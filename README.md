@@ -119,7 +119,7 @@ More information can be found via the [Kubebuilder Documentation](https://book.k
 
 ## License
 
-Copyright 2026 Trey Dockendorf.
+Copyright 2026 Ohio Supercomputer Center.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
