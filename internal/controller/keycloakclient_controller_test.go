@@ -51,7 +51,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: keycloakv1alpha1.KeycloakClientSpec{
+						ClientID:     "test-client-id",
+						RedirectURIs: []string{"https://example.com/callback"},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
