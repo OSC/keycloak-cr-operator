@@ -192,7 +192,6 @@ spec:
                   type: string
                 type: array
             required:
-            - clientID
             - redirectUris
             type: object
           status:

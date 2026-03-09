@@ -65,7 +65,7 @@ type KeycloakClientSpec struct {
 	ClientAuthenticatorType *string `json:"clientAuthenticatorType,omitempty"`
 
 	// ClientID is the unique identifier for the client
-	// +required
+	// +optional
 	ClientID string `json:"clientID"`
 
 	// ClientTemplate is the client template

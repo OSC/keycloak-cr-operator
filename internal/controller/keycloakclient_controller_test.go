@@ -52,7 +52,6 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Namespace: "default",
 					},
 					Spec: keycloakv1alpha1.KeycloakClientSpec{
-						ClientID:     "test-client-id",
 						RedirectURIs: []string{"https://example.com/callback"},
 					},
 				}
