@@ -156,7 +156,7 @@ type KeycloakClientSpec struct {
 	PublicClient *bool `json:"publicClient,omitempty"`
 
 	// RedirectURIs is the list of valid redirect URIs
-	// +required
+	// +optional
 	RedirectURIs []string `json:"redirectUris"`
 
 	// RegisteredNodes is the registered nodes

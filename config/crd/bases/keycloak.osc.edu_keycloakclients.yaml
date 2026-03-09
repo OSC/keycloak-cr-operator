@@ -191,8 +191,6 @@ spec:
                 items:
                   type: string
                 type: array
-            required:
-            - redirectUris
             type: object
           status:
             description: status defines the observed state of KeycloakClient
