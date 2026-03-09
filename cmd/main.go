@@ -27,6 +27,7 @@ import (
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
 	"k8s.io/klog/v2"
 
+	"github.com/Nerzal/gocloak/v13"
 	"github.com/coreos/pkg/flagutil"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
@@ -38,7 +39,6 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	"github.com/Nerzal/gocloak/v13"
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
 	// +kubebuilder:scaffold:imports
@@ -101,6 +101,8 @@ func main() {
 	}
 	flag.Parse()
 
+	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
 	// Validate required flags
 	if keycloakUrl == "" {
 		setupLog.Error(fmt.Errorf("keycloak-url is required"), "Missing required flag")
@@ -110,12 +112,6 @@ func main() {
 		setupLog.Error(fmt.Errorf("keycloak-admin-password is required"), "Missing required flag")
 		os.Exit(1)
 	}
-	if keycloakDefaultRealm == "" {
-		setupLog.Error(fmt.Errorf("keycloak-default-realm is required"), "Missing required flag")
-		os.Exit(1)
-	}
-
-	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will

@@ -1,2 +1,7 @@
 resources:
 - manager.yaml
+secretGenerator:
+- literals:
+  - keycloak-admin-username=admin
+  - keycloak-admin-password=1f2d1e2e67df
+  name: keycloak-cr-operator
