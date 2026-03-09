@@ -24,25 +24,32 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-func KeycloakLogin(ctx context.Context, client *gocloak.GoCloak, username, password, realm string, jwt *gocloak.JWT, tokenCreatedAt *time.Time) error {
+type KeycloakToken struct {
+	gocloak.JWT
+	CreatedAt *time.Time
+}
+
+func KeycloakLogin(ctx context.Context, client *gocloak.GoCloak, username, password, realm string, token *KeycloakToken) error {
 	log := logf.FromContext(ctx)
-	if jwt != nil && jwt.ExpiresIn != 0 && tokenCreatedAt != nil {
-		expirationTime := tokenCreatedAt.Add(time.Duration(jwt.ExpiresIn) * time.Second)
+	if token != nil && token.ExpiresIn != 0 && token.CreatedAt != nil {
+		expirationTime := token.CreatedAt.Add(time.Duration(token.ExpiresIn) * time.Second)
 		if time.Now().Before(expirationTime) {
-			log.Info("admin token still valid", "expiresIn", jwt.ExpiresIn, "createdAt", tokenCreatedAt)
+			log.Info("admin token still valid", "expiresIn", token.ExpiresIn, "createdAt", token.CreatedAt)
 			return nil
 		}
 	}
 
 	now := time.Now()
-	token, err := client.LoginAdmin(context.Background(), username, password, realm)
+	t, err := client.LoginAdmin(context.Background(), username, password, realm)
 	if err != nil {
 		log.Error(err, "Failed to login to Keycloak", "username", username, "realm", realm)
 		return err
 	}
 	log.Info("Successfully logged into Keycloak", "username", username, "realm", realm)
-	jwt = token
-	tokenCreatedAt = &now
+	token.AccessToken = t.AccessToken
+	token.IDToken = t.IDToken
+	token.ExpiresIn = t.ExpiresIn
+	token.CreatedAt = &now
 
 	return nil
 }
