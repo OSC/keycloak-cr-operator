@@ -42,17 +42,6 @@ spec:
               adminUrl:
                 description: AdminURL is the URL for the admin console
                 type: string
-              attributes:
-                additionalProperties:
-                  type: string
-                description: Attributes is the map of additional attributes
-                type: object
-              authenticationFlowBindingOverrides:
-                additionalProperties:
-                  type: string
-                description: AuthenticationFlowBindingOverrides is the map of authentication
-                  flow binding overrides
-                type: object
               authorizationServicesEnabled:
                 default: false
                 description: AuthorizationServicesEnabled indicates if authorization
@@ -71,9 +60,6 @@ spec:
                 type: string
               clientID:
                 description: ClientID is the unique identifier for the client
-                type: string
-              clientTemplate:
-                description: ClientTemplate is the client template
                 type: string
               consentRequired:
                 description: ConsentRequired indicates if consent is required
@@ -114,18 +100,17 @@ spec:
                 default: false
                 description: ImplicitFlowEnabled indicates if implicit flow is enabled
                 type: boolean
-              managementUrl:
-                description: ManagementURL is the management URL for the client
-                type: string
               name:
                 description: Name is the display name for the client
                 type: string
               nodeReRegistrationTimeout:
                 description: NodeReRegistrationTimeout is the node re-registration
                   timeout
+                format: int32
                 type: integer
               notBefore:
                 description: NotBefore is the not before setting
+                format: int32
                 type: integer
               optionalClientScopes:
                 description: OptionalClientScopes is the optional client scopes
@@ -150,11 +135,6 @@ spec:
                 items:
                   type: string
                 type: array
-              registeredNodes:
-                additionalProperties:
-                  type: integer
-                description: RegisteredNodes is the registered nodes
-                type: object
               registrationAccessToken:
                 description: RegistrationAccessToken is the registration access token
                 type: string
@@ -163,6 +143,9 @@ spec:
                 type: string
               secret:
                 description: Secret is the client secret
+                type: string
+              secretName:
+                description: The name of the secret data will be written back to
                 type: string
               serviceAccountsEnabled:
                 default: false
@@ -175,16 +158,6 @@ spec:
               surrogateAuthRequired:
                 description: SurrogateAuthRequired indicates if surrogate authentication
                   is required
-                type: boolean
-              useTemplateConfig:
-                description: UseTemplateConfig indicates if template config is used
-                type: boolean
-              useTemplateMappers:
-                description: UseTemplateMappers indicates if template mappers are
-                  used
-                type: boolean
-              useTemplateScope:
-                description: UseTemplateScope indicates if template scope is used
                 type: boolean
               webOrigins:
                 description: WebOrigins is the list of valid web origins

@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"time"
 
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -39,6 +40,8 @@ type KeycloakClientReconciler struct {
 	KeycloakAdminPassword string
 	KeycloakAdminRealm    string
 	DefaultRealm          string
+	JWT                   *gocloak.JWT
+	TokenCreatedAt        *time.Time
 }
 
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients,verbs=get;list;watch;create;update;patch;delete

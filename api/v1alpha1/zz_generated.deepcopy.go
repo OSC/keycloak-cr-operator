@@ -92,20 +92,6 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Attributes != nil {
-		in, out := &in.Attributes, &out.Attributes
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
-	if in.AuthenticationFlowBindingOverrides != nil {
-		in, out := &in.AuthenticationFlowBindingOverrides, &out.AuthenticationFlowBindingOverrides
-		*out = make(map[string]string, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
-		}
-	}
 	if in.AuthorizationServicesEnabled != nil {
 		in, out := &in.AuthorizationServicesEnabled, &out.AuthorizationServicesEnabled
 		*out = new(bool)
@@ -126,8 +112,8 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.ClientTemplate != nil {
-		in, out := &in.ClientTemplate, &out.ClientTemplate
+	if in.ClientID != nil {
+		in, out := &in.ClientID, &out.ClientID
 		*out = new(string)
 		**out = **in
 	}
@@ -138,13 +124,21 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 	}
 	if in.DefaultClientScopes != nil {
 		in, out := &in.DefaultClientScopes, &out.DefaultClientScopes
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
 	}
 	if in.DefaultRoles != nil {
 		in, out := &in.DefaultRoles, &out.DefaultRoles
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
 	}
 	if in.Description != nil {
 		in, out := &in.Description, &out.Description
@@ -181,11 +175,6 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.ManagementURL != nil {
-		in, out := &in.ManagementURL, &out.ManagementURL
-		*out = new(string)
-		**out = **in
-	}
 	if in.Name != nil {
 		in, out := &in.Name, &out.Name
 		*out = new(string)
@@ -193,18 +182,22 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 	}
 	if in.NodeReRegistrationTimeout != nil {
 		in, out := &in.NodeReRegistrationTimeout, &out.NodeReRegistrationTimeout
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.NotBefore != nil {
 		in, out := &in.NotBefore, &out.NotBefore
-		*out = new(int)
+		*out = new(int32)
 		**out = **in
 	}
 	if in.OptionalClientScopes != nil {
 		in, out := &in.OptionalClientScopes, &out.OptionalClientScopes
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
 	}
 	if in.Origin != nil {
 		in, out := &in.Origin, &out.Origin
@@ -223,14 +216,11 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 	}
 	if in.RedirectURIs != nil {
 		in, out := &in.RedirectURIs, &out.RedirectURIs
-		*out = make([]string, len(*in))
-		copy(*out, *in)
-	}
-	if in.RegisteredNodes != nil {
-		in, out := &in.RegisteredNodes, &out.RegisteredNodes
-		*out = make(map[string]int, len(*in))
-		for key, val := range *in {
-			(*out)[key] = val
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
 		}
 	}
 	if in.RegistrationAccessToken != nil {
@@ -263,25 +253,19 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 		*out = new(bool)
 		**out = **in
 	}
-	if in.UseTemplateConfig != nil {
-		in, out := &in.UseTemplateConfig, &out.UseTemplateConfig
-		*out = new(bool)
-		**out = **in
-	}
-	if in.UseTemplateMappers != nil {
-		in, out := &in.UseTemplateMappers, &out.UseTemplateMappers
-		*out = new(bool)
-		**out = **in
-	}
-	if in.UseTemplateScope != nil {
-		in, out := &in.UseTemplateScope, &out.UseTemplateScope
-		*out = new(bool)
-		**out = **in
-	}
 	if in.WebOrigins != nil {
 		in, out := &in.WebOrigins, &out.WebOrigins
-		*out = make([]string, len(*in))
-		copy(*out, *in)
+		*out = new([]string)
+		if **in != nil {
+			in, out := *in, *out
+			*out = make([]string, len(*in))
+			copy(*out, *in)
+		}
+	}
+	if in.SecretName != nil {
+		in, out := &in.SecretName, &out.SecretName
+		*out = new(string)
+		**out = **in
 	}
 }
 
