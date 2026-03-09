@@ -26,12 +26,19 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+
+	"github.com/Nerzal/gocloak/v13"
 )
 
 // KeycloakClientReconciler reconciles a KeycloakClient object
 type KeycloakClientReconciler struct {
 	client.Client
-	Scheme *runtime.Scheme
+	Scheme                *runtime.Scheme
+	Server                *gocloak.GoCloak
+	KeycloakAdminUsername string
+	KeycloakAdminPassword string
+	KeycloakAdminRealm    string
+	DefaultRealm          string
 }
 
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients,verbs=get;list;watch;create;update;patch;delete
