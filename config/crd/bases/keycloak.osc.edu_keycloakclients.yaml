@@ -1,0 +1,274 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.1
+  name: keycloakclients.keycloak.osc.edu
+spec:
+  group: keycloak.osc.edu
+  names:
+    kind: KeycloakClient
+    listKind: KeycloakClientList
+    plural: keycloakclients
+    singular: keycloakclient
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: KeycloakClient is the Schema for the keycloakclients API
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: spec defines the desired state of KeycloakClient
+            properties:
+              adminUrl:
+                description: AdminURL is the URL for the admin console
+                type: string
+              attributes:
+                additionalProperties:
+                  type: string
+                description: Attributes is the map of additional attributes
+                type: object
+              authenticationFlowBindingOverrides:
+                additionalProperties:
+                  type: string
+                description: AuthenticationFlowBindingOverrides is the map of authentication
+                  flow binding overrides
+                type: object
+              authorizationServicesEnabled:
+                default: false
+                description: AuthorizationServicesEnabled indicates if authorization
+                  services are enabled
+                type: boolean
+              baseUrl:
+                description: BaseURL is the base URL for the client
+                type: string
+              bearerOnly:
+                default: false
+                description: BearerOnly indicates if the client is bearer-only
+                type: boolean
+              clientAuthenticatorType:
+                default: client-secret
+                description: ClientAuthenticatorType is the client authenticator type
+                type: string
+              clientID:
+                description: ClientID is the unique identifier for the client
+                type: string
+              clientTemplate:
+                description: ClientTemplate is the client template
+                type: string
+              consentRequired:
+                description: ConsentRequired indicates if consent is required
+                type: boolean
+              defaultClientScopes:
+                description: DefaultClientScopes is the default client scopes
+                items:
+                  type: string
+                type: array
+              defaultRoles:
+                description: DefaultRoles is the default roles
+                items:
+                  type: string
+                type: array
+              description:
+                description: Description is the description of the client
+                type: string
+              directAccessGrantsEnabled:
+                default: true
+                description: DirectAccessGrantsEnabled indicates if direct access
+                  grants are enabled
+                type: boolean
+              enabled:
+                default: true
+                description: Enabled indicates if the client is enabled
+                type: boolean
+              frontChannelLogout:
+                description: FrontChannelLogout is the front channel logout setting
+                type: boolean
+              fullScopeAllowed:
+                default: true
+                description: FullScopeAllowed indicates if full scope is allowed
+                type: boolean
+              id:
+                description: ID is the unique identifier for the client
+                type: string
+              implicitFlowEnabled:
+                default: false
+                description: ImplicitFlowEnabled indicates if implicit flow is enabled
+                type: boolean
+              managementUrl:
+                description: ManagementURL is the management URL for the client
+                type: string
+              name:
+                description: Name is the display name for the client
+                type: string
+              nodeReRegistrationTimeout:
+                description: NodeReRegistrationTimeout is the node re-registration
+                  timeout
+                type: integer
+              notBefore:
+                description: NotBefore is the not before setting
+                type: integer
+              optionalClientScopes:
+                description: OptionalClientScopes is the optional client scopes
+                items:
+                  type: string
+                type: array
+              origin:
+                description: Origin is the origin of the client
+                type: string
+              protocol:
+                default: openid-connect
+                description: Protocol is the protocol type
+                enum:
+                - openid-connect
+                type: string
+              publicClient:
+                default: false
+                description: PublicClient indicates if the client is public
+                type: boolean
+              redirectUris:
+                description: RedirectURIs is the list of valid redirect URIs
+                items:
+                  type: string
+                type: array
+              registeredNodes:
+                additionalProperties:
+                  type: integer
+                description: RegisteredNodes is the registered nodes
+                type: object
+              registrationAccessToken:
+                description: RegistrationAccessToken is the registration access token
+                type: string
+              rootUrl:
+                description: RootURL is the root URL for the client
+                type: string
+              secret:
+                description: Secret is the client secret
+                type: string
+              serviceAccountsEnabled:
+                default: false
+                description: ServiceAccountsEnabled indicates if service accounts
+                  are enabled
+                type: boolean
+              standardFlowEnabled:
+                description: StandardFlowEnabled indicates if standard flow is enabled
+                type: boolean
+              surrogateAuthRequired:
+                description: SurrogateAuthRequired indicates if surrogate authentication
+                  is required
+                type: boolean
+              useTemplateConfig:
+                description: UseTemplateConfig indicates if template config is used
+                type: boolean
+              useTemplateMappers:
+                description: UseTemplateMappers indicates if template mappers are
+                  used
+                type: boolean
+              useTemplateScope:
+                description: UseTemplateScope indicates if template scope is used
+                type: boolean
+              webOrigins:
+                description: WebOrigins is the list of valid web origins
+                items:
+                  type: string
+                type: array
+            type: object
+          status:
+            description: status defines the observed state of KeycloakClient
+            properties:
+              conditions:
+                description: |-
+                  conditions represent the current state of the KeycloakClient resource.
+                  Each condition has a unique type and reflects the status of a specific aspect of the resource.
+
+                  Standard condition types include:
+                  - "Available": the resource is fully functional
+                  - "Progressing": the resource is being created or updated
+                  - "Degraded": the resource failed to reach or maintain its desired state
+
+                  The status of each condition is one of True, False, or Unknown.
+                items:
+                  description: Condition contains details for one aspect of the current
+                    state of this API Resource.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        lastTransitionTime is the last time the condition transitioned from one status to another.
+                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        message is a human readable message indicating details about the transition.
+                        This may be an empty string.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        observedGeneration represents the .metadata.generation that the condition was set based upon.
+                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
+                        with respect to the current state of the instance.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
+                        Producers of specific condition types may define expected values and meanings for this field,
+                        and whether the values are considered a guaranteed API.
+                        The value should be a CamelCase string.
+                        This field may not be empty.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: status of the condition, one of True, False, Unknown.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
