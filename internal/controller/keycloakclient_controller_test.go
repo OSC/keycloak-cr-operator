@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 
+	"github.com/Nerzal/gocloak/v13"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -71,6 +72,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			controllerReconciler := &KeycloakClientReconciler{
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
+				Server: gocloak.NewClient("http://example.svc.cluster.local"),
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

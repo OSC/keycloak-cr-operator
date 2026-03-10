@@ -59,7 +59,7 @@ func init() {
 // nolint:gocyclo
 func main() {
 	var keycloakUrl, keycloakAdminUsername, keycloakAdminPassword, keycloakAdminRealm string
-	var keycloakDefaultRealm string
+	var keycloakDefaultRealm, keycloakClientIDPrefix string
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
@@ -73,6 +73,7 @@ func main() {
 	flag.StringVar(&keycloakAdminPassword, "keycloak-admin-password", "", "The Keycloak admin password")
 	flag.StringVar(&keycloakAdminRealm, "keycloak-admin-realm", "master", "The Keycloak admin realm")
 	flag.StringVar(&keycloakDefaultRealm, "keycloak-default-realm", "", "The Keycloak default realm")
+	flag.StringVar(&keycloakClientIDPrefix, "keycloak-client-id-prefix", "kubernetes", "The prefix used when creating Keycloak client ID")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -212,6 +213,7 @@ func main() {
 		KeycloakAdminPassword: keycloakAdminPassword,
 		KeycloakAdminRealm:    keycloakAdminRealm,
 		DefaultRealm:          keycloakDefaultRealm,
+		ClientIDPrefix:        keycloakClientIDPrefix,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "KeycloakClient")
 		os.Exit(1)

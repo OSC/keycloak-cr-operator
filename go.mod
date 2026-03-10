@@ -34,7 +34,7 @@ require (
 	github.com/go-openapi/jsonpointer v0.21.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
 	github.com/go-openapi/swag v0.23.0 // indirect
-	github.com/go-resty/resty/v2 v2.7.0 // indirect
+	github.com/go-resty/resty/v2 v2.16.5 // indirect
 	github.com/go-task/slim-sprig/v3 v3.0.0 // indirect
 	github.com/golang-jwt/jwt/v5 v5.2.2 // indirect
 	github.com/google/btree v1.1.3 // indirect
@@ -105,3 +105,5 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2-0.20260122202528-d9cc6641c482 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
+
+replace github.com/Nerzal/gocloak/v13 => github.com/osc/gocloak/v13 v13.0.0-20260310140230-7556592da059

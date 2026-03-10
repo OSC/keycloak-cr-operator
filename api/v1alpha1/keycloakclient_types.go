@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/Nerzal/gocloak/v13"
-	"github.com/google/uuid"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -188,9 +188,9 @@ type KeycloakClientSpec struct {
 	// +optional
 	WebOrigins *[]string `json:"webOrigins,omitempty"`
 
-	// The name of the secret data will be written back to
+	// Reference to the secret holding the ClientSecret
 	// +optional
-	SecretName *string `json:"secretName,omitempty"`
+	ClientSecretRef *corev1.SecretKeySelector `json:"clientSecretRef,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.
@@ -249,7 +249,7 @@ func init() {
 	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
 }
 
-func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
+func (k *KeycloakClient) GetClient(prefix string, clientSecret string) *gocloak.Client {
 	client := &gocloak.Client{}
 
 	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
@@ -258,12 +258,10 @@ func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	} else {
 		client.ClientID = k.Spec.ClientID
 	}
-
-	if k.Spec.Secret == nil || *k.Spec.Secret == "" {
-		secret := uuid.New().String()
-		client.Secret = &secret
+	if k.Spec.ID == nil || *k.Spec.ID == "" {
+		client.ID = client.ClientID
 	} else {
-		client.Secret = k.Spec.Secret
+		client.ID = k.Spec.ID
 	}
 
 	client.AdminURL = k.Spec.AdminURL
@@ -271,6 +269,7 @@ func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	client.BaseURL = k.Spec.BaseURL
 	client.BearerOnly = k.Spec.BearerOnly
 	client.ClientAuthenticatorType = k.Spec.ClientAuthenticatorType
+	client.ClientSecret = &clientSecret
 	client.ConsentRequired = k.Spec.ConsentRequired
 	client.DefaultClientScopes = k.Spec.DefaultClientScopes
 	client.DefaultRoles = k.Spec.DefaultRoles
@@ -279,7 +278,6 @@ func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	client.Enabled = k.Spec.Enabled
 	client.FrontChannelLogout = k.Spec.FrontChannelLogout
 	client.FullScopeAllowed = k.Spec.FullScopeAllowed
-	client.ID = k.Spec.ID
 	client.ImplicitFlowEnabled = k.Spec.ImplicitFlowEnabled
 	client.Name = k.Spec.Name
 	client.NodeReRegistrationTimeout = k.Spec.NodeReRegistrationTimeout
