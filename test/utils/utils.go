@@ -31,6 +31,9 @@ const (
 	certmanagerVersion = "v1.19.4"
 	certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
 
+	keycloakChartRepo    = "https://charts.bitnami.com/bitnami"
+	keycloakChartVersion = "21.2.0"
+
 	defaultKindBinary  = "kind"
 	defaultKindCluster = "kind"
 )
@@ -131,6 +134,57 @@ func IsCertManagerCRDsInstalled() bool {
 	}
 
 	return false
+}
+
+func UninstallKeycloak() {
+	name := "keycloak"
+	ns := "keycloak"
+	cmd := exec.Command("helm", "uninstall", name, "-n", ns)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+	cmd = exec.Command("kubectl", "delete", "namespace", ns)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+}
+
+func InstallKeycloak() error {
+	name := "keycloak"
+	ns := "keycloak"
+	cmd := exec.Command("helm", "repo", "add", "bitnami", keycloakChartRepo)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+	cmd = exec.Command("kubectl", "create", "namespace", ns)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+	cmd = exec.Command("helm", "install", name, "bitnami/keycloak", "-n", ns,
+		"--version", keycloakChartVersion,
+		"--set", "image.repository=bitnamilegacy/keycloak",
+		"--set", "postgresql.image.repository=bitnamilegacy/postgresql",
+		"--set", "auth.adminUser=admin",
+		"--set", "auth.adminPassword=secret",
+	)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+	if !IsKeycloakRunning() {
+		return fmt.Errorf("keycloak is not running")
+	}
+	return nil
+}
+
+func IsKeycloakRunning() bool {
+	pod := "pod/keycloak-0"
+	ns := "keycloak"
+	cmd := exec.Command("kubectl", "wait", "--for=condition=Ready", pod, "-n", ns, "--timeout=120s")
+	_, err := Run(cmd)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 // LoadImageToKindClusterWithName loads a local docker image to the kind cluster

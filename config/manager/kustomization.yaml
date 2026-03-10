@@ -3,5 +3,11 @@ resources:
 secretGenerator:
 - literals:
   - keycloak-admin-username=admin
-  - keycloak-admin-password=1f2d1e2e67df
+  - keycloak-admin-password=secret
   name: keycloak-cr-operator
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+images:
+- name: controller
+  newName: example.com/keycloak-cr-operator
+  newTag: v0.0.1
