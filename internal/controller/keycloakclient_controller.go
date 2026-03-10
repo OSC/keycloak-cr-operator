@@ -28,6 +28,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
@@ -35,11 +36,14 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 )
 
+const clientFinalizerName = "client.keycloak.osc.edu/finalizer"
+
 type GoCloakServer interface {
 	LoginAdmin(ctx context.Context, realm, username, password string) (*gocloak.JWT, error)
 	GetClients(ctx context.Context, token, realm string, params gocloak.GetClientsParams) ([]*gocloak.Client, error)
 	CreateClient(ctx context.Context, token, realm string, client gocloak.Client) (string, error)
 	UpdateClient(ctx context.Context, token, realm string, client gocloak.Client) error
+	DeleteClient(ctx context.Context, token, realm, idOfClient string) error
 }
 
 // KeycloakClientReconciler reconciles a KeycloakClient object
@@ -95,6 +99,15 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 	gocloakClient := keycloakClient.GetClient(r.ClientIDPrefix, secret)
 
+	delete, err := r.handleFinalizer(ctx, keycloakClient, gocloakClient)
+	if err != nil {
+		log.Error(err, "failed to handle finalizer")
+		return ctrl.Result{}, err
+	}
+	if delete {
+		return ctrl.Result{}, nil
+	}
+
 	// Check if the client exists in Keycloak and create/update if needed
 	err = r.ensureKeycloakClient(ctx, keycloakClient, gocloakClient)
 	if err != nil {
@@ -103,6 +116,29 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) (bool, error) {
+	log := logf.FromContext(ctx)
+	if keycloakClient.ObjectMeta.DeletionTimestamp.IsZero() {
+		// add finalizer in case of create/update
+		if !controllerutil.ContainsFinalizer(keycloakClient, clientFinalizerName) {
+			ok := controllerutil.AddFinalizer(keycloakClient, clientFinalizerName)
+			log.Info("Add Finalizer", "name", clientFinalizerName, "ok", ok)
+			return false, r.Update(ctx, keycloakClient)
+		}
+	} else {
+		// remove finalizer in case of deletion
+		if controllerutil.ContainsFinalizer(keycloakClient, clientFinalizerName) {
+			if err := r.deleteKeycloakClient(ctx, keycloakClient, gocloakClient); err != nil {
+				return true, err
+			}
+			ok := controllerutil.RemoveFinalizer(keycloakClient, clientFinalizerName)
+			log.Info("Remove Finalizer", "name", clientFinalizerName, "ok", ok)
+			return true, r.Update(ctx, keycloakClient)
+		}
+	}
+	return false, nil
 }
 
 // ensureKeycloakClient checks if the client exists in Keycloak and creates/updates it if needed
@@ -178,6 +214,27 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 		return "", fmt.Errorf("Unable to find secret key %s in secret %s", secretKey, secretName)
 	}
 	return string(clientSecret), nil
+}
+
+func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
+	log := logf.FromContext(ctx)
+	realm := r.DefaultRealm
+
+	// Get an access token first
+	token, err := r.Server.LoginAdmin(ctx, r.KeycloakAdminRealm, r.KeycloakAdminUsername, r.KeycloakAdminPassword)
+	if err != nil {
+		log.Error(err, "Failed to get Keycloak admin token for deletion")
+		return err
+	}
+
+	log.Info("Deleting Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+	err = r.Server.DeleteClient(ctx, token.AccessToken, realm, *gocloakClient.ID)
+	if err != nil {
+		log.Error(err, "Failed to delete Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+		return err
+	}
+	log.Info("Successfully deleted Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

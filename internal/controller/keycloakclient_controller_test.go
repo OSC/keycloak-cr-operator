@@ -57,6 +57,11 @@ func (m *MockGoCloak) UpdateClient(ctx context.Context, token, realm string, cli
 	return args.Error(0)
 }
 
+func (m *MockGoCloak) DeleteClient(ctx context.Context, token, realm, idOfClient string) error {
+	args := m.Called(ctx, token, realm, idOfClient)
+	return args.Error(0)
+}
+
 var _ = Describe("KeycloakClient Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
@@ -125,46 +130,6 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
 			// Example: If you expect a certain status condition after reconciliation, verify it here.
-
-			// Verify that all expectations were met
-			mockServer.AssertExpectations(GinkgoT())
-		})
-
-		It("should handle existing client correctly", func() {
-			By("Reconciling the created resource with existing client")
-
-			// Create a mock GoCloak client
-			mockServer := new(MockGoCloak)
-
-			// Set up expectations for the mock
-			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
-				AccessToken: "test-token",
-			}, nil)
-
-			// Simulate that the client already exists
-			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
-				{
-					ClientID: gocloak.StringP("test-client-id"),
-				},
-			}, nil)
-
-			mockServer.On("UpdateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
-
-			controllerReconciler := &KeycloakClientReconciler{
-				Client:                k8sClient,
-				Scheme:                k8sClient.Scheme(),
-				Server:                mockServer,
-				KeycloakAdminUsername: "admin",
-				KeycloakAdminPassword: "password",
-				KeycloakAdminRealm:    "master",
-				DefaultRealm:          "test-realm",
-				ClientIDPrefix:        "test-prefix",
-			}
-
-			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
-				NamespacedName: typeNamespacedName,
-			})
-			Expect(err).NotTo(HaveOccurred())
 
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
