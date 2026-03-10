@@ -184,6 +184,5 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keycloakv1alpha1.KeycloakClient{}).
-		Owns(&corev1.Secret{}).
 		Complete(r)
 }
