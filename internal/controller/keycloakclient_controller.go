@@ -35,11 +35,18 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 )
 
+type GoCloakServer interface {
+	LoginAdmin(ctx context.Context, realm, username, password string) (*gocloak.JWT, error)
+	GetClients(ctx context.Context, token, realm string, params gocloak.GetClientsParams) ([]*gocloak.Client, error)
+	CreateClient(ctx context.Context, token, realm string, client gocloak.Client) (string, error)
+	UpdateClient(ctx context.Context, token, realm string, client gocloak.Client) error
+}
+
 // KeycloakClientReconciler reconciles a KeycloakClient object
 type KeycloakClientReconciler struct {
 	client.Client
 	Scheme                *runtime.Scheme
-	Server                *gocloak.GoCloak
+	Server                GoCloakServer
 	KeycloakAdminUsername string
 	KeycloakAdminPassword string
 	KeycloakAdminRealm    string

@@ -205,16 +205,17 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.KeycloakClientReconciler{
+	reconciler := &controller.KeycloakClientReconciler{
 		Client:                mgr.GetClient(),
 		Scheme:                mgr.GetScheme(),
-		Server:                gocloak.NewClient(keycloakUrl),
 		KeycloakAdminUsername: keycloakAdminUsername,
 		KeycloakAdminPassword: keycloakAdminPassword,
 		KeycloakAdminRealm:    keycloakAdminRealm,
 		DefaultRealm:          keycloakDefaultRealm,
 		ClientIDPrefix:        keycloakClientIDPrefix,
-	}).SetupWithManager(mgr); err != nil {
+	}
+	reconciler.Server = gocloak.NewClient(keycloakUrl)
+	if err := (reconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "KeycloakClient")
 		os.Exit(1)
 	}
