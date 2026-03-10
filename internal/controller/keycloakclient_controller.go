@@ -27,7 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -48,7 +48,7 @@ type GoCloakServer interface {
 
 // KeycloakClientReconciler reconciles a KeycloakClient object
 type KeycloakClientReconciler struct {
-	client.Client
+	runtimeclient.Client
 	Scheme                *runtime.Scheme
 	Server                GoCloakServer
 	KeycloakAdminUsername string
@@ -120,7 +120,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) (bool, error) {
 	log := logf.FromContext(ctx)
-	if keycloakClient.ObjectMeta.DeletionTimestamp.IsZero() {
+	if keycloakClient.DeletionTimestamp.IsZero() {
 		// add finalizer in case of create/update
 		if !controllerutil.ContainsFinalizer(keycloakClient, clientFinalizerName) {
 			ok := controllerutil.AddFinalizer(keycloakClient, clientFinalizerName)
@@ -130,7 +130,7 @@ func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloak
 	} else {
 		// remove finalizer in case of deletion
 		if controllerutil.ContainsFinalizer(keycloakClient, clientFinalizerName) {
-			if err := r.deleteKeycloakClient(ctx, keycloakClient, gocloakClient); err != nil {
+			if err := r.deleteKeycloakClient(ctx, gocloakClient); err != nil {
 				return true, err
 			}
 			ok := controllerutil.RemoveFinalizer(keycloakClient, clientFinalizerName)
@@ -205,18 +205,18 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 	secretName := keycloakClient.Spec.ClientSecretRef.Name
 	secretKey := keycloakClient.Spec.ClientSecretRef.Key
 	secret := &corev1.Secret{}
-	err := r.Client.Get(ctx, types.NamespacedName{Name: secretName, Namespace: keycloakClient.Namespace}, secret)
+	err := r.Get(ctx, types.NamespacedName{Name: secretName, Namespace: keycloakClient.Namespace}, secret)
 	if err != nil {
 		return "", err
 	}
 	clientSecret, found := secret.Data[secretKey]
 	if !found {
-		return "", fmt.Errorf("Unable to find secret key %s in secret %s", secretKey, secretName)
+		return "", fmt.Errorf("unable to find secret key %s in secret %s", secretKey, secretName)
 	}
 	return string(clientSecret), nil
 }
 
-func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
+func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
 	realm := r.DefaultRealm
 
