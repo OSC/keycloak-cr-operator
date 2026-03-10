@@ -179,7 +179,7 @@ func InstallKeycloak() error {
 		cmd = exec.Command("kubectl", "logs", keycloakPod, "-n", keycloakNamespace, "--previous")
 		output, _ = Run(cmd)
 		_, _ = fmt.Fprintf(GinkgoWriter, "Keycloak previous logs: %s\n", output)
-		cmd = exec.Command("kubectl", "describe", "pod", keycloakPod, "-n", keycloakNamespace)
+		cmd = exec.Command("kubectl", "describe", keycloakPod, "-n", keycloakNamespace)
 		output, _ = Run(cmd)
 		_, _ = fmt.Fprintf(GinkgoWriter, "Keycloak pod: %s\n", output)
 		return fmt.Errorf("keycloak is not running")
