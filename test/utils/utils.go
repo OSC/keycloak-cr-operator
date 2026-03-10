@@ -33,6 +33,9 @@ const (
 
 	keycloakChartRepo    = "https://charts.bitnami.com/bitnami"
 	keycloakChartVersion = "21.2.0"
+	keycloakHelmName     = "keycloak"
+	keycloakNamespace    = "keycloak"
+	keycloakPod          = "pod/keycloak-0"
 
 	defaultKindBinary  = "kind"
 	defaultKindCluster = "kind"
@@ -137,30 +140,26 @@ func IsCertManagerCRDsInstalled() bool {
 }
 
 func UninstallKeycloak() {
-	name := "keycloak"
-	ns := "keycloak"
-	cmd := exec.Command("helm", "uninstall", name, "-n", ns)
+	cmd := exec.Command("helm", "uninstall", keycloakHelmName, "-n", keycloakNamespace)
 	if _, err := Run(cmd); err != nil {
 		warnError(err)
 	}
-	cmd = exec.Command("kubectl", "delete", "namespace", ns)
+	cmd = exec.Command("kubectl", "delete", "namespace", keycloakNamespace)
 	if _, err := Run(cmd); err != nil {
 		warnError(err)
 	}
 }
 
 func InstallKeycloak() error {
-	name := "keycloak"
-	ns := "keycloak"
 	cmd := exec.Command("helm", "repo", "add", "bitnami", keycloakChartRepo)
 	if _, err := Run(cmd); err != nil {
 		return err
 	}
-	cmd = exec.Command("kubectl", "create", "namespace", ns)
+	cmd = exec.Command("kubectl", "create", "namespace", keycloakNamespace)
 	if _, err := Run(cmd); err != nil {
 		warnError(err)
 	}
-	cmd = exec.Command("helm", "install", name, "bitnami/keycloak", "-n", ns,
+	cmd = exec.Command("helm", "install", keycloakHelmName, "bitnami/keycloak", "-n", keycloakNamespace,
 		"--version", keycloakChartVersion,
 		"--set", "image.repository=bitnamilegacy/keycloak",
 		"--set", "postgresql.image.repository=bitnamilegacy/postgresql",
@@ -177,14 +176,9 @@ func InstallKeycloak() error {
 }
 
 func IsKeycloakRunning() bool {
-	pod := "pod/keycloak-0"
-	ns := "keycloak"
-	cmd := exec.Command("kubectl", "wait", "--for=condition=Ready", pod, "-n", ns, "--timeout=120s")
+	cmd := exec.Command("kubectl", "wait", "--for=condition=Ready", keycloakPod, "-n", keycloakNamespace, "--timeout=180s")
 	_, err := Run(cmd)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // LoadImageToKindClusterWithName loads a local docker image to the kind cluster
