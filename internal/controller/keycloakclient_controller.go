@@ -36,7 +36,10 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 )
 
-const clientFinalizerName = "client.keycloak.osc.edu/finalizer"
+const (
+	clientFinalizerName         = "client.keycloak.osc.edu/finalizer"
+	typeAvailableKeycloakClient = "Available"
+)
 
 type GoCloakServer interface {
 	LoginAdmin(ctx context.Context, realm, username, password string) (*gocloak.JWT, error)
@@ -92,15 +95,51 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	// Let's just set the status as Unknown when no status is available
+	if len(keycloakClient.Status.Conditions) == 0 {
+		meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+			Type:    typeAvailableKeycloakClient,
+			Status:  metav1.ConditionUnknown,
+			Reason:  "Reconciling",
+			Message: "Starting reconciliation",
+		})
+		if err = r.Status().Update(ctx, keycloakClient); err != nil {
+			log.Error(err, "Failed to update keycloakClient status")
+			return ctrl.Result{}, err
+		}
+
+		// Let's re-fetch the memcached Custom Resource after updating the status
+		// so that we have the latest state of the resource on the cluster and we will avoid
+		// raising the error "the object has been modified, please apply
+		// your changes to the latest version and try again" which would re-trigger the reconciliation
+		// if we try to update it again in the following operations
+		if err := r.Get(ctx, req.NamespacedName, keycloakClient); err != nil {
+			log.Error(err, "Failed to re-fetch keycloakClient")
+			return ctrl.Result{}, err
+		}
+	}
+
 	// Get the client object from the KeycloakClient resource
 	secret, err := r.getSecret(ctx, keycloakClient)
 	if err != nil {
+		meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+			Type:    typeAvailableKeycloakClient,
+			Status:  metav1.ConditionUnknown,
+			Reason:  "Reconciling",
+			Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.Spec.ClientSecretRef.Name),
+		})
 		log.Error(err, "Unable to get secret")
 	}
 	gocloakClient := keycloakClient.GetClient(r.ClientIDPrefix, secret)
 
 	delete, err := r.handleFinalizer(ctx, keycloakClient, gocloakClient)
 	if err != nil {
+		meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+			Type:    typeAvailableKeycloakClient,
+			Status:  metav1.ConditionUnknown,
+			Reason:  "Reconciling",
+			Message: "failed to handle finalizer",
+		})
 		log.Error(err, "failed to handle finalizer")
 		return ctrl.Result{}, err
 	}
@@ -169,6 +208,12 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 		_, err = r.Server.CreateClient(ctx, token.AccessToken, realm, *gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to create Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+			meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+				Type:    typeAvailableKeycloakClient,
+				Status:  metav1.ConditionUnknown,
+				Reason:  "Reconciling",
+				Message: "Failed to create Keycloak client",
+			})
 			return err
 		}
 		log.Info("Successfully created Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
@@ -177,13 +222,19 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 		err = r.Server.UpdateClient(ctx, token.AccessToken, realm, *gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to update Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+			meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+				Type:    typeAvailableKeycloakClient,
+				Status:  metav1.ConditionUnknown,
+				Reason:  "Reconciling",
+				Message: "Failed to update Keycloak client",
+			})
 			return err
 		}
 		log.Info("Successfully updated Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
 	}
 
 	meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
-		Type:    "Available",
+		Type:    typeAvailableKeycloakClient,
 		Status:  metav1.ConditionTrue,
 		Reason:  "Successful",
 		Message: "Keycloak client processed successfully",
