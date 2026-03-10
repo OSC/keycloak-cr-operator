@@ -188,6 +188,14 @@ type KeycloakClientSpec struct {
 	// +optional
 	WebOrigins *[]string `json:"webOrigins,omitempty"`
 
+	// BEGIN ATTRIBUTES
+
+	// The client's login theme
+	// +optional
+	LoginTheme string `json:"loginTheme,omitempty"`
+
+	// END ATTRIBUTES
+
 	// Reference to the secret holding the ClientSecret
 	// +optional
 	ClientSecretRef *corev1.SecretKeySelector `json:"clientSecretRef,omitempty"`
@@ -263,8 +271,11 @@ func (k *KeycloakClient) GetClient(prefix string, clientSecret string) *gocloak.
 	} else {
 		client.ID = k.Spec.ID
 	}
+	attributes := make(map[string]string)
+	attributes["login_theme"] = k.Spec.LoginTheme
 
 	client.AdminURL = k.Spec.AdminURL
+	client.Attributes = &attributes
 	client.AuthorizationServicesEnabled = k.Spec.AuthorizationServicesEnabled
 	client.BaseURL = k.Spec.BaseURL
 	client.BearerOnly = k.Spec.BearerOnly

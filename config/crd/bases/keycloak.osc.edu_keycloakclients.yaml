@@ -123,6 +123,9 @@ spec:
                 default: false
                 description: ImplicitFlowEnabled indicates if implicit flow is enabled
                 type: boolean
+              loginTheme:
+                description: The client's login theme
+                type: string
               name:
                 description: Name is the display name for the client
                 type: string
