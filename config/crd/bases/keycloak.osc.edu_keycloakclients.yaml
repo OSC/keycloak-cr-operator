@@ -156,6 +156,9 @@ spec:
                 default: false
                 description: PublicClient indicates if the client is public
                 type: boolean
+              realm:
+                description: The Realm for the Keycloak Client
+                type: string
               redirectUris:
                 description: RedirectURIs is the list of valid redirect URIs
                 items:

@@ -169,7 +169,7 @@ func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloak
 	} else {
 		// remove finalizer in case of deletion
 		if controllerutil.ContainsFinalizer(keycloakClient, clientFinalizerName) {
-			if err := r.deleteKeycloakClient(ctx, gocloakClient); err != nil {
+			if err := r.deleteKeycloakClient(ctx, keycloakClient, gocloakClient); err != nil {
 				return true, err
 			}
 			ok := controllerutil.RemoveFinalizer(keycloakClient, clientFinalizerName)
@@ -183,9 +183,10 @@ func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloak
 // ensureKeycloakClient checks if the client exists in Keycloak and creates/updates it if needed
 func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
-
-	// Get realm name - use the default realm if not specified
-	realm := r.DefaultRealm
+	realm := keycloakClient.Spec.Realm
+	if keycloakClient.Spec.Realm == "" {
+		realm = r.DefaultRealm
+	}
 
 	// Get an access token first
 	token, err := r.Server.LoginAdmin(ctx, r.KeycloakAdminRealm, r.KeycloakAdminUsername, r.KeycloakAdminPassword)
@@ -267,9 +268,12 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 	return string(clientSecret), nil
 }
 
-func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, gocloakClient *gocloak.Client) error {
+func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
-	realm := r.DefaultRealm
+	realm := keycloakClient.Spec.Realm
+	if keycloakClient.Spec.Realm == "" {
+		realm = r.DefaultRealm
+	}
 
 	// Get an access token first
 	token, err := r.Server.LoginAdmin(ctx, r.KeycloakAdminRealm, r.KeycloakAdminUsername, r.KeycloakAdminPassword)

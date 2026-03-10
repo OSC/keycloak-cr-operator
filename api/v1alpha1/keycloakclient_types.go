@@ -196,6 +196,10 @@ type KeycloakClientSpec struct {
 
 	// END ATTRIBUTES
 
+	// The Realm for the Keycloak Client
+	// +optional
+	Realm string `json:"realm,omitempty"`
+
 	// Reference to the secret holding the ClientSecret
 	// +optional
 	ClientSecretRef *corev1.SecretKeySelector `json:"clientSecretRef,omitempty"`
