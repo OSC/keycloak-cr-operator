@@ -170,6 +170,12 @@ func InstallKeycloak() error {
 		return err
 	}
 	if !IsKeycloakRunning() {
+		cmd = exec.Command("kubectl", "get", "pods", "-n", keycloakNamespace)
+		output, _ := Run(cmd)
+		fmt.Fprintf(GinkgoWriter, "Keycloak pods: %s\n", output)
+		cmd = exec.Command("kubectl", "logs", keycloakPod, "-n", keycloakNamespace)
+		output, _ = Run(cmd)
+		fmt.Fprintf(GinkgoWriter, "Keycloak logs: %s\n", output)
 		return fmt.Errorf("keycloak is not running")
 	}
 	return nil
