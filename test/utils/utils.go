@@ -165,7 +165,7 @@ func InstallKeycloak() error {
 		"--set", "postgresql.image.repository=bitnamilegacy/postgresql",
 		"--set", "auth.adminUser=admin",
 		"--set", "auth.adminPassword=secret",
-		"--set", "resourcesPreset=medium",
+		"--set", "resourcesPreset=large",
 	)
 	if _, err := Run(cmd); err != nil {
 		return err
