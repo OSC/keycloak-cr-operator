@@ -166,6 +166,7 @@ func InstallKeycloak() error {
 		"--set", "auth.adminUser=admin",
 		"--set", "auth.adminPassword=secret",
 		"--set", "resourcesPreset=large",
+		"-f", "test/e2e/keycloak-values.yaml",
 	)
 	if _, err := Run(cmd); err != nil {
 		return err

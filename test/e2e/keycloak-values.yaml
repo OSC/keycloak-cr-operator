@@ -1,0 +1,7 @@
+extraEnvVars:
+  - name: KEYCLOAK_LOG_LEVEL
+    value: INFO
+  - name: QUARKUS_HTTP_ACCESS_LOG_ENABLED
+    value: 'true'
+  - name: KC_HTTP_ACCESS_LOG_ENABLED
+    value: 'true'
