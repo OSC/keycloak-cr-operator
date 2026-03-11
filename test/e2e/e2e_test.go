@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -284,7 +284,7 @@ var _ = Describe("Manager", Ordered, func() {
 			verifyKeycloakClientResource := func(g Gomega) {
 				cmd := exec.Command("kubectl", "apply", "-f",
 					"config/samples/keycloak_v1alpha1_keycloakclient.yaml")
-				_, err := utils.Run(cmd)
+				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("created")))
 				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",
