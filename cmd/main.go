@@ -207,13 +207,15 @@ func main() {
 	}
 
 	reconciler := &controller.KeycloakClientReconciler{
-		Client:                mgr.GetClient(),
-		Scheme:                mgr.GetScheme(),
-		KeycloakAdminUsername: keycloakAdminUsername,
-		KeycloakAdminPassword: keycloakAdminPassword,
-		KeycloakAdminRealm:    keycloakAdminRealm,
-		DefaultRealm:          keycloakDefaultRealm,
-		ClientIDPrefix:        keycloakClientIDPrefix,
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+		Config: &controller.KeycloakConfig{
+			AdminUsername:  keycloakAdminUsername,
+			AdminPassword:  keycloakAdminPassword,
+			AdminRealm:     keycloakAdminRealm,
+			DefaultRealm:   keycloakDefaultRealm,
+			ClientIDPrefix: keycloakClientIDPrefix,
+		},
 	}
 	reconciler.Server = gocloak.NewClient(keycloakUrl)
 	if err := (reconciler).SetupWithManager(mgr); err != nil {

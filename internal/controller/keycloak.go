@@ -35,7 +35,15 @@ type KeycloakToken struct {
 	CreatedAt *time.Time
 }
 
-func KeycloakLogin(ctx context.Context, server GoCloakServer, username, password, realm string) error {
+type KeycloakConfig struct {
+	AdminUsername  string
+	AdminPassword  string
+	AdminRealm     string
+	DefaultRealm   string
+	ClientIDPrefix string
+}
+
+func KeycloakLogin(ctx context.Context, server GoCloakServer, config *KeycloakConfig) error {
 	log := logf.FromContext(ctx)
 	Token.lock.Lock()
 	defer Token.lock.Unlock()
@@ -48,12 +56,12 @@ func KeycloakLogin(ctx context.Context, server GoCloakServer, username, password
 	}
 
 	now := time.Now()
-	t, err := server.LoginAdmin(ctx, username, password, realm)
+	t, err := server.LoginAdmin(ctx, config.AdminUsername, config.AdminPassword, config.AdminRealm)
 	if err != nil {
-		log.Error(err, "Failed to login to Keycloak", "username", username, "realm", realm)
+		log.Error(err, "Failed to login to Keycloak", "username", config.AdminUsername, "realm", config.AdminRealm)
 		return err
 	}
-	log.Info("Successfully logged into Keycloak", "username", username, "realm", realm)
+	log.Info("Successfully logged into Keycloak", "username", config.AdminUsername, "realm", config.AdminRealm)
 	Token.AccessToken = t.AccessToken
 	Token.IDToken = t.IDToken
 	Token.ExpiresIn = t.ExpiresIn

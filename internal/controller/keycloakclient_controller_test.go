@@ -114,14 +114,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			controllerReconciler := &KeycloakClientReconciler{
-				Client:                k8sClient,
-				Scheme:                k8sClient.Scheme(),
-				Server:                mockServer,
-				KeycloakAdminUsername: "admin",
-				KeycloakAdminPassword: "password",
-				KeycloakAdminRealm:    "master",
-				DefaultRealm:          "test-realm",
-				ClientIDPrefix:        "test-prefix",
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+				Server: mockServer,
+				Config: &KeycloakConfig{
+					AdminUsername:  "admin",
+					AdminPassword:  "password",
+					AdminRealm:     "master",
+					ClientIDPrefix: "kubernetes",
+				},
 			}
 
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{

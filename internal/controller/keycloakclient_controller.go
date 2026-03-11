@@ -52,13 +52,9 @@ type GoCloakServer interface {
 // KeycloakClientReconciler reconciles a KeycloakClient object
 type KeycloakClientReconciler struct {
 	runtimeclient.Client
-	Scheme                *runtime.Scheme
-	Server                GoCloakServer
-	KeycloakAdminUsername string
-	KeycloakAdminPassword string
-	KeycloakAdminRealm    string
-	DefaultRealm          string
-	ClientIDPrefix        string
+	Scheme *runtime.Scheme
+	Server GoCloakServer
+	Config *KeycloakConfig
 }
 
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients,verbs=get;list;watch;create;update;patch;delete
@@ -132,7 +128,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, "Unable to get secret")
 	}
 	log.V(1).Info("Get gocloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	gocloakClient := keycloakClient.GetClient(r.ClientIDPrefix, secret)
+	gocloakClient := keycloakClient.GetClient(r.Config.ClientIDPrefix, secret)
 
 	delete, err := r.handleFinalizer(ctx, keycloakClient, gocloakClient)
 	if err != nil {
@@ -187,15 +183,15 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 	log := logf.FromContext(ctx)
 	realm := keycloakClient.Spec.Realm
 	if keycloakClient.Spec.Realm == "" {
-		realm = r.DefaultRealm
+		realm = r.Config.DefaultRealm
 	}
 	log.V(1).Info("Ensure Keycloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", gocloakClient.ClientID, "realm", realm)
 
 	// Get an access token first
 	log.V(1).Info("Keycloak Login", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
 		"clientID", gocloakClient.ClientID, "realm", realm,
-		"admin-realm", r.KeycloakAdminRealm, "admin-username", r.KeycloakAdminUsername)
-	err := KeycloakLogin(ctx, r.Server, r.KeycloakAdminUsername, r.KeycloakAdminPassword, r.KeycloakAdminRealm)
+		"admin-realm", r.Config.AdminRealm, "admin-username", r.Config.AdminUsername)
+	err := KeycloakLogin(ctx, r.Server, r.Config)
 	if err != nil {
 		return err
 	}
@@ -285,13 +281,13 @@ func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, key
 	log := logf.FromContext(ctx)
 	realm := keycloakClient.Spec.Realm
 	if keycloakClient.Spec.Realm == "" {
-		realm = r.DefaultRealm
+		realm = r.Config.DefaultRealm
 	}
 
 	log.V(1).Info("Keycloak Login", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
 		"clientID", gocloakClient.ClientID, "realm", realm,
-		"admin-realm", r.KeycloakAdminRealm, "admin-username", r.KeycloakAdminUsername)
-	err := KeycloakLogin(ctx, r.Server, r.KeycloakAdminUsername, r.KeycloakAdminPassword, r.KeycloakAdminRealm)
+		"admin-realm", r.Config.AdminRealm, "admin-username", r.Config.AdminUsername)
+	err := KeycloakLogin(ctx, r.Server, r.Config)
 	if err != nil {
 		log.Error(err, "Failed to get Keycloak admin token for deletion")
 		return err
