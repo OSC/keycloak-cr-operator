@@ -161,11 +161,6 @@ func InstallKeycloak() error {
 	}
 	cmd = exec.Command("helm", "install", keycloakHelmName, "bitnami/keycloak", "-n", keycloakNamespace,
 		"--version", keycloakChartVersion,
-		"--set", "image.repository=bitnamilegacy/keycloak",
-		"--set", "postgresql.image.repository=bitnamilegacy/postgresql",
-		"--set", "auth.adminUser=admin",
-		"--set", "auth.adminPassword=secret",
-		"--set", "resourcesPreset=large",
 		"-f", "test/e2e/keycloak-values.yaml",
 	)
 	if _, err := Run(cmd); err != nil {

@@ -1,3 +1,12 @@
+image:
+  repository: bitnamilegacy/keycloak
+postgresql:
+  image:
+    repository: bitnamilegacy/postgresql
+auth:
+  adminUser: admin
+  adminPassword: secret
+resourcesPreset: large
 extraEnvVars:
   - name: KEYCLOAK_LOG_LEVEL
     value: INFO

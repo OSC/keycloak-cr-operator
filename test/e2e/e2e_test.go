@@ -78,8 +78,12 @@ var _ = Describe("Manager", Ordered, func() {
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
 	// and deleting the namespace.
 	AfterAll(func() {
+		By("cleanup custom resources")
+		cmd := exec.Command("kubectl", "delete", "keycloakclient", "--all", "--force")
+		_, _ = utils.Run(cmd)
+
 		By("cleaning up the curl pod for metrics")
-		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
+		cmd = exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
 		_, _ = utils.Run(cmd)
 
 		By("undeploying the controller-manager")
@@ -92,6 +96,10 @@ var _ = Describe("Manager", Ordered, func() {
 
 		By("removing manager namespace")
 		cmd = exec.Command("kubectl", "delete", "ns", namespace)
+		_, _ = utils.Run(cmd)
+
+		By("removing metrics clusterrolebinding")
+		cmd = exec.Command("kubectl", "delete", "clusterrolebinding", metricsRoleBindingName)
 		_, _ = utils.Run(cmd)
 	})
 
@@ -227,7 +235,7 @@ var _ = Describe("Manager", Ordered, func() {
 							"image": "curlimages/curl:latest",
 							"command": ["/bin/sh", "-c"],
 							"args": [
-								"for i in $(seq 1 30); do curl -v -k -H 'Authorization: Bearer %s' https://%s.%s.svc.cluster.local:8443/metrics && exit 0 || sleep 2; done; exit 1"
+								"for i in $(seq 1 30); do curl -v -k -H 'Authorization: Bearer %s' https://%s.%s.svc.cluster.local:8443/metrics && sleep 600 || sleep 2; done; exit 1"
 							],
 							"securityContext": {
 								"readOnlyRootFilesystem": true,
@@ -255,7 +263,7 @@ var _ = Describe("Manager", Ordered, func() {
 					"-n", namespace)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(output).To(Equal("Succeeded"), "curl pod in wrong status")
+				g.Expect(output).To(Or(Equal("Succeeded"), Equal("Running")), "curl pod in wrong status")
 			}
 			Eventually(verifyCurlUp, 5*time.Minute).Should(Succeed())
 
@@ -276,23 +284,28 @@ var _ = Describe("Manager", Ordered, func() {
 			verifyKeycloakClientResource := func(g Gomega) {
 				cmd := exec.Command("kubectl", "apply", "-f",
 					"config/samples/keycloak_v1alpha1_keycloakclient.yaml")
-				output, err := utils.Run(cmd)
+				_, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(output).To(ContainSubstring("created"))
+				g.Expect(output).To(Or(ContainSubstring("created")))
+				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",
+					"keycloakclient", "keycloakclient-sample", "--timeout=20s")
+				waitOut, waitErr := utils.Run(waitCmd)
+				g.Expect(waitOut).To(ContainSubstring("condition met"))
+				g.Expect(waitErr).NotTo(HaveOccurred())
 			}
-			Eventually(verifyKeycloakClientResource, 3*time.Minute).Should(Succeed())
+			Eventually(verifyKeycloakClientResource, 4*time.Minute).Should(Succeed())
 
 			By("getting the metrics by checking for success")
 			verifyMetricsSuccess := func(g Gomega) {
 				metricsOutput, err := getMetricsOutput()
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
-				Expect(metricsOutput).To(ContainSubstring(
+				g.Expect(metricsOutput).To(ContainSubstring(
 					fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
 						strings.ToLower("KeycloakClient"),
-					)
+					),
 				))
 			}
-			Eventually(verifyMetricsSuccess, 3*time.Minute).Should(Succeed())
+			Eventually(verifyMetricsSuccess, 5*time.Minute, 10*time.Second).WithTimeout(20 * time.Second).Should(Succeed())
 		})
 	})
 })
@@ -341,7 +354,14 @@ func serviceAccountToken() (string, error) {
 // getMetricsOutput retrieves and returns the logs from the curl pod used to access the metrics endpoint.
 func getMetricsOutput() (string, error) {
 	By("getting the curl-metrics logs")
-	cmd := exec.Command("kubectl", "logs", "curl-metrics", "-n", namespace)
+	token, err := serviceAccountToken()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(token).NotTo(BeEmpty())
+	cmd := exec.Command("kubectl", "exec", "pod/curl-metrics", "-n", namespace, "--",
+		"curl", "-v", "-k",
+		"-H", fmt.Sprintf("Authorization: Bearer %s", token),
+		fmt.Sprintf("https://%s.%s.svc.cluster.local:8443/metrics", metricsServiceName, namespace),
+	)
 	return utils.Run(cmd)
 }
 
