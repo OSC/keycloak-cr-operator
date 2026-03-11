@@ -18,23 +18,31 @@ package controller
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/Nerzal/gocloak/v13"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
+var (
+	Token = &KeycloakToken{}
+)
+
 type KeycloakToken struct {
 	gocloak.JWT
+	lock      sync.RWMutex
 	CreatedAt *time.Time
 }
 
-func KeycloakLogin(ctx context.Context, server GoCloakServer, username, password, realm string, token *KeycloakToken) error {
+func KeycloakLogin(ctx context.Context, server GoCloakServer, username, password, realm string) error {
 	log := logf.FromContext(ctx)
-	if token != nil && token.ExpiresIn != 0 && token.CreatedAt != nil {
-		expirationTime := token.CreatedAt.Add(time.Duration(token.ExpiresIn) * time.Second)
+	Token.lock.Lock()
+	defer Token.lock.Unlock()
+	if Token != nil && Token.ExpiresIn != 0 && Token.CreatedAt != nil {
+		expirationTime := Token.CreatedAt.Add(time.Duration(Token.ExpiresIn) * time.Second)
 		if time.Now().Before(expirationTime) {
-			log.V(1).Info("admin token still valid", "expiresIn", token.ExpiresIn, "createdAt", token.CreatedAt)
+			log.V(1).Info("admin token still valid", "expiresIn", Token.ExpiresIn, "createdAt", Token.CreatedAt)
 			return nil
 		}
 	}
@@ -46,10 +54,10 @@ func KeycloakLogin(ctx context.Context, server GoCloakServer, username, password
 		return err
 	}
 	log.Info("Successfully logged into Keycloak", "username", username, "realm", realm)
-	token.AccessToken = t.AccessToken
-	token.IDToken = t.IDToken
-	token.ExpiresIn = t.ExpiresIn
-	token.CreatedAt = &now
+	Token.AccessToken = t.AccessToken
+	Token.IDToken = t.IDToken
+	Token.ExpiresIn = t.ExpiresIn
+	Token.CreatedAt = &now
 
 	return nil
 }
