@@ -29,18 +29,18 @@ type KeycloakToken struct {
 	CreatedAt *time.Time
 }
 
-func KeycloakLogin(ctx context.Context, client *gocloak.GoCloak, username, password, realm string, token *KeycloakToken) error {
+func KeycloakLogin(ctx context.Context, server GoCloakServer, username, password, realm string, token *KeycloakToken) error {
 	log := logf.FromContext(ctx)
 	if token != nil && token.ExpiresIn != 0 && token.CreatedAt != nil {
 		expirationTime := token.CreatedAt.Add(time.Duration(token.ExpiresIn) * time.Second)
 		if time.Now().Before(expirationTime) {
-			log.Info("admin token still valid", "expiresIn", token.ExpiresIn, "createdAt", token.CreatedAt)
+			log.V(1).Info("admin token still valid", "expiresIn", token.ExpiresIn, "createdAt", token.CreatedAt)
 			return nil
 		}
 	}
 
 	now := time.Now()
-	t, err := client.LoginAdmin(context.Background(), username, password, realm)
+	t, err := server.LoginAdmin(ctx, username, password, realm)
 	if err != nil {
 		log.Error(err, "Failed to login to Keycloak", "username", username, "realm", realm)
 		return err
