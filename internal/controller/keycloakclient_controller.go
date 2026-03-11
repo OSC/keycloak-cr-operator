@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -54,9 +55,10 @@ type GoCloakServer interface {
 // KeycloakClientReconciler reconciles a KeycloakClient object
 type KeycloakClientReconciler struct {
 	runtimeclient.Client
-	Scheme *runtime.Scheme
-	Server GoCloakServer
-	Config *KeycloakConfig
+	Scheme            *runtime.Scheme
+	Server            GoCloakServer
+	SecretWaitTimeout string
+	Config            *KeycloakConfig
 }
 
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients,verbs=get;list;watch;create;update;patch;delete
@@ -283,15 +285,47 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 	secretKey := keycloakClient.Spec.ClientSecretRef.Key
 	secret := &corev1.Secret{}
 	log.V(1).Info("Get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "secret", secretName, "key", secretKey)
-	err := r.Get(ctx, types.NamespacedName{Name: secretName, Namespace: keycloakClient.Namespace}, secret)
+
+	// Parse the timeout duration from SecretWaitTimeout
+	timeoutDuration, err := time.ParseDuration(r.SecretWaitTimeout)
 	if err != nil {
+		log.Error(err, "Failed to parse SecretWaitTimeout", "timeout", r.SecretWaitTimeout)
 		return "", err
 	}
-	clientSecret, found := secret.Data[secretKey]
-	if !found {
-		return "", fmt.Errorf("unable to find secret key %s in secret %s", secretKey, secretName)
+
+	// Set up retry logic with timeout
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeoutDuration)
+	defer cancel()
+
+	// Retry until the secret is found or timeout occurs
+	for {
+		err := r.Get(ctxWithTimeout, types.NamespacedName{Name: secretName, Namespace: keycloakClient.Namespace}, secret)
+		if err == nil {
+			// Secret found successfully
+			clientSecret, found := secret.Data[secretKey]
+			if !found {
+				return "", fmt.Errorf("unable to find secret key %s in secret %s", secretKey, secretName)
+			}
+			return string(clientSecret), nil
+		}
+
+		// Check if the error is "not found" - if so, retry
+		if apierrors.IsNotFound(err) {
+			// Check if we've timed out
+			select {
+			case <-ctxWithTimeout.Done():
+				return "", fmt.Errorf("timed out waiting for secret %s to become available", secretName)
+			default:
+				// Not timed out yet, continue with retry
+				log.V(1).Info("Secret not found, retrying", "namespace", keycloakClient.Namespace, "secret", secretName, "timeout", r.SecretWaitTimeout)
+				time.Sleep(1 * time.Second) // Wait 1 second before retrying
+				continue
+			}
+		} else {
+			// Some other error occurred, return it
+			return "", err
+		}
 	}
-	return string(clientSecret), nil
 }
 
 func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {

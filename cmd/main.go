@@ -59,7 +59,7 @@ func init() {
 // nolint:gocyclo
 func main() {
 	var keycloakUrl, keycloakAdminUsername, keycloakAdminPassword, keycloakAdminRealm string
-	var keycloakDefaultRealm, keycloakClientIDPrefix string
+	var keycloakDefaultRealm, keycloakClientIDPrefix, secretWaitTimeout string
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
@@ -75,6 +75,8 @@ func main() {
 	flag.StringVar(&keycloakDefaultRealm, "keycloak-default-realm", "", "The Keycloak default realm")
 	flag.StringVar(&keycloakClientIDPrefix, "keycloak-client-id-prefix", "kubernetes",
 		"The prefix used when creating Keycloak client ID")
+	flag.StringVar(&secretWaitTimeout, "secret-wait-timeout", "10s",
+		"The time to wait for secrets to be available when needed for a custom resource")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -207,8 +209,9 @@ func main() {
 	}
 
 	reconciler := &controller.KeycloakClientReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		SecretWaitTimeout: secretWaitTimeout,
 		Config: &controller.KeycloakConfig{
 			AdminUsername:  keycloakAdminUsername,
 			AdminPassword:  keycloakAdminPassword,
