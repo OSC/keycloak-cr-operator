@@ -25,6 +25,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -287,7 +288,8 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
 				Expect(metricsOutput).To(ContainSubstring(
 					fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
-					strings.ToLower("KeycloakClient"),
+						strings.ToLower("KeycloakClient"),
+					)
 				))
 			}
 			Eventually(verifyMetricsSuccess, 3*time.Minute).Should(Succeed())
