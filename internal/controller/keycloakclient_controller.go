@@ -26,10 +26,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 
@@ -64,10 +66,6 @@ type KeycloakClientReconciler struct {
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
-// TODO(user): Modify the Reconcile function to compare the state specified by
-// the KeycloakClient object against the actual cluster state, and then
-// perform operations to make the cluster state reflect the state specified by
-// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/reconcile
@@ -93,33 +91,20 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Let's just set the status as Unknown when no status is available
 	if len(keycloakClient.Status.Conditions) == 0 {
-		log.V(1).Info("Add KeycloakClient status of reconciling", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-		meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+		err := r.setStatus(ctx, keycloakClient, metav1.Condition{
 			Type:    typeAvailableKeycloakClient,
 			Status:  metav1.ConditionUnknown,
 			Reason:  "Reconciling",
 			Message: "Starting reconciliation",
 		})
-		log.V(1).Info("Update KeycloakClient status with reconciling", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-		if err = r.Status().Update(ctx, keycloakClient); err != nil {
-			log.Error(err, "Failed to update keycloakClient status")
-			return ctrl.Result{}, err
-		}
-
-		// Let's re-fetch the memcached Custom Resource after updating the status
-		// so that we have the latest state of the resource on the cluster and we will avoid
-		// raising the error "the object has been modified, please apply
-		// your changes to the latest version and try again" which would re-trigger the reconciliation
-		// if we try to update it again in the following operations
-		if err := r.Get(ctx, req.NamespacedName, keycloakClient); err != nil {
-			log.Error(err, "Failed to re-fetch keycloakClient")
+		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
 
 	secret, err := r.getSecret(ctx, keycloakClient)
 	if err != nil {
-		meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 			Type:    typeAvailableKeycloakClient,
 			Status:  metav1.ConditionUnknown,
 			Reason:  "Reconciling",
@@ -132,17 +117,26 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	delete, err := r.handleFinalizer(ctx, keycloakClient, gocloakClient)
 	if err != nil {
-		meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+		log.Error(err, "failed to handle finalizer")
+		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 			Type:    typeAvailableKeycloakClient,
 			Status:  metav1.ConditionUnknown,
 			Reason:  "Reconciling",
 			Message: "failed to handle finalizer",
 		})
-		log.Error(err, "failed to handle finalizer")
 		return ctrl.Result{}, err
 	}
 	if delete {
 		return ctrl.Result{}, nil
+	}
+	// Let's re-fetch the Custom Resource after updating the status
+	// so that we have the latest state of the resource on the cluster and we will avoid
+	// raising the error "the object has been modified, please apply
+	// your changes to the latest version and try again" which would re-trigger the reconciliation
+	// if we try to update it again in the following operations
+	if err := r.Get(ctx, req.NamespacedName, keycloakClient); err != nil {
+		log.Error(err, "Failed to re-fetch keycloakClient")
+		return ctrl.Result{}, err
 	}
 
 	// Check if the client exists in Keycloak and create/update if needed
@@ -162,7 +156,9 @@ func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloak
 		if !controllerutil.ContainsFinalizer(keycloakClient, clientFinalizerName) {
 			ok := controllerutil.AddFinalizer(keycloakClient, clientFinalizerName)
 			log.Info("Add Finalizer", "name", clientFinalizerName, "ok", ok)
-			return false, r.Update(ctx, keycloakClient)
+			return false, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.Update(ctx, keycloakClient)
+			})
 		}
 	} else {
 		// remove finalizer in case of deletion
@@ -172,10 +168,34 @@ func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloak
 			}
 			ok := controllerutil.RemoveFinalizer(keycloakClient, clientFinalizerName)
 			log.Info("Remove Finalizer", "name", clientFinalizerName, "ok", ok)
-			return true, r.Update(ctx, keycloakClient)
+			return true, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+				return r.Update(ctx, keycloakClient)
+			})
 		}
 	}
 	return false, nil
+}
+
+func (r *KeycloakClientReconciler) setStatus(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, condition metav1.Condition) error {
+	log := logf.FromContext(ctx)
+	namespacedName := types.NamespacedName{Name: keycloakClient.Name, Namespace: keycloakClient.Namespace}
+	// Re-fetch object to avoid "the object has been modified" errors
+	if err := r.Get(ctx, namespacedName, keycloakClient); err != nil {
+		log.Error(err, "Failed to re-fetch keycloakClient")
+		return err
+	}
+	log.V(1).Info("Set KeycloakClient status", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
+		"status", condition.Status, "message", condition.Message)
+	meta.SetStatusCondition(&keycloakClient.Status.Conditions, condition)
+	log.V(1).Info("Updating KeycloakClient with status", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return r.Status().Update(ctx, keycloakClient)
+	})
+	if err != nil {
+		log.Error(err, "Failed to update KeycloakClient status")
+		return err
+	}
+	return nil
 }
 
 // ensureKeycloakClient checks if the client exists in Keycloak and creates/updates it if needed
@@ -214,7 +234,7 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 		_, err = r.Server.CreateClient(ctx, Token.AccessToken, realm, *gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to create Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
-			meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionUnknown,
 				Reason:  "Reconciling",
@@ -228,7 +248,7 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 		err = r.Server.UpdateClient(ctx, Token.AccessToken, realm, *gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to update Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
-			meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionUnknown,
 				Reason:  "Reconciling",
@@ -239,16 +259,13 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 		log.Info("Successfully updated Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
 	}
 
-	meta.SetStatusCondition(&keycloakClient.Status.Conditions, metav1.Condition{
+	err = r.setStatus(ctx, keycloakClient, metav1.Condition{
 		Type:    typeAvailableKeycloakClient,
 		Status:  metav1.ConditionTrue,
 		Reason:  "Successful",
 		Message: "Keycloak client processed successfully",
 	})
-
-	err = r.Status().Update(ctx, keycloakClient)
 	if err != nil {
-		log.Error(err, "Failed to update KeycloakClient status")
 		return err
 	}
 
@@ -309,5 +326,6 @@ func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, key
 func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keycloakv1alpha1.KeycloakClient{}).
+		WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }
