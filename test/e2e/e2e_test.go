@@ -279,7 +279,7 @@ var _ = Describe("Manager", Ordered, func() {
 
 		// +kubebuilder:scaffold:e2e-webhooks-checks
 
-		It("should create custom resources", func() {
+		It("should handle custom resources", func() {
 			By("Apply custom KeycloakClient resource from samples")
 			verifyKeycloakClientResource := func(g Gomega) {
 				cmd := exec.Command("kubectl", "apply", "-f",
@@ -316,6 +316,17 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
 			}
 			Eventually(verifyClientExists, 3*time.Minute).Should(Succeed())
+			By("Client deleted from Keycloak")
+			verifyKeycloakClientDelete := func(g Gomega) {
+				cmd := exec.Command("kubectl", "delete", "-f",
+					"config/samples/keycloak_v1alpha1_keycloakclient.yaml")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(Or(ContainSubstring("deleted")))
+				client := getKeycloakClient("keycloakclient-sample", "master")
+				g.Expect(client).To(BeNil(), "keycloak client still present")
+			}
+			Eventually(verifyKeycloakClientDelete, 3*time.Minute).Should(Succeed())
 		})
 	})
 })
