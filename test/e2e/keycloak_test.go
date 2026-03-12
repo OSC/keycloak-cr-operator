@@ -1,3 +1,6 @@
+//go:build e2e
+// +build e2e
+
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -32,13 +35,13 @@ import (
 var (
 	keycloakURL   = fmt.Sprintf("http://localhost:%s", utils.KeycloakPort)
 	gocloakClient = gocloak.NewClient(keycloakURL)
-	logger        = zap.New(zap.UseDevMode(true))
 )
 
 func keycloakLogin() {
 	By("Login to Keycloak")
 
 	ctx := context.Background()
+	logger := zap.New(zap.UseDevMode(true))
 	ctrl.SetLogger(logger)
 
 	// Create KeycloakConfig struct based on parameters
@@ -50,9 +53,8 @@ func keycloakLogin() {
 		ClientIDPrefix: "kubernetes",
 	}
 
-	// Call the existing KeycloakLogin function from the controller package
-	_ = controller.KeycloakLogin(ctx, gocloakClient, config)
-	//Expect(err).NotTo(HaveOccurred(), "Failed to login to Keycloak")
+	err := controller.KeycloakLogin(ctx, gocloakClient, config)
+	Expect(err).NotTo(HaveOccurred(), "Failed to login to Keycloak")
 }
 
 func getKeycloakClient(clientID, realm string) *gocloak.Client {
