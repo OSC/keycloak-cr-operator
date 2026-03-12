@@ -276,10 +276,14 @@ func (k *KeycloakClient) GetClient(prefix string, clientSecret string) *gocloak.
 		client.ID = k.Spec.ID
 	}
 	attributes := make(map[string]string)
-	attributes["login_theme"] = *k.Spec.LoginTheme
+	if k.Spec.LoginTheme != nil && *k.Spec.LoginTheme != "" {
+		attributes["login_theme"] = *k.Spec.LoginTheme
+	}
+	if len(attributes) > 0 {
+		client.Attributes = &attributes
+	}
 
 	client.AdminURL = k.Spec.AdminURL
-	client.Attributes = &attributes
 	client.AuthorizationServicesEnabled = k.Spec.AuthorizationServicesEnabled
 	client.BaseURL = k.Spec.BaseURL
 	client.BearerOnly = k.Spec.BearerOnly

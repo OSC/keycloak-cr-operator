@@ -203,9 +203,9 @@ func (r *KeycloakClientReconciler) setStatus(ctx context.Context, keycloakClient
 // ensureKeycloakClient checks if the client exists in Keycloak and creates/updates it if needed
 func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
-	realm := *keycloakClient.Spec.Realm
-	if realm == "" {
-		realm = r.Config.DefaultRealm
+	realm := r.Config.DefaultRealm
+	if keycloakClient.Spec.Realm != nil && *keycloakClient.Spec.Realm != "" {
+		realm = *keycloakClient.Spec.Realm
 	}
 	log.V(1).Info("Ensure Keycloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", gocloakClient.ClientID, "realm", realm)
 
@@ -330,9 +330,9 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 
 func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
-	realm := *keycloakClient.Spec.Realm
-	if realm == "" {
-		realm = r.Config.DefaultRealm
+	realm := r.Config.DefaultRealm
+	if keycloakClient.Spec.Realm != nil && *keycloakClient.Spec.Realm != "" {
+		realm = *keycloakClient.Spec.Realm
 	}
 
 	log.V(1).Info("Keycloak Login", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
