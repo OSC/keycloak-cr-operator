@@ -192,13 +192,13 @@ type KeycloakClientSpec struct {
 
 	// The client's login theme
 	// +optional
-	LoginTheme string `json:"loginTheme,omitempty"`
+	LoginTheme *string `json:"loginTheme,omitempty"`
 
 	// END ATTRIBUTES
 
 	// The Realm for the Keycloak Client
 	// +optional
-	Realm string `json:"realm,omitempty"`
+	Realm *string `json:"realm,omitempty"`
 
 	// Reference to the secret holding the ClientSecret
 	// +optional
@@ -276,7 +276,7 @@ func (k *KeycloakClient) GetClient(prefix string, clientSecret string) *gocloak.
 		client.ID = k.Spec.ID
 	}
 	attributes := make(map[string]string)
-	attributes["login_theme"] = k.Spec.LoginTheme
+	attributes["login_theme"] = *k.Spec.LoginTheme
 
 	client.AdminURL = k.Spec.AdminURL
 	client.Attributes = &attributes

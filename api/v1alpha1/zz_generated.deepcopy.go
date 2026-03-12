@@ -263,6 +263,16 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 			copy(*out, *in)
 		}
 	}
+	if in.LoginTheme != nil {
+		in, out := &in.LoginTheme, &out.LoginTheme
+		*out = new(string)
+		**out = **in
+	}
+	if in.Realm != nil {
+		in, out := &in.Realm, &out.Realm
+		*out = new(string)
+		**out = **in
+	}
 	if in.ClientSecretRef != nil {
 		in, out := &in.ClientSecretRef, &out.ClientSecretRef
 		*out = new(v1.SecretKeySelector)
