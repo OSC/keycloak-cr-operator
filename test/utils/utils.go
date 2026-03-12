@@ -31,11 +31,14 @@ const (
 	certmanagerVersion = "v1.19.4"
 	certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
 
-	keycloakChartRepo    = "https://charts.bitnami.com/bitnami"
-	keycloakChartVersion = "21.2.0"
-	keycloakHelmName     = "keycloak"
-	keycloakNamespace    = "keycloak"
-	keycloakPod          = "pod/keycloak-0"
+	keycloakChartRepo     = "https://charts.bitnami.com/bitnami"
+	keycloakChartVersion  = "21.2.0"
+	keycloakHelmName      = "keycloak"
+	keycloakNamespace     = "keycloak"
+	keycloakPod           = "pod/keycloak-0"
+	KeycloakPort          = "30080"
+	KeycloakAdminUsername = "admin"
+	KeycloakAdminPassword = "secret"
 
 	defaultKindBinary  = "kind"
 	defaultKindCluster = "kind"
@@ -162,6 +165,9 @@ func InstallKeycloak() error {
 	cmd = exec.Command("helm", "install", keycloakHelmName, "bitnami/keycloak", "-n", keycloakNamespace,
 		"--version", keycloakChartVersion,
 		"-f", "test/e2e/keycloak-values.yaml",
+		"--set", fmt.Sprintf("service.nodePorts.http=%s", KeycloakPort),
+		"--set", fmt.Sprintf("auth.adminUser=%s", KeycloakAdminUsername),
+		"--set", fmt.Sprintf("auth.adminPassword=%s", KeycloakAdminPassword),
 	)
 	if _, err := Run(cmd); err != nil {
 		return err

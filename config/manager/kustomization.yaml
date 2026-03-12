@@ -5,6 +5,10 @@ secretGenerator:
   - keycloak-admin-username=admin
   - keycloak-admin-password=secret
   name: keycloak-cr-operator
+configMapGenerator:
+- literals:
+  - KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local
+  name: keycloak-cr-operator
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:

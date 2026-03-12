@@ -293,7 +293,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(waitOut).To(ContainSubstring("condition met"))
 				g.Expect(waitErr).NotTo(HaveOccurred())
 			}
-			Eventually(verifyKeycloakClientResource, 4*time.Minute).Should(Succeed())
+			Eventually(verifyKeycloakClientResource, 3*time.Minute).Should(Succeed())
 
 			By("getting the metrics by checking for success")
 			verifyMetricsSuccess := func(g Gomega) {
@@ -305,7 +305,17 @@ var _ = Describe("Manager", Ordered, func() {
 					),
 				))
 			}
-			Eventually(verifyMetricsSuccess, 5*time.Minute, 10*time.Second).WithTimeout(20 * time.Second).Should(Succeed())
+			Eventually(verifyMetricsSuccess, 3*time.Minute).Should(Succeed())
+			By("Client exists in Keycloak")
+			verifyClientExists := func(g Gomega) {
+				client := getKeycloakClient("keycloakclient-sample", "master")
+				g.Expect(client).To(Not(BeNil()), "expected client not found")
+				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
+				g.Expect(*client.Secret).To(Equal("sample-secret"))
+				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
+				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
+			}
+			Eventually(verifyClientExists, 3*time.Minute).Should(Succeed())
 		})
 	})
 })

@@ -261,7 +261,7 @@ func init() {
 	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
 }
 
-func (k *KeycloakClient) GetClient(prefix string, clientSecret string) *gocloak.Client {
+func (k *KeycloakClient) GetClient(prefix string, secret string) *gocloak.Client {
 	client := &gocloak.Client{}
 
 	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
@@ -288,7 +288,6 @@ func (k *KeycloakClient) GetClient(prefix string, clientSecret string) *gocloak.
 	client.BaseURL = k.Spec.BaseURL
 	client.BearerOnly = k.Spec.BearerOnly
 	client.ClientAuthenticatorType = k.Spec.ClientAuthenticatorType
-	client.ClientSecret = &clientSecret
 	client.ConsentRequired = k.Spec.ConsentRequired
 	client.DefaultClientScopes = k.Spec.DefaultClientScopes
 	client.DefaultRoles = k.Spec.DefaultRoles
@@ -308,6 +307,7 @@ func (k *KeycloakClient) GetClient(prefix string, clientSecret string) *gocloak.
 	client.RedirectURIs = k.Spec.RedirectURIs
 	client.RegistrationAccessToken = k.Spec.RegistrationAccessToken
 	client.RootURL = k.Spec.RootURL
+	client.Secret = &secret
 	client.ServiceAccountsEnabled = k.Spec.ServiceAccountsEnabled
 	client.StandardFlowEnabled = k.Spec.StandardFlowEnabled
 	client.SurrogateAuthRequired = k.Spec.SurrogateAuthRequired

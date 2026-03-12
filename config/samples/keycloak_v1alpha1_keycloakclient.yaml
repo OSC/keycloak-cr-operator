@@ -11,6 +11,13 @@ spec:
   clientSecretRef:
     name: keycloak-sample
     key: client-secret
+  redirectUris:
+    - https://example.com/*
+    - https://example.test.com/*
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
 ---
 apiVersion: v1
 kind: Secret
@@ -20,4 +27,4 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: keycloak-sample
 data:
-  client-secret: QUNGRDEzREItN0EwQy00ODBGLThEOTgtOEUzQkE0RTREQThG
+  client-secret: c2FtcGxlLXNlY3JldA==

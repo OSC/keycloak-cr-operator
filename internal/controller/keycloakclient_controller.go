@@ -64,7 +64,7 @@ type KeycloakClientReconciler struct {
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/finalizers,verbs=update
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -104,15 +104,21 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	secret, err := r.getSecret(ctx, keycloakClient)
-	if err != nil {
-		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
-			Type:    typeAvailableKeycloakClient,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "Reconciling",
-			Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.Spec.ClientSecretRef.Name),
-		})
-		log.Error(err, "Unable to get secret")
+	var secret string
+	if keycloakClient.Spec.ClientSecretRef == nil {
+		log.V(1).Info("Secret not defined", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	} else {
+		secret, err = r.getSecret(ctx, keycloakClient)
+		if err != nil {
+			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
+				Type:    typeAvailableKeycloakClient,
+				Status:  metav1.ConditionFalse,
+				Reason:  "Failed",
+				Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.Spec.ClientSecretRef.Name),
+			})
+			log.Error(err, "Unable to get secret")
+			return ctrl.Result{}, err
+		}
 	}
 	log.V(1).Info("Get gocloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
 	gocloakClient := keycloakClient.GetClient(r.Config.ClientIDPrefix, secret)
@@ -122,8 +128,8 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, "failed to handle finalizer")
 		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 			Type:    typeAvailableKeycloakClient,
-			Status:  metav1.ConditionUnknown,
-			Reason:  "Reconciling",
+			Status:  metav1.ConditionFalse,
+			Reason:  "Failed",
 			Message: "failed to handle finalizer",
 		})
 		return ctrl.Result{}, err
@@ -238,8 +244,8 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 			log.Error(err, "Failed to create Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
-				Status:  metav1.ConditionUnknown,
-				Reason:  "Reconciling",
+				Status:  metav1.ConditionFalse,
+				Reason:  "Failed",
 				Message: "Failed to create Keycloak client",
 			})
 			return err
@@ -252,8 +258,8 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 			log.Error(err, "Failed to update Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
-				Status:  metav1.ConditionUnknown,
-				Reason:  "Reconciling",
+				Status:  metav1.ConditionFalse,
+				Reason:  "Failed",
 				Message: "Failed to update Keycloak client",
 			})
 			return err
@@ -277,14 +283,9 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (string, error) {
 	log := logf.FromContext(ctx)
 	log.V(1).Info("Begin get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	if keycloakClient.Spec.ClientSecretRef == nil {
-		log.V(1).Info("Secret not defined", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-		return "", nil
-	}
-	secretName := keycloakClient.Spec.ClientSecretRef.Name
-	secretKey := keycloakClient.Spec.ClientSecretRef.Key
 	secret := &corev1.Secret{}
-	log.V(1).Info("Get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "secret", secretName, "key", secretKey)
+	log.V(1).Info("Get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
+		"secret", keycloakClient.Spec.ClientSecretRef.Name, "key", keycloakClient.Spec.ClientSecretRef.Key)
 
 	// Set up retry logic with timeout
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, *r.SecretWaitTimeout)
@@ -292,12 +293,12 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 
 	// Retry until the secret is found or timeout occurs
 	for {
-		err := r.Get(ctxWithTimeout, types.NamespacedName{Name: secretName, Namespace: keycloakClient.Namespace}, secret)
+		err := r.Get(ctxWithTimeout, types.NamespacedName{Name: keycloakClient.Spec.ClientSecretRef.Name, Namespace: keycloakClient.Namespace}, secret)
 		if err == nil {
 			// Secret found successfully
-			clientSecret, found := secret.Data[secretKey]
+			clientSecret, found := secret.Data[keycloakClient.Spec.ClientSecretRef.Key]
 			if !found {
-				return "", fmt.Errorf("unable to find secret key %s in secret %s", secretKey, secretName)
+				return "", fmt.Errorf("unable to find secret key %s in secret %s", keycloakClient.Spec.ClientSecretRef.Key, keycloakClient.Spec.ClientSecretRef.Name)
 			}
 			return string(clientSecret), nil
 		}
@@ -307,10 +308,10 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 			// Check if we've timed out
 			select {
 			case <-ctxWithTimeout.Done():
-				return "", fmt.Errorf("timed out waiting for secret %s to become available", secretName)
+				return "", fmt.Errorf("timed out waiting for secret %s to become available", keycloakClient.Spec.ClientSecretRef.Name)
 			default:
 				// Not timed out yet, continue with retry
-				log.V(1).Info("Secret not found, retrying", "namespace", keycloakClient.Namespace, "secret", secretName, "timeout", r.SecretWaitTimeout)
+				log.V(1).Info("Secret not found, retrying", "namespace", keycloakClient.Namespace, "secret", keycloakClient.Spec.ClientSecretRef.Name, "timeout", r.SecretWaitTimeout)
 				time.Sleep(1 * time.Second) // Wait 1 second before retrying
 				continue
 			}

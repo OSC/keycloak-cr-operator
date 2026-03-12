@@ -61,13 +61,16 @@ spec:
       - command:
         - /manager
         args:
-          - --keycloak-url=http://keycloak.keycloak.svc.cluster.local
+          - --keycloak-url=$(KEYCLOAK_URL)
           - --keycloak-admin-username=$(KEYCLOAK_ADMIN_USERNAME)
           - --keycloak-admin-password=$(KEYCLOAK_ADMIN_PASSWORD)
           - --leader-elect
           - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
+        envFrom:
+        - configMapRef:
+            name: keycloak-cr-operator
         env:
         - name: KEYCLOAK_ADMIN_USERNAME
           valueFrom:

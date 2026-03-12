@@ -107,5 +107,3 @@ require (
 	sigs.k8s.io/structured-merge-diff/v6 v6.3.2-0.20260122202528-d9cc6641c482 // indirect
 	sigs.k8s.io/yaml v1.6.0 // indirect
 )
-
-replace github.com/Nerzal/gocloak/v13 => github.com/osc/gocloak/v13 v13.0.0-20260310214620-8d192c9873de

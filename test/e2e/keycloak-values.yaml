@@ -3,9 +3,6 @@ image:
 postgresql:
   image:
     repository: bitnamilegacy/postgresql
-auth:
-  adminUser: admin
-  adminPassword: secret
 resourcesPreset: large
 extraEnvVars:
   - name: KEYCLOAK_LOG_LEVEL
@@ -14,3 +11,7 @@ extraEnvVars:
     value: 'true'
   - name: KC_HTTP_ACCESS_LOG_ENABLED
     value: 'true'
+# Use NodePort so that Kind can forward the port to the host and make it accessible
+# to e2e tests
+service:
+  type: NodePort
