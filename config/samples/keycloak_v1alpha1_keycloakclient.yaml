@@ -8,3 +8,16 @@ metadata:
 spec:
   clientID: keycloakclient-sample
   realm: master
+  clientSecretRef:
+    name: keycloak-sample
+    key: client-secret
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-cr-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: keycloak-sample
+data:
+  client-secret: QUNGRDEzREItN0EwQy00ODBGLThEOTgtOEUzQkE0RTREQThG
