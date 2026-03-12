@@ -57,7 +57,7 @@ type KeycloakClientReconciler struct {
 	runtimeclient.Client
 	Scheme            *runtime.Scheme
 	Server            GoCloakServer
-	SecretWaitTimeout string
+	SecretWaitTimeout *time.Duration
 	Config            *KeycloakConfig
 }
 
@@ -286,15 +286,8 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 	secret := &corev1.Secret{}
 	log.V(1).Info("Get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "secret", secretName, "key", secretKey)
 
-	// Parse the timeout duration from SecretWaitTimeout
-	timeoutDuration, err := time.ParseDuration(r.SecretWaitTimeout)
-	if err != nil {
-		log.Error(err, "Failed to parse SecretWaitTimeout", "timeout", r.SecretWaitTimeout)
-		return "", err
-	}
-
 	// Set up retry logic with timeout
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, timeoutDuration)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, *r.SecretWaitTimeout)
 	defer cancel()
 
 	// Retry until the secret is found or timeout occurs

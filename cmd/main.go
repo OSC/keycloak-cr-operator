@@ -21,6 +21,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -114,6 +115,13 @@ func main() {
 	}
 	if keycloakAdminPassword == "" {
 		setupLog.Error(fmt.Errorf("keycloak-admin-password is required"), "Missing required flag")
+		os.Exit(1)
+	}
+
+	// Validate flags
+	secretWaitDuration, err := time.ParseDuration(secretWaitTimeout)
+	if err != nil {
+		setupLog.Error(err, "Failed to parse SecretWaitTimeout", "timeout", secretWaitTimeout)
 		os.Exit(1)
 	}
 
@@ -211,7 +219,7 @@ func main() {
 	reconciler := &controller.KeycloakClientReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
-		SecretWaitTimeout: secretWaitTimeout,
+		SecretWaitTimeout: &secretWaitDuration,
 		Config: &controller.KeycloakConfig{
 			AdminUsername:  keycloakAdminUsername,
 			AdminPassword:  keycloakAdminPassword,
