@@ -29,10 +29,13 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 
@@ -42,6 +45,7 @@ import (
 const (
 	clientFinalizerName         = "client.keycloak.osc.edu/finalizer"
 	typeAvailableKeycloakClient = "Available"
+	keycloakClientSecretLabel   = "keycloak.osc.edu/keycloakclient"
 )
 
 type GoCloakServer interface {
@@ -104,24 +108,8 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	var secret string
-	if keycloakClient.Spec.ClientSecretRef == nil {
-		log.V(1).Info("Secret not defined", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	} else {
-		secret, err = r.getSecret(ctx, keycloakClient)
-		if err != nil {
-			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
-				Type:    typeAvailableKeycloakClient,
-				Status:  metav1.ConditionFalse,
-				Reason:  "Failed",
-				Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.Spec.ClientSecretRef.Name),
-			})
-			log.Error(err, "Unable to get secret")
-			return ctrl.Result{}, err
-		}
-	}
 	log.V(1).Info("Get gocloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	gocloakClient := keycloakClient.GetClient(r.Config.ClientIDPrefix, secret)
+	gocloakClient := keycloakClient.GetClient(r.Config.ClientIDPrefix, "")
 
 	delete, err := r.handleFinalizer(ctx, keycloakClient, gocloakClient)
 	if err != nil {
@@ -146,6 +134,24 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		log.Error(err, "Failed to re-fetch keycloakClient")
 		return ctrl.Result{}, err
 	}
+
+	var secret string
+	if keycloakClient.Spec.ClientSecretRef == nil {
+		log.V(1).Info("Secret not defined", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	} else {
+		secret, err = r.getSecret(ctx, keycloakClient)
+		if err != nil {
+			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
+				Type:    typeAvailableKeycloakClient,
+				Status:  metav1.ConditionFalse,
+				Reason:  "Failed",
+				Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.Spec.ClientSecretRef.Name),
+			})
+			log.Error(err, "Unable to get secret")
+			return ctrl.Result{}, err
+		}
+	}
+	gocloakClient.Secret = &secret
 
 	// Check if the client exists in Keycloak and create/update if needed
 	err = r.ensureKeycloakClient(ctx, keycloakClient, gocloakClient)
@@ -352,8 +358,41 @@ func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, key
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	mapSecretToKeycloakClient := func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+		log := logf.FromContext(ctx)
+		log.V(1).Info("Entered manager check for secret")
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			log.V(1).Info("Return manager secret check, not a secret")
+			return []reconcile.Request{}
+		}
+		labels := secret.GetLabels()
+		if labels == nil {
+			log.V(1).Info("Return manager secret check, no labels")
+			return []reconcile.Request{}
+		}
+		keycloakClientName, exists := labels[keycloakClientSecretLabel]
+		if !exists {
+			log.V(1).Info("Return manager secret check, keycloakclient secret label missing")
+			return []reconcile.Request{}
+		}
+		log.V(1).Info("Trigger KeycloakClient reconcile from secret",
+			"keycloakclient", keycloakClientName, "secret", secret.Name, "namespace", secret.Namespace)
+		return []reconcile.Request{
+			{
+				NamespacedName: types.NamespacedName{
+					Name:      keycloakClientName,
+					Namespace: secret.Namespace,
+				},
+			},
+		}
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&keycloakv1alpha1.KeycloakClient{}).
-		WithEventFilter(predicate.GenerationChangedPredicate{}).
+		For(&keycloakv1alpha1.KeycloakClient{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(mapSecretToKeycloakClient),
+		).
 		Complete(r)
 }

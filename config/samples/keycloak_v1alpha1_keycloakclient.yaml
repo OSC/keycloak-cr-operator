@@ -25,6 +25,7 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak-cr-operator
     app.kubernetes.io/managed-by: kustomize
+    keycloak.osc.edu/keycloakclient: keycloakclient-sample
   name: keycloak-sample
 data:
   client-secret: c2FtcGxlLXNlY3JldA==
