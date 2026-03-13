@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-    http://www.apache.org/licenses/LICENSE-2.0
+	http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -77,8 +77,12 @@ var _ = Describe("Manager", Ordered, func() {
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
 	// and deleting the namespace.
 	AfterAll(func() {
+		By("cleanup custom resources")
+		cmd := exec.Command("kubectl", "delete", "keycloakclient", "--all", "--force")
+		_, _ = utils.Run(cmd)
+
 		By("cleaning up the curl pod for metrics")
-		cmd := exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
+		cmd = exec.Command("kubectl", "delete", "pod", "curl-metrics", "-n", namespace)
 		_, _ = utils.Run(cmd)
 
 		By("undeploying the controller-manager")
@@ -91,6 +95,10 @@ var _ = Describe("Manager", Ordered, func() {
 
 		By("removing manager namespace")
 		cmd = exec.Command("kubectl", "delete", "ns", namespace)
+		_, _ = utils.Run(cmd)
+
+		By("removing metrics clusterrolebinding")
+		cmd = exec.Command("kubectl", "delete", "clusterrolebinding", metricsRoleBindingName)
 		_, _ = utils.Run(cmd)
 	})
 
@@ -226,7 +234,13 @@ var _ = Describe("Manager", Ordered, func() {
 							"image": "curlimages/curl:latest",
 							"command": ["/bin/sh", "-c"],
 							"args": [
-								"for i in $(seq 1 30); do curl -v -k -H 'Authorization: Bearer %s' https://%s.%s.svc.cluster.local:8443/metrics && exit 0 || sleep 2; done; exit 1"
+								"sleep 600"
+							],
+							"env": [
+								{
+									"name": "TOKEN",
+									"value": "%s"
+								}
 							],
 							"securityContext": {
 								"readOnlyRootFilesystem": true,
@@ -243,7 +257,7 @@ var _ = Describe("Manager", Ordered, func() {
 						}],
 						"serviceAccountName": "%s"
 					}
-				}`, token, metricsServiceName, namespace, serviceAccountName))
+				}`, token, serviceAccountName))
 			_, err = utils.Run(cmd)
 			Expect(err).NotTo(HaveOccurred(), "Failed to create curl-metrics pod")
 
@@ -254,7 +268,7 @@ var _ = Describe("Manager", Ordered, func() {
 					"-n", namespace)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
-				g.Expect(output).To(Equal("Succeeded"), "curl pod in wrong status")
+				g.Expect(output).To(Or(Equal("Succeeded"), Equal("Running")), "curl pod in wrong status")
 			}
 			Eventually(verifyCurlUp, 5*time.Minute).Should(Succeed())
 
@@ -270,15 +284,75 @@ var _ = Describe("Manager", Ordered, func() {
 
 		// +kubebuilder:scaffold:e2e-webhooks-checks
 
-		// TODO: Customize the e2e test suite with scenarios specific to your project.
-		// Consider applying sample/CR(s) and check their status and/or verifying
-		// the reconciliation by using the metrics, i.e.:
-		// metricsOutput, err := getMetricsOutput()
-		// Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
-		// Expect(metricsOutput).To(ContainSubstring(
-		//    fmt.Sprintf(`controller_runtime_reconcile_total{controller="%s",result="success"} 1`,
-		//    strings.ToLower(<Kind>),
-		// ))
+		It("should handle custom resources", func() {
+			By("Apply custom KeycloakClient resource from samples")
+			verifyKeycloakClientResource := func(g Gomega) {
+				cmd := exec.Command("kubectl", "apply", "-f",
+					"config/samples/keycloak_v1alpha1_keycloakclient.yaml")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(Or(ContainSubstring("created")))
+				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",
+					"keycloakclient", "keycloakclient-sample", "--timeout=20s")
+				waitOut, waitErr := utils.Run(waitCmd)
+				g.Expect(waitOut).To(ContainSubstring("condition met"))
+				g.Expect(waitErr).NotTo(HaveOccurred())
+			}
+			Eventually(verifyKeycloakClientResource, 2*time.Minute).Should(Succeed())
+
+			By("getting the metrics by checking for success")
+			verifyMetricsSuccess := func(g Gomega) {
+				metricsOutput, err := getMetricsOutput()
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve logs from curl pod")
+				g.Expect(metricsOutput).To(MatchRegexp(`controller_runtime_reconcile_total\{controller="keycloakclient",result="success"\} [1-9]`))
+			}
+			Eventually(verifyMetricsSuccess, 2*time.Minute).Should(Succeed())
+			By("Client exists in Keycloak")
+			verifyClientExists := func(g Gomega) {
+				client := getKeycloakClient("keycloakclient-sample", "master")
+				g.Expect(client).To(Not(BeNil()), "expected client not found")
+				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
+				g.Expect(*client.Secret).To(Equal("sample-secret"))
+				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
+				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
+			}
+			Eventually(verifyClientExists, 2*time.Minute).Should(Succeed())
+			By("Client updated in Keycloak")
+			verifyClientUpdates := func(g Gomega) {
+				cmd := exec.Command("kubectl", "patch", "keycloakclient", "keycloakclient-sample",
+					"--type", "merge", "-p", "{\"spec\":{\"description\":\"sample\"}}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Patch keycloak client failed: %s", output))
+				secretCmd := exec.Command("kubectl", "patch", "secret", "keycloak-sample",
+					"-p", "{\"stringData\":{\"client-secret\":\"new-secret\"}}")
+				secretOutput, secretErr := utils.Run(secretCmd)
+				g.Expect(secretErr).NotTo(HaveOccurred(), fmt.Sprintf("Patch secret failed: %s", secretOutput))
+				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",
+					"keycloakclient", "keycloakclient-sample", "--timeout=20s")
+				waitOut, waitErr := utils.Run(waitCmd)
+				g.Expect(waitOut).To(ContainSubstring("condition met"))
+				g.Expect(waitErr).NotTo(HaveOccurred())
+				client := getKeycloakClient("keycloakclient-sample", "master")
+				g.Expect(client).To(Not(BeNil()), "expected client not found")
+				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
+				g.Expect(*client.Secret).To(Equal("new-secret"))
+				g.Expect(*client.Description).To(Equal("sample"))
+				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
+				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
+			}
+			Eventually(verifyClientUpdates, 2*time.Minute).Should(Succeed())
+			By("Client deleted from Keycloak")
+			verifyKeycloakClientDelete := func(g Gomega) {
+				cmd := exec.Command("kubectl", "delete", "-f",
+					"config/samples/keycloak_v1alpha1_keycloakclient.yaml")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(Or(ContainSubstring("deleted")))
+				client := getKeycloakClient("keycloakclient-sample", "master")
+				g.Expect(client).To(BeNil(), "keycloak client still present")
+			}
+			Eventually(verifyKeycloakClientDelete, 2*time.Minute).Should(Succeed())
+		})
 	})
 })
 
@@ -326,7 +400,13 @@ func serviceAccountToken() (string, error) {
 // getMetricsOutput retrieves and returns the logs from the curl pod used to access the metrics endpoint.
 func getMetricsOutput() (string, error) {
 	By("getting the curl-metrics logs")
-	cmd := exec.Command("kubectl", "logs", "curl-metrics", "-n", namespace)
+	token, err := serviceAccountToken()
+	Expect(err).NotTo(HaveOccurred())
+	Expect(token).NotTo(BeEmpty())
+	cmd := exec.Command("kubectl", "exec", "pod/curl-metrics", "-n", namespace, "--",
+		"sh", "-c",
+		fmt.Sprintf("curl -v -k -H \"Authorization: Bearer $TOKEN\" https://%s.%s.svc.cluster.local:8443/metrics", metricsServiceName, namespace),
+	)
 	return utils.Run(cmd)
 }
 

@@ -17,6 +17,10 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"fmt"
+
+	"github.com/Nerzal/gocloak/v13"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -33,13 +37,13 @@ type KeycloakClientSpec struct {
 	// +optional
 	AdminURL *string `json:"adminUrl,omitempty"`
 
-	// Attributes is the map of additional attributes
-	// +optional
-	Attributes map[string]string `json:"attributes,omitempty"`
+	// Do not implement attributes, instead populate as needed
+	// Attributes map[string]string `json:"attributes,omitempty"`
 
 	// AuthenticationFlowBindingOverrides is the map of authentication flow binding overrides
+	// TODO: Implement if needed
 	// +optional
-	AuthenticationFlowBindingOverrides map[string]string `json:"authenticationFlowBindingOverrides,omitempty"`
+	// AuthenticationFlowBindingOverrides *map[string]string `json:"authenticationFlowBindingOverrides,omitempty"`
 
 	// AuthorizationServicesEnabled indicates if authorization services are enabled
 	// +kubebuilder:default=false
@@ -66,11 +70,7 @@ type KeycloakClientSpec struct {
 
 	// ClientID is the unique identifier for the client
 	// +optional
-	ClientID string `json:"clientID"`
-
-	// ClientTemplate is the client template
-	// +optional
-	ClientTemplate *string `json:"clientTemplate,omitempty"`
+	ClientID *string `json:"clientID"`
 
 	// ConsentRequired indicates if consent is required
 	// +optional
@@ -78,11 +78,11 @@ type KeycloakClientSpec struct {
 
 	// DefaultClientScopes is the default client scopes
 	// +optional
-	DefaultClientScopes []string `json:"defaultClientScopes,omitempty"`
+	DefaultClientScopes *[]string `json:"defaultClientScopes,omitempty"`
 
 	// DefaultRoles is the default roles
 	// +optional
-	DefaultRoles []string `json:"defaultRoles,omitempty"`
+	DefaultRoles *[]string `json:"defaultRoles,omitempty"`
 
 	// Description is the description of the client
 	// +optional
@@ -116,25 +116,21 @@ type KeycloakClientSpec struct {
 	// +optional
 	ImplicitFlowEnabled *bool `json:"implicitFlowEnabled,omitempty"`
 
-	// ManagementURL is the management URL for the client
-	// +optional
-	ManagementURL *string `json:"managementUrl,omitempty"`
-
 	// Name is the display name for the client
 	// +optional
 	Name *string `json:"name,omitempty"`
 
 	// NodeReRegistrationTimeout is the node re-registration timeout
 	// +optional
-	NodeReRegistrationTimeout *int `json:"nodeReRegistrationTimeout,omitempty"`
+	NodeReRegistrationTimeout *int32 `json:"nodeReRegistrationTimeout,omitempty"`
 
 	// NotBefore is the not before setting
 	// +optional
-	NotBefore *int `json:"notBefore,omitempty"`
+	NotBefore *int32 `json:"notBefore,omitempty"`
 
 	// OptionalClientScopes is the optional client scopes
 	// +optional
-	OptionalClientScopes []string `json:"optionalClientScopes,omitempty"`
+	OptionalClientScopes *[]string `json:"optionalClientScopes,omitempty"`
 
 	// Origin is the origin of the client
 	// +optional
@@ -157,11 +153,11 @@ type KeycloakClientSpec struct {
 
 	// RedirectURIs is the list of valid redirect URIs
 	// +optional
-	RedirectURIs []string `json:"redirectUris"`
+	RedirectURIs *[]string `json:"redirectUris"`
 
-	// RegisteredNodes is the registered nodes
+	// RegisteredNodes is the registered nodes, TODO: Add RegisteredNodes later
 	// +optional
-	RegisteredNodes map[string]int `json:"registeredNodes,omitempty"`
+	// RegisteredNodes *map[string]int `json:"registeredNodes,omitempty"`
 
 	// RegistrationAccessToken is the registration access token
 	// +optional
@@ -188,21 +184,25 @@ type KeycloakClientSpec struct {
 	// +optional
 	SurrogateAuthRequired *bool `json:"surrogateAuthRequired,omitempty"`
 
-	// UseTemplateConfig indicates if template config is used
-	// +optional
-	UseTemplateConfig *bool `json:"useTemplateConfig,omitempty"`
-
-	// UseTemplateMappers indicates if template mappers are used
-	// +optional
-	UseTemplateMappers *bool `json:"useTemplateMappers,omitempty"`
-
-	// UseTemplateScope indicates if template scope is used
-	// +optional
-	UseTemplateScope *bool `json:"useTemplateScope,omitempty"`
-
 	// WebOrigins is the list of valid web origins
 	// +optional
-	WebOrigins []string `json:"webOrigins,omitempty"`
+	WebOrigins *[]string `json:"webOrigins,omitempty"`
+
+	// BEGIN ATTRIBUTES
+
+	// The client's login theme
+	// +optional
+	LoginTheme *string `json:"loginTheme,omitempty"`
+
+	// END ATTRIBUTES
+
+	// The Realm for the Keycloak Client
+	// +optional
+	Realm *string `json:"realm,omitempty"`
+
+	// Reference to the secret holding the ClientSecret
+	// +optional
+	ClientSecretRef *corev1.SecretKeySelector `json:"clientSecretRef,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.
@@ -259,4 +259,59 @@ type KeycloakClientList struct {
 
 func init() {
 	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
+}
+
+func (k *KeycloakClient) GetClient(prefix string, secret string) *gocloak.Client {
+	client := &gocloak.Client{}
+
+	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
+		clientID := fmt.Sprintf("%s-%s-%s", prefix, k.Namespace, k.Name)
+		client.ClientID = &clientID
+	} else {
+		client.ClientID = k.Spec.ClientID
+	}
+	if k.Spec.ID == nil || *k.Spec.ID == "" {
+		client.ID = client.ClientID
+	} else {
+		client.ID = k.Spec.ID
+	}
+	attributes := make(map[string]string)
+	if k.Spec.LoginTheme != nil && *k.Spec.LoginTheme != "" {
+		attributes["login_theme"] = *k.Spec.LoginTheme
+	}
+	if len(attributes) > 0 {
+		client.Attributes = &attributes
+	}
+
+	client.AdminURL = k.Spec.AdminURL
+	client.AuthorizationServicesEnabled = k.Spec.AuthorizationServicesEnabled
+	client.BaseURL = k.Spec.BaseURL
+	client.BearerOnly = k.Spec.BearerOnly
+	client.ClientAuthenticatorType = k.Spec.ClientAuthenticatorType
+	client.ConsentRequired = k.Spec.ConsentRequired
+	client.DefaultClientScopes = k.Spec.DefaultClientScopes
+	client.DefaultRoles = k.Spec.DefaultRoles
+	client.Description = k.Spec.Description
+	client.DirectAccessGrantsEnabled = k.Spec.DirectAccessGrantsEnabled
+	client.Enabled = k.Spec.Enabled
+	client.FrontChannelLogout = k.Spec.FrontChannelLogout
+	client.FullScopeAllowed = k.Spec.FullScopeAllowed
+	client.ImplicitFlowEnabled = k.Spec.ImplicitFlowEnabled
+	client.Name = k.Spec.Name
+	client.NodeReRegistrationTimeout = k.Spec.NodeReRegistrationTimeout
+	client.NotBefore = k.Spec.NotBefore
+	client.OptionalClientScopes = k.Spec.OptionalClientScopes
+	client.Origin = k.Spec.Origin
+	client.Protocol = k.Spec.Protocol
+	client.PublicClient = k.Spec.PublicClient
+	client.RedirectURIs = k.Spec.RedirectURIs
+	client.RegistrationAccessToken = k.Spec.RegistrationAccessToken
+	client.RootURL = k.Spec.RootURL
+	client.Secret = &secret
+	client.ServiceAccountsEnabled = k.Spec.ServiceAccountsEnabled
+	client.StandardFlowEnabled = k.Spec.StandardFlowEnabled
+	client.SurrogateAuthRequired = k.Spec.SurrogateAuthRequired
+	client.WebOrigins = k.Spec.WebOrigins
+
+	return client
 }

@@ -19,12 +19,17 @@ package main
 import (
 	"crypto/tls"
 	"flag"
+	"fmt"
 	"os"
+	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
+	"k8s.io/klog/v2"
 
+	"github.com/Nerzal/gocloak/v13"
+	"github.com/coreos/pkg/flagutil"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -54,6 +59,8 @@ func init() {
 
 // nolint:gocyclo
 func main() {
+	var keycloakUrl, keycloakAdminUsername, keycloakAdminPassword, keycloakAdminRealm string
+	var keycloakDefaultRealm, keycloakClientIDPrefix, secretWaitTimeout string
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
@@ -62,6 +69,15 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
+	flag.StringVar(&keycloakUrl, "keycloak-url", "", "The Keycloak instance base URL")
+	flag.StringVar(&keycloakAdminUsername, "keycloak-admin-username", "admin", "The Keycloak admin username")
+	flag.StringVar(&keycloakAdminPassword, "keycloak-admin-password", "", "The Keycloak admin password")
+	flag.StringVar(&keycloakAdminRealm, "keycloak-admin-realm", "master", "The Keycloak admin realm")
+	flag.StringVar(&keycloakDefaultRealm, "keycloak-default-realm", "", "The Keycloak default realm")
+	flag.StringVar(&keycloakClientIDPrefix, "keycloak-client-id-prefix", "kubernetes",
+		"The prefix used when creating Keycloak client ID")
+	flag.StringVar(&secretWaitTimeout, "secret-wait-timeout", "10s",
+		"The time to wait for secrets to be available when needed for a custom resource")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
 		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
@@ -83,9 +99,31 @@ func main() {
 		Development: true,
 	}
 	opts.BindFlags(flag.CommandLine)
+	err := flagutil.SetFlagsFromEnv(flag.CommandLine, "")
+	if err != nil {
+		ctrl.SetLogger(klog.NewKlogr())
+		setupLog.Error(err, "Failed to set flags from environment variables")
+	}
 	flag.Parse()
 
 	ctrl.SetLogger(zap.New(zap.UseFlagOptions(&opts)))
+
+	// Validate required flags
+	if keycloakUrl == "" {
+		setupLog.Error(fmt.Errorf("keycloak-url is required"), "Missing required flag")
+		os.Exit(1)
+	}
+	if keycloakAdminPassword == "" {
+		setupLog.Error(fmt.Errorf("keycloak-admin-password is required"), "Missing required flag")
+		os.Exit(1)
+	}
+
+	// Validate flags
+	secretWaitDuration, err := time.ParseDuration(secretWaitTimeout)
+	if err != nil {
+		setupLog.Error(err, "Failed to parse SecretWaitTimeout", "timeout", secretWaitTimeout)
+		os.Exit(1)
+	}
 
 	// if the enable-http2 flag is false (the default), http/2 should be disabled
 	// due to its vulnerabilities. More specifically, disabling http/2 will
@@ -178,10 +216,20 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err := (&controller.KeycloakClientReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	reconciler := &controller.KeycloakClientReconciler{
+		Client:            mgr.GetClient(),
+		Scheme:            mgr.GetScheme(),
+		SecretWaitTimeout: &secretWaitDuration,
+		Config: &controller.KeycloakConfig{
+			AdminUsername:  keycloakAdminUsername,
+			AdminPassword:  keycloakAdminPassword,
+			AdminRealm:     keycloakAdminRealm,
+			DefaultRealm:   keycloakDefaultRealm,
+			ClientIDPrefix: keycloakClientIDPrefix,
+		},
+	}
+	reconciler.Server = gocloak.NewClient(keycloakUrl)
+	if err := (reconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "KeycloakClient")
 		os.Exit(1)
 	}

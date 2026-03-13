@@ -6,4 +6,26 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: keycloakclient-sample
 spec:
-  # TODO(user): Add fields here
+  clientID: keycloakclient-sample
+  realm: master
+  clientSecretRef:
+    name: keycloak-sample
+    key: client-secret
+  redirectUris:
+    - https://example.com/*
+    - https://example.test.com/*
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-cr-operator
+    app.kubernetes.io/managed-by: kustomize
+    keycloak.osc.edu/keycloakclient: keycloakclient-sample
+  name: keycloak-sample
+data:
+  client-secret: c2FtcGxlLXNlY3JldA==

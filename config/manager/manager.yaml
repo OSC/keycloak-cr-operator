@@ -61,10 +61,27 @@ spec:
       - command:
         - /manager
         args:
+          - --keycloak-url=$(KEYCLOAK_URL)
+          - --keycloak-admin-username=$(KEYCLOAK_ADMIN_USERNAME)
+          - --keycloak-admin-password=$(KEYCLOAK_ADMIN_PASSWORD)
           - --leader-elect
           - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
+        envFrom:
+        - configMapRef:
+            name: keycloak-cr-operator
+        env:
+        - name: KEYCLOAK_ADMIN_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-cr-operator
+              key: keycloak-admin-username
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: keycloak-cr-operator
+              key: keycloak-admin-password
         ports: []
         securityContext:
           readOnlyRootFilesystem: true

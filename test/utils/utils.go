@@ -31,6 +31,15 @@ const (
 	certmanagerVersion = "v1.19.4"
 	certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
 
+	keycloakChartRepo     = "https://charts.bitnami.com/bitnami"
+	keycloakChartVersion  = "21.2.0"
+	keycloakHelmName      = "keycloak"
+	keycloakNamespace     = "keycloak"
+	keycloakPod           = "pod/keycloak-0"
+	KeycloakPort          = "30080"
+	KeycloakAdminUsername = "admin"
+	KeycloakAdminPassword = "secret"
+
 	defaultKindBinary  = "kind"
 	defaultKindCluster = "kind"
 )
@@ -131,6 +140,60 @@ func IsCertManagerCRDsInstalled() bool {
 	}
 
 	return false
+}
+
+func UninstallKeycloak() {
+	cmd := exec.Command("helm", "uninstall", keycloakHelmName, "-n", keycloakNamespace)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+	cmd = exec.Command("kubectl", "delete", "namespace", keycloakNamespace)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+}
+
+func InstallKeycloak() error {
+	cmd := exec.Command("helm", "repo", "add", "bitnami", keycloakChartRepo)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+	cmd = exec.Command("kubectl", "create", "namespace", keycloakNamespace)
+	if _, err := Run(cmd); err != nil {
+		warnError(err)
+	}
+	cmd = exec.Command("helm", "install", keycloakHelmName, "bitnami/keycloak", "-n", keycloakNamespace,
+		"--version", keycloakChartVersion,
+		"-f", "test/e2e/keycloak-values.yaml",
+		"--set", fmt.Sprintf("service.nodePorts.http=%s", KeycloakPort),
+		"--set", fmt.Sprintf("auth.adminUser=%s", KeycloakAdminUsername),
+		"--set", fmt.Sprintf("auth.adminPassword=%s", KeycloakAdminPassword),
+	)
+	if _, err := Run(cmd); err != nil {
+		return err
+	}
+	if !IsKeycloakRunning() {
+		cmd = exec.Command("kubectl", "get", "pods", "-n", keycloakNamespace)
+		output, _ := Run(cmd)
+		_, _ = fmt.Fprintf(GinkgoWriter, "Keycloak pods: %s\n", output)
+		cmd = exec.Command("kubectl", "logs", keycloakPod, "-n", keycloakNamespace)
+		output, _ = Run(cmd)
+		_, _ = fmt.Fprintf(GinkgoWriter, "Keycloak logs: %s\n", output)
+		cmd = exec.Command("kubectl", "logs", keycloakPod, "-n", keycloakNamespace, "--previous")
+		output, _ = Run(cmd)
+		_, _ = fmt.Fprintf(GinkgoWriter, "Keycloak previous logs: %s\n", output)
+		cmd = exec.Command("kubectl", "describe", keycloakPod, "-n", keycloakNamespace)
+		output, _ = Run(cmd)
+		_, _ = fmt.Fprintf(GinkgoWriter, "Keycloak pod: %s\n", output)
+		return fmt.Errorf("keycloak is not running")
+	}
+	return nil
+}
+
+func IsKeycloakRunning() bool {
+	cmd := exec.Command("kubectl", "wait", "--for=condition=Ready", keycloakPod, "-n", keycloakNamespace, "--timeout=180s")
+	_, err := Run(cmd)
+	return err == nil
 }
 
 // LoadImageToKindClusterWithName loads a local docker image to the kind cluster
