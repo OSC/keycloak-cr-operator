@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
 
 // MockGoCloak is a mock implementation of the GoCloak interface for testing
@@ -117,7 +118,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 				Server: mockServer,
-				Config: &KeycloakConfig{
+				Config: &models.KeycloakConfig{
 					AdminUsername:  "admin",
 					AdminPassword:  "password",
 					AdminRealm:     "master",

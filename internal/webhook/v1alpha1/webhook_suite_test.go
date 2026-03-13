@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -109,7 +110,12 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupKeycloakClientWebhookWithManager(mgr)
+	err = SetupKeycloakClientWebhookWithManager(mgr, &models.KeycloakConfig{
+		AdminUsername:  "admin",
+		AdminPassword:  "password",
+		AdminRealm:     "master",
+		ClientIDPrefix: "kubernetes",
+	})
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:webhook

@@ -25,6 +25,7 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 	"github.com/OSC/keycloak-cr-operator/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,7 +46,7 @@ func keycloakLogin() {
 	ctrl.SetLogger(logger)
 
 	// Create KeycloakConfig struct based on parameters
-	config := &controller.KeycloakConfig{
+	config := &models.KeycloakConfig{
 		AdminUsername:  utils.KeycloakAdminUsername,
 		AdminPassword:  utils.KeycloakAdminPassword,
 		AdminRealm:     "master",

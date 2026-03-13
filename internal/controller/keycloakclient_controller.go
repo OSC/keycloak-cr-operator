@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 
 	"github.com/Nerzal/gocloak/v13"
 )
@@ -62,7 +63,7 @@ type KeycloakClientReconciler struct {
 	Scheme            *runtime.Scheme
 	Server            GoCloakServer
 	SecretWaitTimeout *time.Duration
-	Config            *KeycloakConfig
+	Config            *models.KeycloakConfig
 }
 
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients,verbs=get;list;watch;create;update;patch;delete

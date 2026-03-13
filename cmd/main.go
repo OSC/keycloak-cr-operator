@@ -42,6 +42,7 @@ import (
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 	webhookv1alpha1 "github.com/OSC/keycloak-cr-operator/internal/webhook/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
@@ -217,24 +218,25 @@ func main() {
 		os.Exit(1)
 	}
 
+	keycloakConfig := &models.KeycloakConfig{
+		AdminUsername:  keycloakAdminUsername,
+		AdminPassword:  keycloakAdminPassword,
+		AdminRealm:     keycloakAdminRealm,
+		DefaultRealm:   keycloakDefaultRealm,
+		ClientIDPrefix: keycloakClientIDPrefix,
+	}
 	reconciler := &controller.KeycloakClientReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		SecretWaitTimeout: &secretWaitDuration,
-		Config: &controller.KeycloakConfig{
-			AdminUsername:  keycloakAdminUsername,
-			AdminPassword:  keycloakAdminPassword,
-			AdminRealm:     keycloakAdminRealm,
-			DefaultRealm:   keycloakDefaultRealm,
-			ClientIDPrefix: keycloakClientIDPrefix,
-		},
+		Config:            keycloakConfig,
 	}
 	reconciler.Server = gocloak.NewClient(keycloakUrl)
 	if err := (reconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "KeycloakClient")
 		os.Exit(1)
 	}
-	if err := webhookv1alpha1.SetupKeycloakClientWebhookWithManager(mgr); err != nil {
+	if err := webhookv1alpha1.SetupKeycloakClientWebhookWithManager(mgr, keycloakConfig); err != nil {
 		setupLog.Error(err, "Failed to create webhook", "webhook", "KeycloakClient")
 		os.Exit(1)
 	}

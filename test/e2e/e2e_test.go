@@ -385,6 +385,7 @@ var _ = Describe("Manager", Ordered, func() {
 			verifyClientExists := func(g Gomega) {
 				client := getKeycloakClient("keycloakclient-sample", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
+				g.Expect(*client.ID).To(Equal("keycloakclient-sample"))
 				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
 				g.Expect(*client.Secret).To(Equal("sample-secret"))
 				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
@@ -408,6 +409,7 @@ var _ = Describe("Manager", Ordered, func() {
 				g.Expect(waitErr).NotTo(HaveOccurred())
 				client := getKeycloakClient("keycloakclient-sample", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
+				g.Expect(*client.ID).To(Equal("keycloakclient-sample"))
 				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
 				g.Expect(*client.Secret).To(Equal("new-secret"))
 				g.Expect(*client.Description).To(Equal("sample"))

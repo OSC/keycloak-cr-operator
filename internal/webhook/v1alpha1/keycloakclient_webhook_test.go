@@ -19,9 +19,10 @@ package v1alpha1
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
-	// TODO (user): Add any additional imports if needed
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
 
 var _ = Describe("KeycloakClient Webhook", func() {
@@ -33,11 +34,26 @@ var _ = Describe("KeycloakClient Webhook", func() {
 	)
 
 	BeforeEach(func() {
-		obj = &keycloakv1alpha1.KeycloakClient{}
-		oldObj = &keycloakv1alpha1.KeycloakClient{}
+		obj = &keycloakv1alpha1.KeycloakClient{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-keycloak-client",
+				Namespace: "test-namespace",
+			},
+		}
+		oldObj = &keycloakv1alpha1.KeycloakClient{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-keycloak-client",
+				Namespace: "test-namespace",
+			},
+		}
 		validator = KeycloakClientCustomValidator{}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
-		defaulter = KeycloakClientCustomDefaulter{}
+		defaulter = KeycloakClientCustomDefaulter{
+			keycloakConfig: &models.KeycloakConfig{
+				DefaultRealm:   "master",
+				ClientIDPrefix: "kubernetes",
+			},
+		}
 		Expect(defaulter).NotTo(BeNil(), "Expected defaulter to be initialized")
 		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
 		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
@@ -48,16 +64,78 @@ var _ = Describe("KeycloakClient Webhook", func() {
 	})
 
 	Context("When creating KeycloakClient under Defaulting Webhook", func() {
-		// TODO (user): Add logic for defaulting webhooks
-		// Example:
-		// It("Should apply defaults when a required field is empty", func() {
-		//     By("simulating a scenario where defaults should be applied")
-		//     obj.SomeFieldWithDefault = ""
-		//     By("calling the Default method to apply defaults")
-		//     defaulter.Default(ctx, obj)
-		//     By("checking that the default values are set")
-		//     Expect(obj.SomeFieldWithDefault).To(Equal("default_value"))
-		// })
+		It("Should apply defaults for ClientID, Realm, and ID when not set", func() {
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that the default ClientID is set")
+			Expect(obj.Spec.ClientID).NotTo(BeNil())
+			Expect(*obj.Spec.ClientID).To(Equal("kubernetes-test-namespace-test-keycloak-client"))
+
+			By("Checking that the default Realm is set")
+			Expect(obj.Spec.Realm).NotTo(BeNil())
+			Expect(*obj.Spec.Realm).To(Equal("master"))
+
+			By("Checking that the default ID is set to ClientID")
+			Expect(obj.Spec.ID).NotTo(BeNil())
+			Expect(*obj.Spec.ID).To(Equal(*obj.Spec.ClientID))
+		})
+
+		It("Should not override existing ClientID", func() {
+			By("Setting an explicit ClientID")
+			clientID := "existing-client-id"
+			obj.Spec.ClientID = &clientID
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that the existing ClientID is preserved")
+			Expect(obj.Spec.ClientID).NotTo(BeNil())
+			Expect(*obj.Spec.ClientID).To(Equal("existing-client-id"))
+		})
+
+		It("Should not override existing Realm", func() {
+			By("Setting an explicit Realm")
+			realm := "custom-realm"
+			obj.Spec.Realm = &realm
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that the existing Realm is preserved")
+			Expect(obj.Spec.Realm).NotTo(BeNil())
+			Expect(*obj.Spec.Realm).To(Equal("custom-realm"))
+		})
+
+		It("Should not override existing ID", func() {
+			By("Setting an explicit ID")
+			id := "existing-id"
+			obj.Spec.ID = &id
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that the existing ID is preserved")
+			Expect(obj.Spec.ID).NotTo(BeNil())
+			Expect(*obj.Spec.ID).To(Equal("existing-id"))
+		})
+
+		It("Should handle empty ClientIDPrefix", func() {
+			By("Setting empty ClientIDPrefix")
+			defaulter.keycloakConfig.ClientIDPrefix = ""
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that the default ClientID is set without prefix")
+			Expect(obj.Spec.ClientID).NotTo(BeNil())
+			Expect(*obj.Spec.ClientID).To(Equal("test-namespace-test-keycloak-client"))
+		})
 	})
 
 	Context("When creating or updating KeycloakClient under Validating Webhook", func() {
