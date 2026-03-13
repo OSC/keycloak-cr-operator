@@ -42,6 +42,7 @@ import (
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
+	webhookv1alpha1 "github.com/OSC/keycloak-cr-operator/internal/webhook/v1alpha1"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -231,6 +232,10 @@ func main() {
 	reconciler.Server = gocloak.NewClient(keycloakUrl)
 	if err := (reconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "KeycloakClient")
+		os.Exit(1)
+	}
+	if err := webhookv1alpha1.SetupKeycloakClientWebhookWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create webhook", "webhook", "KeycloakClient")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

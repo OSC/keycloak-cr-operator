@@ -1,0 +1,52 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  name: mutating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /mutate-keycloak-osc-edu-v1alpha1-keycloakclient
+  failurePolicy: Fail
+  name: mkeycloakclient-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - keycloak.osc.edu
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - keycloakclients
+  sideEffects: None
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: validating-webhook-configuration
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-keycloak-osc-edu-v1alpha1-keycloakclient
+  failurePolicy: Fail
+  name: vkeycloakclient-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - keycloak.osc.edu
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - keycloakclients
+  sideEffects: None
