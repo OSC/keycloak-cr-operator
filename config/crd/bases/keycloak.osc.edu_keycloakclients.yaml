@@ -64,6 +64,9 @@ spec:
               clientSecretRef:
                 description: Reference to the secret holding the ClientSecret
                 properties:
+                  create:
+                    default: true
+                    type: boolean
                   key:
                     description: The key of the secret to select from.  Must be a
                       valid secret key.

@@ -67,5 +67,14 @@ func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient
 	if len(clients) < 1 {
 		return nil, nil
 	}
-	return clients[0], nil
+	client := clients[0]
+	if keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == "client-secret" &&
+		keycloakClient.Spec.PublicClient != nil && !*keycloakClient.Spec.PublicClient {
+		secret, err := server.GetClientSecret(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *client.ID)
+		if err != nil {
+			return nil, err
+		}
+		client.Secret = secret.Value
+	}
+	return client, nil
 }

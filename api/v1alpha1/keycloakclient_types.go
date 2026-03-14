@@ -203,7 +203,15 @@ type KeycloakClientSpec struct {
 
 	// Reference to the secret holding the ClientSecret
 	// +optional
-	ClientSecretRef *corev1.SecretKeySelector `json:"clientSecretRef,omitempty"`
+	ClientSecretRef *KeycloakClientSecret `json:"clientSecretRef,omitempty"`
+}
+
+// Defines the structure for the Keycloak Client Secret
+type KeycloakClientSecret struct {
+	corev1.SecretKeySelector `json:",inline"`
+	// +kubebuilder:default=true
+	// +optional
+	Create *bool `json:"create,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.

@@ -52,6 +52,7 @@ const (
 type GoCloakServer interface {
 	LoginAdmin(ctx context.Context, realm, username, password string) (*gocloak.JWT, error)
 	GetClients(ctx context.Context, token, realm string, params gocloak.GetClientsParams) ([]*gocloak.Client, error)
+	GetClientSecret(ctx context.Context, token, realm, idOfClient string) (*gocloak.CredentialRepresentation, error)
 	CreateClient(ctx context.Context, token, realm string, client gocloak.Client) (string, error)
 	UpdateClient(ctx context.Context, token, realm string, client gocloak.Client) error
 	DeleteClient(ctx context.Context, token, realm, idOfClient string) error
@@ -141,7 +142,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	var secret string
 	if keycloakClient.Spec.ClientSecretRef == nil {
 		log.V(1).Info("Secret not defined", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	} else {
+	} else if keycloakClient.Spec.ClientSecretRef.Create != nil && !*keycloakClient.Spec.ClientSecretRef.Create {
 		secret, err = r.getSecret(ctx, keycloakClient)
 		if err != nil {
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{

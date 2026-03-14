@@ -148,6 +148,147 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			Expect(obj.Spec.ClientID).NotTo(BeNil())
 			Expect(*obj.Spec.ClientID).To(Equal("test-namespace-test-keycloak-client"))
 		})
+
+		Context("When creating KeycloakClient under Defaulting Webhook - ClientSecretRef Defaulting", func() {
+			It("Should set default ClientSecretRef when ClientAuthenticatorType is client-secret and PublicClient is false", func() {
+				By("Setting up client with client-secret auth type and public=false")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that ClientSecretRef is set")
+				Expect(obj.Spec.ClientSecretRef).NotTo(BeNil())
+				Expect(obj.Spec.ClientSecretRef.Name).To(Equal("test-keycloak-client-secret"))
+				Expect(obj.Spec.ClientSecretRef.Key).To(Equal("client-secret"))
+			})
+
+			It("Should not set default ClientSecretRef when ClientAuthenticatorType is not client-secret", func() {
+				By("Setting up client with different auth type and public=false")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				authType := "other-auth-type"
+				obj.Spec.ClientAuthenticatorType = &authType
+				public := false
+				obj.Spec.PublicClient = &public
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that ClientSecretRef is not set")
+				Expect(obj.Spec.ClientSecretRef).To(BeNil())
+			})
+
+			It("Should not set default ClientSecretRef when PublicClient is true", func() {
+				By("Setting up client with client-secret auth type and public=true")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := true
+				obj.Spec.PublicClient = &public
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that ClientSecretRef is not set")
+				Expect(obj.Spec.ClientSecretRef).To(BeNil())
+			})
+
+			It("Should not override existing ClientSecretRef", func() {
+				By("Setting up client with existing ClientSecretRef")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+				create := false
+
+				// Set an existing ClientSecretRef
+				existingRef := keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "existing-secret",
+						},
+						Key: "existing-key",
+					},
+					Create: &create,
+				}
+				obj.Spec.ClientSecretRef = &existingRef
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that existing ClientSecretRef is preserved")
+				Expect(obj.Spec.ClientSecretRef).NotTo(BeNil())
+				Expect(obj.Spec.ClientSecretRef.Name).To(Equal("existing-secret"))
+				Expect(obj.Spec.ClientSecretRef.Key).To(Equal("existing-key"))
+				Expect(*obj.Spec.ClientSecretRef.Create).To(BeFalse())
+			})
+
+			It("Should set default name when ClientSecretRef.Name is empty", func() {
+				By("Setting up client with empty ClientSecretRef.Name")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+
+				// Set a ClientSecretRef with empty name
+				obj.Spec.ClientSecretRef = &keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "",
+						},
+						Key: "some-key",
+					},
+				}
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that default name is set")
+				Expect(obj.Spec.ClientSecretRef).NotTo(BeNil())
+				Expect(obj.Spec.ClientSecretRef.Name).To(Equal("test-keycloak-client-secret"))
+				Expect(*obj.Spec.ClientSecretRef.Create).To(BeTrue())
+			})
+
+			It("Should set default key when ClientSecretRef.Key is empty", func() {
+				By("Setting up client with empty ClientSecretRef.Key")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+
+				// Set a ClientSecretRef with empty key
+				obj.Spec.ClientSecretRef = &keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "some-secret",
+						},
+						Key: "",
+					},
+				}
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that default key is set")
+				Expect(obj.Spec.ClientSecretRef).NotTo(BeNil())
+				Expect(obj.Spec.ClientSecretRef.Key).To(Equal("client-secret"))
+				Expect(*obj.Spec.ClientSecretRef.Create).To(BeTrue())
+			})
+		})
 	})
 
 	Context("When creating or updating KeycloakClient under Validating Webhook", func() {
@@ -248,13 +389,17 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			obj.Spec.ClientAuthenticatorType = &clientSecretType
 			public := false
 			obj.Spec.PublicClient = &public
+			create := true
 
 			// Create a fake secret reference
-			secretRef := corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: "test-secret",
+			secretRef := keycloakv1alpha1.KeycloakClientSecret{
+				SecretKeySelector: corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: "test-secret",
+					},
+					Key: "test-key",
 				},
-				Key: "test-key",
+				Create: &create,
 			}
 			obj.Spec.ClientSecretRef = &secretRef
 
@@ -298,6 +443,89 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			Expect(warnings).To(BeNil())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("clientID must be set"))
+		})
+
+		Context("When creating or updating KeycloakClient under Validating Webhook - ClientSecretRef Validation", func() {
+			It("Should allow creation if ClientSecretRef key is valid", func() {
+				By("Setting up client with client-secret auth type, public=false, and ClientSecretRef with key")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+				create := true
+
+				// Set a ClientSecretRef with key
+				secretRef := keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-secret",
+						},
+						Key: "test-key",
+					},
+					Create: &create,
+				}
+				obj.Spec.ClientSecretRef = &secretRef
+
+				By("Validating creation should succeed")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should deny creation if ClientSecretRef name is empty", func() {
+				By("Setting up client with client-secret auth type, public=false, and ClientSecretRef with empty name")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+
+				// Set a ClientSecretRef with empty name
+				secretRef := keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "",
+						},
+						Key: "test-key",
+					},
+				}
+				obj.Spec.ClientSecretRef = &secretRef
+
+				By("Validating creation should fail due to empty name")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("clientSecretRef name must be set when clientAuthenticatorType is client-secret and public is false"))
+				Expect(err.Error()).To(ContainSubstring("clientSecretRef create must be set when clientAuthenticatorType is client-secret and public is false"))
+			})
+
+			It("Should deny creation if ClientSecretRef key is empty", func() {
+				By("Setting up client with client-secret auth type, public=false, and ClientSecretRef with empty key")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+
+				// Set a ClientSecretRef with empty key
+				secretRef := keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-secret",
+						},
+						Key: "",
+					},
+				}
+				obj.Spec.ClientSecretRef = &secretRef
+
+				By("Validating creation should fail due to empty key")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("clientSecretRef key must be set when clientAuthenticatorType is client-secret and public is false"))
+				Expect(err.Error()).To(ContainSubstring("clientSecretRef create must be set when clientAuthenticatorType is client-secret and public is false"))
+			})
 		})
 	})
 

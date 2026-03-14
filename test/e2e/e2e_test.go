@@ -443,7 +443,6 @@ spec:
 				output, err := utils.Run(cmd)
 				g.Expect(err).To(HaveOccurred())
 				g.Expect(output).To(ContainSubstring("clientID must begin with"))
-				g.Expect(output).To(ContainSubstring("clientSecretRef must be set"))
 			}
 			Eventually(invalidClientTest, 2*time.Minute).Should(Succeed())
 
