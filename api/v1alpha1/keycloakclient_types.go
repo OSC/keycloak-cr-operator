@@ -171,10 +171,6 @@ type KeycloakClientSpec struct {
 	// +optional
 	RootURL *string `json:"rootUrl,omitempty"`
 
-	// Secret is the client secret
-	// +optional
-	Secret *string `json:"secret,omitempty"`
-
 	// ServiceAccountsEnabled indicates if service accounts are enabled
 	// +kubebuilder:default=false
 	// +optional

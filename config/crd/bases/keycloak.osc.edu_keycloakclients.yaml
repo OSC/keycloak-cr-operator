@@ -174,9 +174,6 @@ spec:
               rootUrl:
                 description: RootURL is the root URL for the client
                 type: string
-              secret:
-                description: Secret is the client secret
-                type: string
               serviceAccountsEnabled:
                 default: false
                 description: ServiceAccountsEnabled indicates if service accounts
