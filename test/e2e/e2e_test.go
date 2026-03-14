@@ -383,10 +383,10 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyMetricsSuccess, 2*time.Minute).Should(Succeed())
 			By("Client exists in Keycloak")
 			verifyClientExists := func(g Gomega) {
-				client := getKeycloakClient("keycloakclient-sample", "master")
+				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
-				g.Expect(*client.ID).To(Equal("keycloakclient-sample"))
-				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
+				g.Expect(*client.ID).To(Equal("kubernetes-keycloakclient-sample"))
+				g.Expect(*client.ClientID).To(Equal("kubernetes-keycloakclient-sample"))
 				g.Expect(*client.Secret).To(Equal("sample-secret"))
 				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
 				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
@@ -407,16 +407,58 @@ var _ = Describe("Manager", Ordered, func() {
 				waitOut, waitErr := utils.Run(waitCmd)
 				g.Expect(waitOut).To(ContainSubstring("condition met"))
 				g.Expect(waitErr).NotTo(HaveOccurred())
-				client := getKeycloakClient("keycloakclient-sample", "master")
+				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
-				g.Expect(*client.ID).To(Equal("keycloakclient-sample"))
-				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
+				g.Expect(*client.ID).To(Equal("kubernetes-keycloakclient-sample"))
+				g.Expect(*client.ClientID).To(Equal("kubernetes-keycloakclient-sample"))
 				g.Expect(*client.Secret).To(Equal("new-secret"))
 				g.Expect(*client.Description).To(Equal("sample"))
 				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
 				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
 			}
 			Eventually(verifyClientUpdates, 2*time.Minute).Should(Succeed())
+
+			By("Testing webhook validation with invalid client creation")
+			// Test creating an invalid KeycloakClient resource (missing ClientID)
+			invalidClientTest := func(g Gomega) {
+				// Create an invalid KeycloakClient resource (missing ClientID)
+				invalidClientYAML := `
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: invalid-client-test
+  namespace: default
+spec:
+  realm: master
+  clientID: invalid-client
+`
+				// Write the invalid client to a temporary file
+				tmpFile := "/tmp/invalid-client.yaml"
+				err := os.WriteFile(tmpFile, []byte(invalidClientYAML), 0644)
+				g.Expect(err).NotTo(HaveOccurred())
+				defer os.Remove(tmpFile)
+
+				// Try to create the invalid client - this should fail
+				cmd := exec.Command("kubectl", "create", "-f", tmpFile)
+				output, err := utils.Run(cmd)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("clientID must begin with"))
+				g.Expect(output).To(ContainSubstring("clientSecretRef must be set"))
+			}
+			Eventually(invalidClientTest, 2*time.Minute).Should(Succeed())
+
+			By("Testing webhook validation with invalid patch")
+			// Test patching with invalid data (empty ClientID)
+			invalidPatchTest := func(g Gomega) {
+				// Patch the existing client with invalid data (empty ClientID)
+				patchCmd := exec.Command("kubectl", "patch", "keycloakclient", "keycloakclient-sample",
+					"--type", "merge", "-p", "{\"spec\":{\"clientID\":\"keycloakclient-sample\"}}")
+				patchOutput, patchErr := utils.Run(patchCmd)
+				g.Expect(patchErr).To(HaveOccurred())
+				g.Expect(patchOutput).To(ContainSubstring("clientID must begin with"))
+			}
+			Eventually(invalidPatchTest, 2*time.Minute).Should(Succeed())
+
 			By("Client deleted from Keycloak")
 			verifyKeycloakClientDelete := func(g Gomega) {
 				cmd := exec.Command("kubectl", "delete", "-f",
@@ -424,7 +466,7 @@ var _ = Describe("Manager", Ordered, func() {
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("deleted")))
-				client := getKeycloakClient("keycloakclient-sample", "master")
+				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(BeNil(), "keycloak client still present")
 			}
 			Eventually(verifyKeycloakClientDelete, 2*time.Minute).Should(Succeed())

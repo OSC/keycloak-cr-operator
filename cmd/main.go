@@ -21,6 +21,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"slices"
+	"strings"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -62,7 +64,7 @@ func init() {
 // nolint:gocyclo
 func main() {
 	var keycloakUrl, keycloakAdminUsername, keycloakAdminPassword, keycloakAdminRealm string
-	var keycloakDefaultRealm, keycloakClientIDPrefix, secretWaitTimeout string
+	var keycloakDefaultRealm, keycloakAllowedRealms, keycloakClientIDPrefix, secretWaitTimeout string
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
@@ -76,6 +78,8 @@ func main() {
 	flag.StringVar(&keycloakAdminPassword, "keycloak-admin-password", "", "The Keycloak admin password")
 	flag.StringVar(&keycloakAdminRealm, "keycloak-admin-realm", "master", "The Keycloak admin realm")
 	flag.StringVar(&keycloakDefaultRealm, "keycloak-default-realm", "", "The Keycloak default realm")
+	flag.StringVar(&keycloakAllowedRealms, "keycloak-allowed-realms", "",
+		"The Keycloak allowed realm. Comma separated for multiple realms.")
 	flag.StringVar(&keycloakClientIDPrefix, "keycloak-client-id-prefix", "kubernetes",
 		"The prefix used when creating Keycloak client ID")
 	flag.StringVar(&secretWaitTimeout, "secret-wait-timeout", "10s",
@@ -118,6 +122,16 @@ func main() {
 	if keycloakAdminPassword == "" {
 		setupLog.Error(fmt.Errorf("keycloak-admin-password is required"), "Missing required flag")
 		os.Exit(1)
+	}
+	var allowedRealms []string
+	if keycloakAllowedRealms != "" {
+		allowedRealms = strings.Split(keycloakAllowedRealms, ",")
+	}
+	if len(allowedRealms) > 0 && keycloakDefaultRealm != "" {
+		if !slices.Contains(allowedRealms, keycloakDefaultRealm) {
+			setupLog.Error(fmt.Errorf("keycloak-default-realm is not listed in keycloak-allowed-realms"), "Invalid flags")
+			os.Exit(1)
+		}
 	}
 
 	// Validate flags
@@ -223,6 +237,7 @@ func main() {
 		AdminPassword:  keycloakAdminPassword,
 		AdminRealm:     keycloakAdminRealm,
 		DefaultRealm:   keycloakDefaultRealm,
+		AllowedRealms:  allowedRealms,
 		ClientIDPrefix: keycloakClientIDPrefix,
 	}
 	reconciler := &controller.KeycloakClientReconciler{

@@ -21,5 +21,6 @@ type KeycloakConfig struct {
 	AdminPassword  string
 	AdminRealm     string
 	DefaultRealm   string
+	AllowedRealms  []string
 	ClientIDPrefix string
 }

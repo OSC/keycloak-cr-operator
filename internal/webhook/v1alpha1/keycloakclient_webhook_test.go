@@ -19,10 +19,16 @@ package v1alpha1
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
+)
+
+var (
+	clientIDWithPrefix = "kubernetes-test-client"
+	testRealm          = "test-realm"
 )
 
 var _ = Describe("KeycloakClient Webhook", func() {
@@ -46,7 +52,13 @@ var _ = Describe("KeycloakClient Webhook", func() {
 				Namespace: "test-namespace",
 			},
 		}
-		validator = KeycloakClientCustomValidator{}
+		validator = KeycloakClientCustomValidator{
+			keycloakConfig: &models.KeycloakConfig{
+				DefaultRealm:   "master",
+				ClientIDPrefix: "kubernetes",
+				AllowedRealms:  []string{},
+			},
+		}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
 		defaulter = KeycloakClientCustomDefaulter{
 			keycloakConfig: &models.KeycloakConfig{
@@ -139,26 +151,154 @@ var _ = Describe("KeycloakClient Webhook", func() {
 	})
 
 	Context("When creating or updating KeycloakClient under Validating Webhook", func() {
-		// TODO (user): Add logic for validating webhooks
-		// Example:
-		// It("Should deny creation if a required field is missing", func() {
-		//     By("simulating an invalid creation scenario")
-		//     obj.SomeRequiredField = ""
-		//     Expect(validator.ValidateCreate(ctx, obj)).Error().To(HaveOccurred())
-		// })
-		//
-		// It("Should admit creation if all required fields are present", func() {
-		//     By("simulating an invalid creation scenario")
-		//     obj.SomeRequiredField = "valid_value"
-		//     Expect(validator.ValidateCreate(ctx, obj)).To(BeNil())
-		// })
-		//
-		// It("Should validate updates correctly", func() {
-		//     By("simulating a valid update scenario")
-		//     oldObj.SomeRequiredField = "updated_value"
-		//     obj.SomeRequiredField = "updated_value"
-		//     Expect(validator.ValidateUpdate(ctx, oldObj, obj)).To(BeNil())
-		// })
+		It("Should deny creation if ClientID is not set", func() {
+			By("Setting empty ClientID")
+			obj.Spec.ClientID = nil
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("clientID must be set"))
+		})
+
+		It("Should deny creation if ClientID has incorrect prefix", func() {
+			By("Setting ClientID")
+			clientID := "test-client"
+			obj.Spec.ClientID = &clientID
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("clientID must begin with the prefix"))
+		})
+
+		It("Should deny creation if Realm is not set", func() {
+			By("Setting empty Realm")
+			obj.Spec.Realm = nil
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("realm must be set"))
+		})
+
+		It("Should deny creation if Realm is not in allowed list", func() {
+			By("Setting valid Realms")
+			validator.keycloakConfig.AllowedRealms = []string{"test-realm"}
+
+			By("Setting empty Realm")
+			realm := "master"
+			obj.Spec.Realm = &realm
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("realm must be one of: test-realm"))
+		})
+
+		It("Should allow creation if both ClientID and Realm are set", func() {
+			By("Setting valid ClientID and Realm")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should allow creation of ClientID without ClientIDPrefix", func() {
+			By("Setting empty ClientIDPrefix")
+			validator.keycloakConfig.ClientIDPrefix = ""
+
+			By("Setting valid ClientID and Realm")
+			clientID := "test-client"
+			obj.Spec.ClientID = &clientID
+			obj.Spec.Realm = &testRealm
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should deny creation if ClientAuthenticatorType is client-secret and Public is false but ClientSecretRef is missing", func() {
+			By("Setting up client with client-secret auth type and public=false")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ClientAuthenticatorType = &clientSecretType
+			public := false
+			obj.Spec.PublicClient = &public
+
+			By("Validating creation should fail due to missing ClientSecretRef")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("clientSecretRef must be set when clientAuthenticatorType is client-secret and public is false"))
+		})
+
+		It("Should allow creation if ClientAuthenticatorType is client-secret, Public is false, and ClientSecretRef is present", func() {
+			By("Setting up client with client-secret auth type, public=false, and ClientSecretRef")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ClientAuthenticatorType = &clientSecretType
+			public := false
+			obj.Spec.PublicClient = &public
+
+			// Create a fake secret reference
+			secretRef := corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: "test-secret",
+				},
+				Key: "test-key",
+			}
+			obj.Spec.ClientSecretRef = &secretRef
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should allow creation if ClientAuthenticatorType is client-secret and Public is true", func() {
+			By("Setting up client with client-secret auth type and public=true")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ClientAuthenticatorType = &clientSecretType
+			public := true
+			obj.Spec.PublicClient = &public
+
+			By("Validating creation should succeed even without ClientSecretRef")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should validate updates correctly", func() {
+			By("Setting up a valid client")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+
+			By("Validating update should succeed")
+			warnings, err := validator.ValidateUpdate(ctx, oldObj, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should deny update if ClientID is not set", func() {
+			By("Setting empty ClientID in update")
+			obj.Spec.ClientID = nil
+
+			By("Validating update should fail")
+			warnings, err := validator.ValidateUpdate(ctx, oldObj, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("clientID must be set"))
+		})
 	})
 
 })

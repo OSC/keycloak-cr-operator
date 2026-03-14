@@ -19,7 +19,11 @@ package v1alpha1
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -28,9 +32,10 @@ import (
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
 
-// nolint:unused
-// log is for logging in this package.
-var keycloakclientlog = logf.Log.WithName("keycloakclient-resource")
+var (
+	keycloakclientlog = logf.Log.WithName("keycloakclient-resource")
+	clientSecretType  = "client-secret"
+)
 
 // SetupKeycloakClientWebhookWithManager registers the webhook for KeycloakClient in the manager.
 func SetupKeycloakClientWebhookWithManager(mgr ctrl.Manager, keycloakConfig *models.KeycloakConfig) error {
@@ -40,9 +45,7 @@ func SetupKeycloakClientWebhookWithManager(mgr ctrl.Manager, keycloakConfig *mod
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
-
-// +kubebuilder:webhook:path=/mutate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update,versions=v1alpha1,name=mkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=mkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1
 
 // KeycloakClientCustomDefaulter struct is responsible for setting default values on the custom resource of the
 // Kind KeycloakClient when those are created or updated.
@@ -88,9 +91,7 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 	return nil
 }
 
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-// NOTE: If you want to customise the 'path', use the flags '--defaulting-path' or '--validation-path'.
-// +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update,versions=v1alpha1,name=vkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=vkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1
 
 // KeycloakClientCustomValidator struct is responsible for validating the KeycloakClient resource
 // when it is created, updated, or deleted.
@@ -101,11 +102,60 @@ type KeycloakClientCustomValidator struct {
 	keycloakConfig *models.KeycloakConfig
 }
 
+// validateKeycloakClient validates a KeycloakClient resource based on the specified rules.
+func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1alpha1.KeycloakClient) error {
+	var allErrs field.ErrorList
+
+	// ClientID must be set
+	if obj.Spec.ClientID == nil || *obj.Spec.ClientID == "" {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientID"), "clientID must be set"))
+	}
+
+	// Realm must be set
+	if obj.Spec.Realm == nil || *obj.Spec.Realm == "" {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "realm"), "realm must be set"))
+	}
+
+	// Realm matched AllowedRealms
+	if obj.Spec.Realm != nil && *obj.Spec.Realm != "" && len(v.keycloakConfig.AllowedRealms) > 0 {
+		if !slices.Contains(v.keycloakConfig.AllowedRealms, *obj.Spec.Realm) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "realm"), *obj.Spec.Realm, fmt.Sprintf("realm must be one of: %s", strings.Join(v.keycloakConfig.AllowedRealms, ","))))
+		}
+	}
+
+	// If ClientIDPrefix is set, the ClientID must begin with the prefix from ClientIDPrefix
+	if v.keycloakConfig.ClientIDPrefix != "" {
+		if obj.Spec.ClientID != nil && *obj.Spec.ClientID != "" {
+			if !strings.HasPrefix(*obj.Spec.ClientID, v.keycloakConfig.ClientIDPrefix) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientID"), *obj.Spec.ClientID, fmt.Sprintf("clientID must begin with the prefix %s", v.keycloakConfig.ClientIDPrefix)))
+			}
+		}
+	}
+
+	// Validate ClientSecretRef is present if ClientAuthenticatorType=client-secret and Public=false
+	if obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == clientSecretType {
+		if obj.Spec.PublicClient == nil || !*obj.Spec.PublicClient {
+			if obj.Spec.ClientSecretRef == nil {
+				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef"), fmt.Sprintf("clientSecretRef must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+			}
+		}
+	}
+
+	if len(allErrs) > 0 {
+		return errors.NewInvalid(keycloakv1alpha1.GroupVersion.WithKind("KeycloakClient").GroupKind(), obj.Name, allErrs)
+	}
+
+	return nil
+}
+
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
 func (v *KeycloakClientCustomValidator) ValidateCreate(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
 	keycloakclientlog.Info("Validation for KeycloakClient upon creation", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
-	// TODO(user): fill in your validation logic upon object creation.
+	// Validate the KeycloakClient resource
+	if err := v.validateKeycloakClient(obj); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -114,7 +164,10 @@ func (v *KeycloakClientCustomValidator) ValidateCreate(_ context.Context, obj *k
 func (v *KeycloakClientCustomValidator) ValidateUpdate(_ context.Context, oldObj, newObj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
 	keycloakclientlog.Info("Validation for KeycloakClient upon update", "name", newObj.GetName(), "namespace", newObj.GetNamespace())
 
-	// TODO(user): fill in your validation logic upon object update.
+	// Validate the KeycloakClient resource
+	if err := v.validateKeycloakClient(newObj); err != nil {
+		return nil, err
+	}
 
 	return nil, nil
 }
@@ -123,7 +176,8 @@ func (v *KeycloakClientCustomValidator) ValidateUpdate(_ context.Context, oldObj
 func (v *KeycloakClientCustomValidator) ValidateDelete(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
 	keycloakclientlog.Info("Validation for KeycloakClient upon deletion", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
-	// TODO(user): fill in your validation logic upon object deletion.
+	// For deletion, we don't perform any validation as the resource is being deleted
+	// but we can add validation logic here if needed in the future
 
 	return nil, nil
 }

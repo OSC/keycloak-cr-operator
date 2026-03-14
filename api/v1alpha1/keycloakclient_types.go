@@ -77,10 +77,12 @@ type KeycloakClientSpec struct {
 	ConsentRequired *bool `json:"consentRequired,omitempty"`
 
 	// DefaultClientScopes is the default client scopes
+	// +kubebuilder:default={}
 	// +optional
 	DefaultClientScopes *[]string `json:"defaultClientScopes,omitempty"`
 
 	// DefaultRoles is the default roles
+	// +kubebuilder:default={}
 	// +optional
 	DefaultRoles *[]string `json:"defaultRoles,omitempty"`
 
@@ -129,6 +131,7 @@ type KeycloakClientSpec struct {
 	NotBefore *int32 `json:"notBefore,omitempty"`
 
 	// OptionalClientScopes is the optional client scopes
+	// +kubebuilder:default={}
 	// +optional
 	OptionalClientScopes *[]string `json:"optionalClientScopes,omitempty"`
 
@@ -152,6 +155,7 @@ type KeycloakClientSpec struct {
 	PublicClient *bool `json:"publicClient,omitempty"`
 
 	// RedirectURIs is the list of valid redirect URIs
+	// +kubebuilder:default={}
 	// +optional
 	RedirectURIs *[]string `json:"redirectUris"`
 
@@ -185,6 +189,7 @@ type KeycloakClientSpec struct {
 	SurrogateAuthRequired *bool `json:"surrogateAuthRequired,omitempty"`
 
 	// WebOrigins is the list of valid web origins
+	// +kubebuilder:default={}
 	// +optional
 	WebOrigins *[]string `json:"webOrigins,omitempty"`
 
