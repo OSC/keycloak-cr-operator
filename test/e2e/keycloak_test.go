@@ -24,7 +24,9 @@ import (
 	"fmt"
 
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 	"github.com/OSC/keycloak-cr-operator/test/utils"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -45,7 +47,7 @@ func keycloakLogin() {
 	ctrl.SetLogger(logger)
 
 	// Create KeycloakConfig struct based on parameters
-	config := &controller.KeycloakConfig{
+	config := &models.KeycloakConfig{
 		AdminUsername:  utils.KeycloakAdminUsername,
 		AdminPassword:  utils.KeycloakAdminPassword,
 		AdminRealm:     "master",
@@ -62,17 +64,19 @@ func getKeycloakClient(clientID, realm string) *gocloak.Client {
 	By("Getting Keycloak client")
 
 	ctx := context.Background()
-	getClientParams := gocloak.GetClientsParams{
-		ClientID: &clientID,
+	keycloakClient := &v1alpha1.KeycloakClient{
+		Spec: v1alpha1.KeycloakClientSpec{
+			ClientID: &clientID,
+			Realm:    &realm,
+		},
 	}
 
-	clients, err := gocloakClient.GetClients(ctx, controller.Token.AccessToken, realm, getClientParams)
+	client, err := controller.GetKeycloakClient(ctx, gocloakClient, keycloakClient)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get Keycloak Clients")
 
-	if len(clients) < 1 {
+	if client == nil {
 		return nil
 	}
-	client := clients[0]
 
 	secret, err := gocloakClient.GetClientSecret(ctx, controller.Token.AccessToken, realm, *client.ID)
 	Expect(err).NotTo(HaveOccurred(), "Failed to get Keycloak client secret")

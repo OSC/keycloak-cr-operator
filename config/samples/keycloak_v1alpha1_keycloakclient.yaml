@@ -6,7 +6,7 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: keycloakclient-sample
 spec:
-  clientID: keycloakclient-sample
+  clientID: kubernetes-keycloakclient-sample
   realm: master
   clientSecretRef:
     name: keycloak-sample

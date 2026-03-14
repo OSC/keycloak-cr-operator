@@ -30,6 +30,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
 
 // MockGoCloak is a mock implementation of the GoCloak interface for testing
@@ -76,6 +77,8 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind KeycloakClient")
+			clientID := "test"
+			realm := "master"
 			err := k8sClient.Get(ctx, typeNamespacedName, keycloakclient)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &keycloakv1alpha1.KeycloakClient{
@@ -83,7 +86,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: keycloakv1alpha1.KeycloakClientSpec{},
+					Spec: keycloakv1alpha1.KeycloakClientSpec{
+						ClientID: &clientID,
+						Realm:    &realm,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
@@ -117,7 +123,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Client: k8sClient,
 				Scheme: k8sClient.Scheme(),
 				Server: mockServer,
-				Config: &KeycloakConfig{
+				Config: &models.KeycloakConfig{
 					AdminUsername:  "admin",
 					AdminPassword:  "password",
 					AdminRealm:     "master",

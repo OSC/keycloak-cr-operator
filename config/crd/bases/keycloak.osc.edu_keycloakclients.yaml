@@ -88,11 +88,13 @@ spec:
                 description: ConsentRequired indicates if consent is required
                 type: boolean
               defaultClientScopes:
+                default: []
                 description: DefaultClientScopes is the default client scopes
                 items:
                   type: string
                 type: array
               defaultRoles:
+                default: []
                 description: DefaultRoles is the default roles
                 items:
                   type: string
@@ -139,6 +141,7 @@ spec:
                 format: int32
                 type: integer
               optionalClientScopes:
+                default: []
                 description: OptionalClientScopes is the optional client scopes
                 items:
                   type: string
@@ -160,6 +163,7 @@ spec:
                 description: The Realm for the Keycloak Client
                 type: string
               redirectUris:
+                default: []
                 description: RedirectURIs is the list of valid redirect URIs
                 items:
                   type: string
@@ -169,9 +173,6 @@ spec:
                 type: string
               rootUrl:
                 description: RootURL is the root URL for the client
-                type: string
-              secret:
-                description: Secret is the client secret
                 type: string
               serviceAccountsEnabled:
                 default: false
@@ -186,6 +187,7 @@ spec:
                   is required
                 type: boolean
               webOrigins:
+                default: []
                 description: WebOrigins is the list of valid web origins
                 items:
                   type: string

@@ -220,6 +220,42 @@ var _ = Describe("Manager", Ordered, func() {
 			}
 			Eventually(verifyMetricsServerStarted, 3*time.Minute, time.Second).Should(Succeed())
 
+			By("waiting for the webhook service endpoints to be ready")
+			verifyWebhookEndpointsReady := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "endpointslices.discovery.k8s.io", "-n", namespace,
+					"-l", "kubernetes.io/service-name=keycloak-cr-operator-webhook-service",
+					"-o", "jsonpath={range .items[*]}{range .endpoints[*]}{.addresses[*]}{end}{end}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred(), "Webhook endpoints should exist")
+				g.Expect(output).ShouldNot(BeEmpty(), "Webhook endpoints not yet ready")
+			}
+			Eventually(verifyWebhookEndpointsReady, 3*time.Minute, time.Second).Should(Succeed())
+
+			By("verifying the mutating webhook server is ready")
+			verifyMutatingWebhookReady := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "mutatingwebhookconfigurations.admissionregistration.k8s.io",
+					"keycloak-cr-operator-mutating-webhook-configuration",
+					"-o", "jsonpath={.webhooks[0].clientConfig.caBundle}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred(), "MutatingWebhookConfiguration should exist")
+				g.Expect(output).ShouldNot(BeEmpty(), "Mutating webhook CA bundle not yet injected")
+			}
+			Eventually(verifyMutatingWebhookReady, 3*time.Minute, time.Second).Should(Succeed())
+
+			By("verifying the validating webhook server is ready")
+			verifyValidatingWebhookReady := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "validatingwebhookconfigurations.admissionregistration.k8s.io",
+					"keycloak-cr-operator-validating-webhook-configuration",
+					"-o", "jsonpath={.webhooks[0].clientConfig.caBundle}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred(), "ValidatingWebhookConfiguration should exist")
+				g.Expect(output).ShouldNot(BeEmpty(), "Validating webhook CA bundle not yet injected")
+			}
+			Eventually(verifyValidatingWebhookReady, 3*time.Minute, time.Second).Should(Succeed())
+
+			By("waiting additional time for webhook server to stabilize")
+			time.Sleep(5 * time.Second)
+
 			// +kubebuilder:scaffold:e2e-metrics-webhooks-readiness
 
 			By("creating the curl-metrics pod to access the metrics endpoint")
@@ -282,6 +318,44 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyMetricsAvailable, 2*time.Minute).Should(Succeed())
 		})
 
+		It("should provisioned cert-manager", func() {
+			By("validating that cert-manager has the certificate Secret")
+			verifyCertManager := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "secrets", "webhook-server-cert", "-n", namespace)
+				_, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+			}
+			Eventually(verifyCertManager).Should(Succeed())
+		})
+
+		It("should have CA injection for mutating webhooks", func() {
+			By("checking CA injection for mutating webhooks")
+			verifyCAInjection := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get",
+					"mutatingwebhookconfigurations.admissionregistration.k8s.io",
+					"keycloak-cr-operator-mutating-webhook-configuration",
+					"-o", "go-template={{ range .webhooks }}{{ .clientConfig.caBundle }}{{ end }}")
+				mwhOutput, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(len(mwhOutput)).To(BeNumerically(">", 10))
+			}
+			Eventually(verifyCAInjection).Should(Succeed())
+		})
+
+		It("should have CA injection for validating webhooks", func() {
+			By("checking CA injection for validating webhooks")
+			verifyCAInjection := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get",
+					"validatingwebhookconfigurations.admissionregistration.k8s.io",
+					"keycloak-cr-operator-validating-webhook-configuration",
+					"-o", "go-template={{ range .webhooks }}{{ .clientConfig.caBundle }}{{ end }}")
+				vwhOutput, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(len(vwhOutput)).To(BeNumerically(">", 10))
+			}
+			Eventually(verifyCAInjection).Should(Succeed())
+		})
+
 		// +kubebuilder:scaffold:e2e-webhooks-checks
 
 		It("should handle custom resources", func() {
@@ -309,9 +383,10 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyMetricsSuccess, 2*time.Minute).Should(Succeed())
 			By("Client exists in Keycloak")
 			verifyClientExists := func(g Gomega) {
-				client := getKeycloakClient("keycloakclient-sample", "master")
+				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
-				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
+				g.Expect(*client.ID).To(Equal("kubernetes-keycloakclient-sample"))
+				g.Expect(*client.ClientID).To(Equal("kubernetes-keycloakclient-sample"))
 				g.Expect(*client.Secret).To(Equal("sample-secret"))
 				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
 				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
@@ -332,15 +407,58 @@ var _ = Describe("Manager", Ordered, func() {
 				waitOut, waitErr := utils.Run(waitCmd)
 				g.Expect(waitOut).To(ContainSubstring("condition met"))
 				g.Expect(waitErr).NotTo(HaveOccurred())
-				client := getKeycloakClient("keycloakclient-sample", "master")
+				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
-				g.Expect(*client.ClientID).To(Equal("keycloakclient-sample"))
+				g.Expect(*client.ID).To(Equal("kubernetes-keycloakclient-sample"))
+				g.Expect(*client.ClientID).To(Equal("kubernetes-keycloakclient-sample"))
 				g.Expect(*client.Secret).To(Equal("new-secret"))
 				g.Expect(*client.Description).To(Equal("sample"))
 				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
 				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
 			}
 			Eventually(verifyClientUpdates, 2*time.Minute).Should(Succeed())
+
+			By("Testing webhook validation with invalid client creation")
+			// Test creating an invalid KeycloakClient resource (missing ClientID)
+			invalidClientTest := func(g Gomega) {
+				// Create an invalid KeycloakClient resource (missing ClientID)
+				invalidClientYAML := `
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: invalid-client-test
+  namespace: default
+spec:
+  realm: master
+  clientID: invalid-client
+`
+				// Write the invalid client to a temporary file
+				tmpFile := "/tmp/invalid-client.yaml"
+				err := os.WriteFile(tmpFile, []byte(invalidClientYAML), 0644)
+				g.Expect(err).NotTo(HaveOccurred())
+				defer os.Remove(tmpFile)
+
+				// Try to create the invalid client - this should fail
+				cmd := exec.Command("kubectl", "create", "-f", tmpFile)
+				output, err := utils.Run(cmd)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("clientID must begin with"))
+				g.Expect(output).To(ContainSubstring("clientSecretRef must be set"))
+			}
+			Eventually(invalidClientTest, 2*time.Minute).Should(Succeed())
+
+			By("Testing webhook validation with invalid patch")
+			// Test patching with invalid data (empty ClientID)
+			invalidPatchTest := func(g Gomega) {
+				// Patch the existing client with invalid data (empty ClientID)
+				patchCmd := exec.Command("kubectl", "patch", "keycloakclient", "keycloakclient-sample",
+					"--type", "merge", "-p", "{\"spec\":{\"clientID\":\"keycloakclient-sample\"}}")
+				patchOutput, patchErr := utils.Run(patchCmd)
+				g.Expect(patchErr).To(HaveOccurred())
+				g.Expect(patchOutput).To(ContainSubstring("clientID must begin with"))
+			}
+			Eventually(invalidPatchTest, 2*time.Minute).Should(Succeed())
+
 			By("Client deleted from Keycloak")
 			verifyKeycloakClientDelete := func(g Gomega) {
 				cmd := exec.Command("kubectl", "delete", "-f",
@@ -348,7 +466,7 @@ var _ = Describe("Manager", Ordered, func() {
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("deleted")))
-				client := getKeycloakClient("keycloakclient-sample", "master")
+				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(BeNil(), "keycloak client still present")
 			}
 			Eventually(verifyKeycloakClientDelete, 2*time.Minute).Should(Succeed())

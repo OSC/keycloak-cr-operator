@@ -234,11 +234,6 @@ func (in *KeycloakClientSpec) DeepCopyInto(out *KeycloakClientSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.Secret != nil {
-		in, out := &in.Secret, &out.Secret
-		*out = new(string)
-		**out = **in
-	}
 	if in.ServiceAccountsEnabled != nil {
 		in, out := &in.ServiceAccountsEnabled, &out.ServiceAccountsEnabled
 		*out = new(bool)
