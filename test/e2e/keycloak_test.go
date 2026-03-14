@@ -64,10 +64,14 @@ func getKeycloakClient(clientID, realm string) *gocloak.Client {
 	By("Getting Keycloak client")
 
 	ctx := context.Background()
+	clientSecret := "client-secret"
+	public := false
 	keycloakClient := &v1alpha1.KeycloakClient{
 		Spec: v1alpha1.KeycloakClientSpec{
-			ClientID: &clientID,
-			Realm:    &realm,
+			ClientID:                &clientID,
+			Realm:                   &realm,
+			ClientAuthenticatorType: &clientSecret,
+			PublicClient:            &public,
 		},
 	}
 
@@ -77,11 +81,6 @@ func getKeycloakClient(clientID, realm string) *gocloak.Client {
 	if client == nil {
 		return nil
 	}
-
-	secret, err := gocloakClient.GetClientSecret(ctx, controller.Token.AccessToken, realm, *client.ID)
-	Expect(err).NotTo(HaveOccurred(), "Failed to get Keycloak client secret")
-
-	client.Secret = secret.Value
 
 	return client
 }

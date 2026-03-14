@@ -4,13 +4,14 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak-cr-operator
     app.kubernetes.io/managed-by: kustomize
-  name: keycloakclient-sample
+  name: keycloakclient-test
 spec:
-  clientID: kubernetes-keycloakclient-sample
+  clientID: kubernetes-keycloakclient-test
   realm: master
   clientSecretRef:
-    name: keycloak-sample
+    name: keycloak-test
     key: client-secret
+    create: true
   redirectUris:
     - https://example.com/*
     - https://example.test.com/*
@@ -18,14 +19,3 @@ spec:
     - web-origins
     - profile
     - email
----
-apiVersion: v1
-kind: Secret
-metadata:
-  labels:
-    app.kubernetes.io/name: keycloak-cr-operator
-    app.kubernetes.io/managed-by: kustomize
-    keycloak.osc.edu/keycloakclient: keycloakclient-sample
-  name: keycloak-sample
-data:
-  client-secret: c2FtcGxlLXNlY3JldA==
