@@ -2,10 +2,12 @@ package controller
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -45,4 +47,25 @@ func KeycloakLogin(ctx context.Context, server GoCloakServer, config *models.Key
 	Token.CreatedAt = &now
 
 	return nil
+}
+
+func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient *v1alpha1.KeycloakClient) (*gocloak.Client, error) {
+	log := logf.FromContext(ctx)
+	getClientParams := gocloak.GetClientsParams{
+		ClientID: keycloakClient.Spec.ClientID,
+	}
+	log.V(1).Info("Check if client exists", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", keycloakClient.Spec.ClientID, "realm", keycloakClient.Spec.Realm)
+	Token.lock.RLock()
+	defer Token.lock.RUnlock()
+	clients, err := server.GetClients(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, getClientParams)
+	log.V(1).Info(fmt.Sprintf("Number of clients returned: %d", len(clients)), "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
+		"clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+	if err != nil {
+		log.Error(err, "Failed to get Keycloak Clients", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+		return nil, err
+	}
+	if len(clients) < 1 {
+		return nil, nil
+	}
+	return clients[0], nil
 }

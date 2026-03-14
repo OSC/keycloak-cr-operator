@@ -109,10 +109,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		}
 	}
 
-	log.V(1).Info("Get gocloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	gocloakClient := keycloakClient.GetClient(r.Config.ClientIDPrefix, "")
-
-	delete, err := r.handleFinalizer(ctx, keycloakClient, gocloakClient)
+	delete, err := r.handleFinalizer(ctx, keycloakClient)
 	if err != nil {
 		log.Error(err, "failed to handle finalizer")
 		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
@@ -136,6 +133,11 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		return ctrl.Result{}, err
 	}
 
+	// Get the gocloak Client struct based on KeycloakClient spec
+	log.V(1).Info("Get gocloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	gocloakClient := keycloakClient.GetClient(r.Config.ClientIDPrefix, "")
+
+	// Get the ClientSecret from clientSecretRef, if set
 	var secret string
 	if keycloakClient.Spec.ClientSecretRef == nil {
 		log.V(1).Info("Secret not defined", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
@@ -164,7 +166,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) (bool, error) {
+func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (bool, error) {
 	log := logf.FromContext(ctx)
 	if keycloakClient.DeletionTimestamp.IsZero() {
 		// add finalizer in case of create/update
@@ -178,7 +180,7 @@ func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloak
 	} else {
 		// remove finalizer in case of deletion
 		if controllerutil.ContainsFinalizer(keycloakClient, clientFinalizerName) {
-			if err := r.deleteKeycloakClient(ctx, keycloakClient, gocloakClient); err != nil {
+			if err := r.deleteKeycloakClient(ctx, keycloakClient); err != nil {
 				return true, err
 			}
 			ok := controllerutil.RemoveFinalizer(keycloakClient, clientFinalizerName)
@@ -216,39 +218,31 @@ func (r *KeycloakClientReconciler) setStatus(ctx context.Context, keycloakClient
 // ensureKeycloakClient checks if the client exists in Keycloak and creates/updates it if needed
 func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
-	realm := r.Config.DefaultRealm
-	if keycloakClient.Spec.Realm != nil && *keycloakClient.Spec.Realm != "" {
-		realm = *keycloakClient.Spec.Realm
+
+	log.V(1).Info("Ensure Keycloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm)
+
+	if *keycloakClient.Spec.Realm == "" {
+		return fmt.Errorf("realm is not defined for KeycloakClient %s", keycloakClient.Name)
 	}
-	log.V(1).Info("Ensure Keycloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", gocloakClient.ClientID, "realm", realm)
 
 	// Get an access token first
 	log.V(1).Info("Keycloak Login", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
-		"clientID", gocloakClient.ClientID, "realm", realm,
+		"clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm,
 		"admin-realm", r.Config.AdminRealm, "admin-username", r.Config.AdminUsername)
 	err := KeycloakLogin(ctx, r.Server, r.Config)
 	if err != nil {
 		return err
 	}
 
-	// Check if the client already exists in Keycloak by using GetClients with ClientID param
-	getClientParams := gocloak.GetClientsParams{
-		ClientID: gocloakClient.ClientID,
-	}
-	log.V(1).Info("Check if client exists", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", gocloakClient.ClientID, "realm", realm)
-	Token.lock.RLock()
-	defer Token.lock.RUnlock()
-	clients, err := r.Server.GetClients(ctx, Token.AccessToken, realm, getClientParams)
+	client, err := GetKeycloakClient(ctx, r.Server, keycloakClient)
 	if err != nil {
-		log.Error(err, "Failed to get Keycloak Clients", "clientID", *gocloakClient.ClientID, "realm", realm)
 		return err
 	}
-	log.V(1).Info(fmt.Sprintf("Number of clients returned: %d", len(clients)), "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", gocloakClient.ClientID, "realm", realm)
-	if len(clients) < 1 {
-		log.Info("Keycloak client not found, creating new one", "clientID", *gocloakClient.ClientID, "realm", realm)
-		_, err = r.Server.CreateClient(ctx, Token.AccessToken, realm, *gocloakClient)
+	if client == nil {
+		log.Info("Keycloak client not found, creating new one", "clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm)
+		_, err = r.Server.CreateClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient)
 		if err != nil {
-			log.Error(err, "Failed to create Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+			log.Error(err, "Failed to create Keycloak client", "clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm)
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionFalse,
@@ -257,12 +251,12 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 			})
 			return err
 		}
-		log.Info("Successfully created Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+		log.Info("Successfully created Keycloak client", "clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm)
 	} else {
-		log.Info("Keycloak client already exists, updating", "clientID", *gocloakClient.ClientID, "realm", realm)
-		err = r.Server.UpdateClient(ctx, Token.AccessToken, realm, *gocloakClient)
+		log.Info("Keycloak client already exists, updating", "clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm)
+		err = r.Server.UpdateClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient)
 		if err != nil {
-			log.Error(err, "Failed to update Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+			log.Error(err, "Failed to update Keycloak client", "clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm)
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionFalse,
@@ -271,7 +265,7 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 			})
 			return err
 		}
-		log.Info("Successfully updated Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
+		log.Info("Successfully updated Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	}
 
 	err = r.setStatus(ctx, keycloakClient, metav1.Condition{
@@ -284,6 +278,46 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 		return err
 	}
 
+	return nil
+}
+
+func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
+	log := logf.FromContext(ctx)
+
+	if *keycloakClient.Spec.ClientID == "" {
+		return fmt.Errorf("clientID is not defined for KeycloakClient %s", keycloakClient.Name)
+	}
+	if *keycloakClient.Spec.Realm == "" {
+		return fmt.Errorf("realm is not defined for KeycloakClient %s", keycloakClient.Name)
+	}
+
+	log.V(1).Info("Keycloak Login", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
+		"clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm,
+		"admin-realm", r.Config.AdminRealm, "admin-username", r.Config.AdminUsername)
+	err := KeycloakLogin(ctx, r.Server, r.Config)
+	if err != nil {
+		log.Error(err, "Failed to get Keycloak admin token for deletion")
+		return err
+	}
+
+	gocloakClient, err := GetKeycloakClient(ctx, r.Server, keycloakClient)
+	if err != nil {
+		return err
+	}
+	if gocloakClient == nil {
+		log.Info("Keycloak Client already deleted", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+		return nil
+	}
+
+	log.Info("Deleting Keycloak client", "id", *gocloakClient.ID, "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+	Token.lock.RLock()
+	defer Token.lock.RUnlock()
+	err = r.Server.DeleteClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient.ID)
+	if err != nil {
+		log.Error(err, "Failed to delete Keycloak client", "id", *gocloakClient.ID, "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+		return err
+	}
+	log.Info("Successfully deleted Keycloak client", "id", *gocloakClient.ID, "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	return nil
 }
 
@@ -327,34 +361,6 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 			return "", err
 		}
 	}
-}
-
-func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
-	log := logf.FromContext(ctx)
-	realm := r.Config.DefaultRealm
-	if keycloakClient.Spec.Realm != nil && *keycloakClient.Spec.Realm != "" {
-		realm = *keycloakClient.Spec.Realm
-	}
-
-	log.V(1).Info("Keycloak Login", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
-		"clientID", gocloakClient.ClientID, "realm", realm,
-		"admin-realm", r.Config.AdminRealm, "admin-username", r.Config.AdminUsername)
-	err := KeycloakLogin(ctx, r.Server, r.Config)
-	if err != nil {
-		log.Error(err, "Failed to get Keycloak admin token for deletion")
-		return err
-	}
-
-	log.Info("Deleting Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
-	Token.lock.RLock()
-	defer Token.lock.RUnlock()
-	err = r.Server.DeleteClient(ctx, Token.AccessToken, realm, *gocloakClient.ID)
-	if err != nil {
-		log.Error(err, "Failed to delete Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
-		return err
-	}
-	log.Info("Successfully deleted Keycloak client", "clientID", *gocloakClient.ClientID, "realm", realm)
-	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

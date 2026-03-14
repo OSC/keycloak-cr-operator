@@ -77,6 +77,8 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind KeycloakClient")
+			clientID := "test"
+			realm := "master"
 			err := k8sClient.Get(ctx, typeNamespacedName, keycloakclient)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &keycloakv1alpha1.KeycloakClient{
@@ -84,7 +86,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: keycloakv1alpha1.KeycloakClientSpec{},
+					Spec: keycloakv1alpha1.KeycloakClientSpec{
+						ClientID: &clientID,
+						Realm:    &realm,
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
