@@ -48,6 +48,11 @@ func (m *MockGoCloak) GetClients(ctx context.Context, token, realm string, param
 	return args.Get(0).([]*gocloak.Client), args.Error(1)
 }
 
+func (m *MockGoCloak) GetClientSecret(ctx context.Context, token, realm, idOfClient string) (*gocloak.CredentialRepresentation, error) {
+	args := m.Called(ctx, token, realm, idOfClient)
+	return args.Get(0).(*gocloak.CredentialRepresentation), args.Error(1)
+}
+
 func (m *MockGoCloak) CreateClient(ctx context.Context, token, realm string, client gocloak.Client) (string, error) {
 	args := m.Called(ctx, token, realm, client)
 	return args.Get(0).(string), args.Error(1)
@@ -116,6 +121,8 @@ var _ = Describe("KeycloakClient Controller", func() {
 			}, nil)
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil)
+
+			// mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{}, nil)
 
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 

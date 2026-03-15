@@ -11,6 +11,7 @@ spec:
   clientSecretRef:
     name: keycloak-sample
     key: client-secret
+    create: false
   redirectUris:
     - https://example.com/*
     - https://example.test.com/*

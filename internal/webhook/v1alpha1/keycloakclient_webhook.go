@@ -88,6 +88,23 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		}
 	}
 
+	if obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == "client-secret" &&
+		obj.Spec.PublicClient != nil && !*obj.Spec.PublicClient {
+		if obj.Spec.ClientSecretRef == nil {
+			obj.Spec.ClientSecretRef = &keycloakv1alpha1.KeycloakClientSecret{}
+		}
+		if obj.Spec.ClientSecretRef.Name == "" {
+			obj.Spec.ClientSecretRef.Name = fmt.Sprintf("%s-secret", obj.Name)
+		}
+		if obj.Spec.ClientSecretRef.Key == "" {
+			obj.Spec.ClientSecretRef.Key = "client-secret"
+		}
+		if obj.Spec.ClientSecretRef.Create == nil {
+			create := true
+			obj.Spec.ClientSecretRef.Create = &create
+		}
+	}
+
 	return nil
 }
 
@@ -137,6 +154,16 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 		if obj.Spec.PublicClient == nil || !*obj.Spec.PublicClient {
 			if obj.Spec.ClientSecretRef == nil {
 				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef"), fmt.Sprintf("clientSecretRef must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+			} else {
+				if obj.Spec.ClientSecretRef.Name == "" {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "name"), fmt.Sprintf("clientSecretRef name must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+				}
+				if obj.Spec.ClientSecretRef.Key == "" {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "key"), fmt.Sprintf("clientSecretRef key must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+				}
+				if obj.Spec.ClientSecretRef.Create == nil {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "create"), fmt.Sprintf("clientSecretRef create must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+				}
 			}
 		}
 	}
