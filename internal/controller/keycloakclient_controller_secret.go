@@ -32,11 +32,19 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 )
 
+func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
+	if keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == clientSecretVal &&
+		keycloakClient.Spec.PublicClient != nil && !*keycloakClient.Spec.PublicClient {
+		return true
+	} else {
+		return false
+	}
+}
+
 func (r *KeycloakClientReconciler) lookupSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
 		keycloakClient.Spec.ClientSecretRef.Create != nil && !*keycloakClient.Spec.ClientSecretRef.Create &&
-		keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == clientSecretVal &&
-		keycloakClient.Spec.PublicClient != nil && !*keycloakClient.Spec.PublicClient {
+		usesClientSecret(keycloakClient) {
 		return true
 	} else {
 		return false
@@ -46,8 +54,7 @@ func (r *KeycloakClientReconciler) lookupSecret(keycloakClient *keycloakv1alpha1
 func (r *KeycloakClientReconciler) createSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
 		keycloakClient.Spec.ClientSecretRef.Create != nil && *keycloakClient.Spec.ClientSecretRef.Create &&
-		keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == clientSecretVal &&
-		keycloakClient.Spec.PublicClient != nil && !*keycloakClient.Spec.PublicClient {
+		usesClientSecret(keycloakClient) {
 		return true
 	} else {
 		return false
