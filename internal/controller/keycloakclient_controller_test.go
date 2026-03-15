@@ -190,14 +190,16 @@ var _ = Describe("KeycloakClient Controller", func() {
 				AccessToken: "test-token",
 			}, nil)
 
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
+
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
 				{
 					ID:       stringPtr("test"),
 					ClientID: stringPtr("test"),
 				},
-			}, nil)
+			}, nil).Once()
 
-			mockServer.On("UpdateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(nil)
+			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
 				Value: stringPtr("secret"),
