@@ -142,7 +142,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// Get the ClientSecret from clientSecretRef, if set
 	if keycloakClient.Spec.ClientSecretRef == nil {
 		log.V(1).Info("Secret not defined", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	} else if r.lookupSecret(keycloakClient) {
+	} else if shouldLookupSecret(keycloakClient) {
 		secret, err := r.getSecret(ctx, keycloakClient)
 		if err != nil {
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
@@ -165,7 +165,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Handle the secret creation/update if needed
-	if r.createSecret(keycloakClient) {
+	if shouldCreateSecret(keycloakClient) {
 		err = r.handleSecret(ctx, keycloakClient, gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to handle secret")

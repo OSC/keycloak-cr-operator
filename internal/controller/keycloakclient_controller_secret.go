@@ -41,7 +41,7 @@ func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	}
 }
 
-func (r *KeycloakClientReconciler) lookupSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
+func shouldLookupSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
 		keycloakClient.Spec.ClientSecretRef.Create != nil && !*keycloakClient.Spec.ClientSecretRef.Create &&
 		usesClientSecret(keycloakClient) {
@@ -51,7 +51,7 @@ func (r *KeycloakClientReconciler) lookupSecret(keycloakClient *keycloakv1alpha1
 	}
 }
 
-func (r *KeycloakClientReconciler) createSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
+func shouldCreateSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
 		keycloakClient.Spec.ClientSecretRef.Create != nil && *keycloakClient.Spec.ClientSecretRef.Create &&
 		usesClientSecret(keycloakClient) {
