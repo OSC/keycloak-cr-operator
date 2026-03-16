@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"fmt"
 
+	"github.com/stoewer/go-strcase"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -34,8 +35,10 @@ func (k *KeycloakClient) GetSecret(clientSecret string) *corev1.Secret {
 		name = fmt.Sprintf("%s-secret", k.Name)
 		key = "client-secret"
 	}
+	envKey := strcase.UpperSnakeCase(key)
 	data := make(map[string]string)
 	data[key] = clientSecret
+	data[envKey] = clientSecret
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

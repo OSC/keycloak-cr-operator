@@ -71,17 +71,8 @@ spec:
         envFrom:
         - configMapRef:
             name: keycloak-cr-operator
-        env:
-        - name: KEYCLOAK_ADMIN_USERNAME
-          valueFrom:
-            secretKeyRef:
-              name: keycloak-cr-operator
-              key: keycloak-admin-username
-        - name: KEYCLOAK_ADMIN_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: keycloak-cr-operator
-              key: keycloak-admin-password
+        - secretRef:
+            name: keycloak-cr-operator
         ports: []
         securityContext:
           readOnlyRootFilesystem: true
