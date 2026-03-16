@@ -480,12 +480,20 @@ spec:
 
 			By("Client deleted from Keycloak")
 			verifyKeycloakClientDelete := func(g Gomega) {
-				cmd := exec.Command("kubectl", "delete", "-f", keycloakClientManifestWithSecret)
+				cmd := exec.Command("kubectl", "delete",
+					"-f", keycloakClientManifest,
+					"-f", keycloakClientManifestWithSecret)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("deleted")))
 				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(BeNil(), "keycloak client still present")
+				client = getKeycloakClient("kubernetes-keycloakclient-test", "master")
+				g.Expect(client).To(BeNil(), "keycloak client still present")
+				cmd = exec.Command("kubectl", "get", "secret", "keycloak-test")
+				output, err = utils.Run(cmd)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(output).To(Or(ContainSubstring("not found")))
 			}
 			Eventually(verifyKeycloakClientDelete, 2*time.Minute).Should(Succeed())
 		})
