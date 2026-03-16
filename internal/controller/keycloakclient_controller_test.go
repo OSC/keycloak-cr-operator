@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -46,6 +47,11 @@ func (m *MockGoCloak) LoginAdmin(ctx context.Context, realm, username, password 
 func (m *MockGoCloak) GetClients(ctx context.Context, token, realm string, params gocloak.GetClientsParams) ([]*gocloak.Client, error) {
 	args := m.Called(ctx, token, realm, params)
 	return args.Get(0).([]*gocloak.Client), args.Error(1)
+}
+
+func (m *MockGoCloak) GetClientSecret(ctx context.Context, token, realm, idOfClient string) (*gocloak.CredentialRepresentation, error) {
+	args := m.Called(ctx, token, realm, idOfClient)
+	return args.Get(0).(*gocloak.CredentialRepresentation), args.Error(1)
 }
 
 func (m *MockGoCloak) CreateClient(ctx context.Context, token, realm string, client gocloak.Client) (string, error) {
@@ -137,6 +143,107 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
 			// Example: If you expect a certain status condition after reconciliation, verify it here.
+
+			// Verify that all expectations were met
+			mockServer.AssertExpectations(GinkgoT())
+		})
+
+		It("should handle secret creation when ClientSecretRef is configured", func() {
+			By("Creating a KeycloakClient with ClientSecretRef")
+
+			// Create a KeycloakClient with ClientSecretRef configuration
+			clientID := "test-client-with-secret"
+			realm := "master"
+			keycloakClientWithSecret := &keycloakv1alpha1.KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-keycloak-client-with-secret",
+					Namespace: "default",
+				},
+				Spec: keycloakv1alpha1.KeycloakClientSpec{
+					ClientID:                &clientID,
+					Realm:                   &realm,
+					ClientAuthenticatorType: stringPtr("client-secret"),
+					PublicClient:            boolPtr(false),
+					ClientSecretRef: &keycloakv1alpha1.KeycloakClientSecret{
+						SecretKeySelector: corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "test-client-secret",
+							},
+							Key: "client-secret",
+						},
+						Create: boolPtr(true),
+					},
+				},
+			}
+
+			// Create the resource in the test cluster
+			Expect(k8sClient.Create(ctx, keycloakClientWithSecret)).To(Succeed())
+
+			// Clean up after test
+			DeferCleanup(func() {
+				Expect(k8sClient.Delete(ctx, keycloakClientWithSecret)).To(Succeed())
+			})
+
+			// Create a mock GoCloak client that returns a secret
+			mockServer := new(MockGoCloak)
+			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
+				AccessToken: "test-token",
+			}, nil)
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
+				{
+					ID:       stringPtr("test"),
+					ClientID: stringPtr("test"),
+				},
+			}, nil).Once()
+
+			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
+
+			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
+				Value: stringPtr("secret"),
+			}, nil)
+
+			controllerReconciler := &KeycloakClientReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+				Server: mockServer,
+				Config: &models.KeycloakConfig{
+					AdminUsername:  "admin",
+					AdminPassword:  "password",
+					AdminRealm:     "master",
+					ClientIDPrefix: "kubernetes",
+				},
+			}
+
+			// Reconcile the resource
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-keycloak-client-with-secret",
+					Namespace: "default",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify that the secret was created
+			secret := &corev1.Secret{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-client-secret",
+				Namespace: "default",
+			}, secret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Data).To(HaveKey("client-secret"))
+			Expect(secret.Data).To(HaveKey("cookie-secret"))
+			cookieSecret, ok := secret.Data["cookie-secret"]
+			Expect(ok).To(BeTrue())
+			Expect(string(cookieSecret)).To(Not(BeEmpty()))
+
+			// Verify the secret has the correct owner reference
+			controllerRefs := secret.GetOwnerReferences()
+			Expect(controllerRefs).To(HaveLen(1))
+			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret"))
+			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())

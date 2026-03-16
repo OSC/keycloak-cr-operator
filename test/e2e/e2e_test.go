@@ -20,11 +20,13 @@ limitations under the License.
 package e2e
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -44,6 +46,9 @@ const metricsServiceName = "keycloak-cr-operator-controller-manager-metrics-serv
 
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
 const metricsRoleBindingName = "keycloak-cr-operator-metrics-binding"
+
+const keycloakClientManifest = "config/samples/keycloak_v1alpha1_keycloakclient.yaml"
+const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha1_keycloakclient_with_secret.yaml"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
@@ -361,14 +366,20 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should handle custom resources", func() {
 			By("Apply custom KeycloakClient resource from samples")
 			verifyKeycloakClientResource := func(g Gomega) {
-				cmd := exec.Command("kubectl", "apply", "-f",
-					"config/samples/keycloak_v1alpha1_keycloakclient.yaml")
+				cmd := exec.Command("kubectl", "apply",
+					"-f", keycloakClientManifest,
+					"-f", keycloakClientManifestWithSecret)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("created")))
 				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",
-					"keycloakclient", "keycloakclient-sample", "--timeout=20s")
+					"keycloakclient", "keycloakclient-test", "--timeout=20s")
 				waitOut, waitErr := utils.Run(waitCmd)
+				g.Expect(waitOut).To(ContainSubstring("condition met"))
+				g.Expect(waitErr).NotTo(HaveOccurred())
+				waitCmd = exec.Command("kubectl", "wait", "--for=condition=Available",
+					"keycloakclient", "keycloakclient-sample", "--timeout=20s")
+				waitOut, waitErr = utils.Run(waitCmd)
 				g.Expect(waitOut).To(ContainSubstring("condition met"))
 				g.Expect(waitErr).NotTo(HaveOccurred())
 			}
@@ -383,7 +394,19 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyMetricsSuccess, 2*time.Minute).Should(Succeed())
 			By("Client exists in Keycloak")
 			verifyClientExists := func(g Gomega) {
-				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
+				client := getKeycloakClient("kubernetes-keycloakclient-test", "master")
+				g.Expect(client).To(Not(BeNil()), "expected client not found")
+				g.Expect(*client.ID).To(Equal("kubernetes-keycloakclient-test"))
+				g.Expect(*client.ClientID).To(Equal("kubernetes-keycloakclient-test"))
+				secret, err := getSecret("keycloak-test", "client-secret")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(*client.Secret).To(Equal(secret))
+				secret, err = getSecret("keycloak-test", "cookie-secret")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve cookie-secret")
+				g.Expect(secret).NotTo(BeEmpty())
+				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
+				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
+				client = getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
 				g.Expect(*client.ID).To(Equal("kubernetes-keycloakclient-sample"))
 				g.Expect(*client.ClientID).To(Equal("kubernetes-keycloakclient-sample"))
@@ -443,7 +466,6 @@ spec:
 				output, err := utils.Run(cmd)
 				g.Expect(err).To(HaveOccurred())
 				g.Expect(output).To(ContainSubstring("clientID must begin with"))
-				g.Expect(output).To(ContainSubstring("clientSecretRef must be set"))
 			}
 			Eventually(invalidClientTest, 2*time.Minute).Should(Succeed())
 
@@ -461,13 +483,20 @@ spec:
 
 			By("Client deleted from Keycloak")
 			verifyKeycloakClientDelete := func(g Gomega) {
-				cmd := exec.Command("kubectl", "delete", "-f",
-					"config/samples/keycloak_v1alpha1_keycloakclient.yaml")
+				cmd := exec.Command("kubectl", "delete",
+					"-f", keycloakClientManifest,
+					"-f", keycloakClientManifestWithSecret)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("deleted")))
 				client := getKeycloakClient("kubernetes-keycloakclient-sample", "master")
 				g.Expect(client).To(BeNil(), "keycloak client still present")
+				client = getKeycloakClient("kubernetes-keycloakclient-test", "master")
+				g.Expect(client).To(BeNil(), "keycloak client still present")
+				cmd = exec.Command("kubectl", "get", "secret", "keycloak-test")
+				output, err = utils.Run(cmd)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(output).To(Or(ContainSubstring("not found")))
 			}
 			Eventually(verifyKeycloakClientDelete, 2*time.Minute).Should(Succeed())
 		})
@@ -526,6 +555,25 @@ func getMetricsOutput() (string, error) {
 		fmt.Sprintf("curl -v -k -H \"Authorization: Bearer $TOKEN\" https://%s.%s.svc.cluster.local:8443/metrics", metricsServiceName, namespace),
 	)
 	return utils.Run(cmd)
+}
+
+func getSecret(name, key string) (string, error) {
+	By("getting secret value")
+	var secret string
+	var err error
+	getSecretValue := func(g Gomega) {
+		cmd := exec.Command("kubectl", "get", "secret", name,
+			fmt.Sprintf("--template={{ index .data \"%s\"}}", key))
+		output, err := utils.Run(cmd)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(output).NotTo(BeEmpty())
+		fmt.Printf("Returned secret: %s", output)
+		decodedBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(output))
+		g.Expect(err).NotTo(HaveOccurred())
+		secret = string(decodedBytes)
+	}
+	Eventually(getSecretValue).Should(Succeed())
+	return secret, err
 }
 
 // tokenRequest is a simplified representation of the Kubernetes TokenRequest API response,

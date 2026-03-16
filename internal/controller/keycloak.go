@@ -67,5 +67,19 @@ func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient
 	if len(clients) < 1 {
 		return nil, nil
 	}
-	return clients[0], nil
+	client := clients[0]
+	if usesClientSecret(keycloakClient) {
+		log.V(1).Info("Get client secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", keycloakClient.Spec.ClientID, "realm", keycloakClient.Spec.Realm)
+		secret, err := server.GetClientSecret(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *client.ID)
+		if err != nil {
+			return nil, err
+		}
+		if secret == nil {
+			err = fmt.Errorf("unable to get client secret")
+			log.Error(err, "Unable to get Client Secret", "clientID", keycloakClient.Spec.ClientID, "realm", keycloakClient.Spec.Realm)
+			return nil, err
+		}
+		client.Secret = secret.Value
+	}
+	return client, nil
 }

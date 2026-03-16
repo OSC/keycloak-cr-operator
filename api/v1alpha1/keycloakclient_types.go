@@ -203,7 +203,15 @@ type KeycloakClientSpec struct {
 
 	// Reference to the secret holding the ClientSecret
 	// +optional
-	ClientSecretRef *corev1.SecretKeySelector `json:"clientSecretRef,omitempty"`
+	ClientSecretRef *KeycloakClientSecret `json:"clientSecretRef,omitempty"`
+}
+
+// Defines the structure for the Keycloak Client Secret
+type KeycloakClientSecret struct {
+	corev1.SecretKeySelector `json:",inline"`
+	// +kubebuilder:default=true
+	// +optional
+	Create *bool `json:"create,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.
@@ -262,7 +270,7 @@ func init() {
 	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
 }
 
-func (k *KeycloakClient) GetClient(prefix string, secret string) *gocloak.Client {
+func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	client := &gocloak.Client{}
 
 	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
@@ -308,7 +316,6 @@ func (k *KeycloakClient) GetClient(prefix string, secret string) *gocloak.Client
 	client.RedirectURIs = k.Spec.RedirectURIs
 	client.RegistrationAccessToken = k.Spec.RegistrationAccessToken
 	client.RootURL = k.Spec.RootURL
-	client.Secret = &secret
 	client.ServiceAccountsEnabled = k.Spec.ServiceAccountsEnabled
 	client.StandardFlowEnabled = k.Spec.StandardFlowEnabled
 	client.SurrogateAuthRequired = k.Spec.SurrogateAuthRequired
