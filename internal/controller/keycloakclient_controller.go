@@ -72,6 +72,7 @@ type KeycloakClientReconciler struct {
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/finalizers,verbs=update
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -177,6 +178,19 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			})
 			return ctrl.Result{}, err
 		}
+	}
+
+	// Handle the config map creation/update
+	err = r.handleConfigMap(ctx, keycloakClient)
+	if err != nil {
+		log.Error(err, "Failed to handle config map")
+		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
+			Type:    typeAvailableKeycloakClient,
+			Status:  metav1.ConditionFalse,
+			Reason:  "Failed",
+			Message: fmt.Sprintf("Failed to create Keycloak client config map: %s", err),
+		})
+		return ctrl.Result{}, err
 	}
 
 	if err = r.setStatus(ctx, keycloakClient, metav1.Condition{
@@ -370,6 +384,7 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keycloakv1alpha1.KeycloakClient{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&corev1.Secret{}).
+		Owns(&corev1.ConfigMap{}).
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(mapSecretToKeycloakClient),

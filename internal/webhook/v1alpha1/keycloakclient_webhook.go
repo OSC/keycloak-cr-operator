@@ -105,6 +105,11 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		}
 	}
 
+	if obj.Spec.ConfigMapName == nil || *obj.Spec.ConfigMapName == "" {
+		configMapName := fmt.Sprintf("%s-config", obj.Name)
+		obj.Spec.ConfigMapName = &configMapName
+	}
+
 	return nil
 }
 
@@ -166,6 +171,10 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 				}
 			}
 		}
+	}
+
+	if obj.Spec.ConfigMapName == nil || *obj.Spec.ConfigMapName == "" {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMapName"), "configMapName must be set"))
 	}
 
 	if len(allErrs) > 0 {

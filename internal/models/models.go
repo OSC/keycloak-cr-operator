@@ -16,7 +16,10 @@ limitations under the License.
 
 package models
 
+import "net/url"
+
 type KeycloakConfig struct {
+	KeycloakURL    *url.URL
 	AdminUsername  string
 	AdminPassword  string
 	AdminRealm     string

@@ -204,10 +204,16 @@ type KeycloakClientSpec struct {
 	// Reference to the secret holding the ClientSecret
 	// +optional
 	ClientSecretRef *KeycloakClientSecret `json:"clientSecretRef,omitempty"`
+
+	// The ConfigMap name, will default to "<name>-config"
+	// +optional
+	ConfigMapName *string `json:"configMapName,omitempty"`
 }
 
 // Defines the structure for the Keycloak Client Secret
 type KeycloakClientSecret struct {
+	// The name will default to "<name>-secret"
+	// The key value defaults to "client-secret"
 	corev1.SecretKeySelector `json:",inline"`
 	// +kubebuilder:default=true
 	// +optional
@@ -274,7 +280,12 @@ func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	client := &gocloak.Client{}
 
 	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
-		clientID := fmt.Sprintf("%s-%s-%s", prefix, k.Namespace, k.Name)
+		var clientID string
+		if prefix != "" {
+			clientID = fmt.Sprintf("%s-%s-%s", prefix, k.Namespace, k.Name)
+		} else {
+			clientID = fmt.Sprintf("%s-%s", k.Namespace, k.Name)
+		}
 		client.ClientID = &clientID
 	} else {
 		client.ClientID = k.Spec.ClientID

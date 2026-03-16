@@ -19,3 +19,4 @@ spec:
     - web-origins
     - profile
     - email
+  configMapName: keycloak-config

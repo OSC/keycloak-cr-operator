@@ -29,6 +29,7 @@ import (
 var (
 	clientIDWithPrefix = "kubernetes-test-client"
 	testRealm          = "test-realm"
+	configMapName      = "test-config"
 )
 
 var _ = Describe("KeycloakClient Webhook", func() {
@@ -134,6 +135,30 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			By("Checking that the existing ID is preserved")
 			Expect(obj.Spec.ID).NotTo(BeNil())
 			Expect(*obj.Spec.ID).To(Equal("existing-id"))
+		})
+
+		It("Should apply default ConfigMapName when not set", func() {
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that the default ConfigMapName is set")
+			Expect(obj.Spec.ConfigMapName).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMapName).To(Equal("test-keycloak-client-config"))
+		})
+
+		It("Should not override existing ConfigMapName", func() {
+			By("Setting an explicit ConfigMapName")
+			configMapName := "existing-configmap"
+			obj.Spec.ConfigMapName = &configMapName
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that the existing ConfigMapName is preserved")
+			Expect(obj.Spec.ConfigMapName).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMapName).To(Equal("existing-configmap"))
 		})
 
 		It("Should handle empty ClientIDPrefix", func() {
@@ -345,6 +370,7 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			By("Setting valid ClientID and Realm")
 			obj.Spec.ClientID = &clientIDWithPrefix
 			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMapName = &configMapName
 
 			By("Validating creation should succeed")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -360,6 +386,7 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			clientID := "test-client"
 			obj.Spec.ClientID = &clientID
 			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMapName = &configMapName
 
 			By("Validating creation should succeed")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -390,6 +417,7 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			public := false
 			obj.Spec.PublicClient = &public
 			create := true
+			obj.Spec.ConfigMapName = &configMapName
 
 			// Create a fake secret reference
 			secretRef := keycloakv1alpha1.KeycloakClientSecret{
@@ -416,6 +444,7 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			obj.Spec.ClientAuthenticatorType = &clientSecretType
 			public := true
 			obj.Spec.PublicClient = &public
+			obj.Spec.ConfigMapName = &configMapName
 
 			By("Validating creation should succeed even without ClientSecretRef")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -423,10 +452,22 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
+		It("Should deny creation if ConfigMapName is not set", func() {
+			By("Setting empty ConfigMapName")
+			obj.Spec.ConfigMapName = nil
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("configMapName must be set"))
+		})
+
 		It("Should validate updates correctly", func() {
 			By("Setting up a valid client")
 			obj.Spec.ClientID = &clientIDWithPrefix
 			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMapName = &configMapName
 
 			By("Validating update should succeed")
 			warnings, err := validator.ValidateUpdate(ctx, oldObj, obj)
@@ -454,6 +495,7 @@ var _ = Describe("KeycloakClient Webhook", func() {
 				public := false
 				obj.Spec.PublicClient = &public
 				create := true
+				obj.Spec.ConfigMapName = &configMapName
 
 				// Set a ClientSecretRef with key
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{

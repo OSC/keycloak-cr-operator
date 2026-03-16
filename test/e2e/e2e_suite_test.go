@@ -20,9 +20,11 @@ limitations under the License.
 package e2e
 
 import (
+	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -125,4 +127,38 @@ func teardownKeycloak() {
 
 	By("uninstalling Keycloak")
 	utils.UninstallKeycloak()
+}
+
+func getSecret(name, key string) (string, error) {
+	By("getting secret value")
+	var secret string
+	var err error
+	getSecretValue := func(g Gomega) {
+		cmd := exec.Command("kubectl", "get", "secret", name,
+			fmt.Sprintf("--template={{ index .data \"%s\"}}", key))
+		output, err := utils.Run(cmd)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(output).NotTo(BeEmpty())
+		fmt.Printf("Returned secret: %s", output)
+		decodedBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(output))
+		g.Expect(err).NotTo(HaveOccurred())
+		secret = string(decodedBytes)
+	}
+	Eventually(getSecretValue).Should(Succeed())
+	return secret, err
+}
+
+func getConfigMap(name, key string) (string, error) {
+	By("getting configmap value")
+	var value string
+	var err error
+	getSecretValue := func(g Gomega) {
+		cmd := exec.Command("kubectl", "get", "configmap", name,
+			fmt.Sprintf("--template={{ index .data \"%s\"}}", key))
+		value, err = utils.Run(cmd)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(value).NotTo(BeEmpty())
+	}
+	Eventually(getSecretValue).Should(Succeed())
+	return value, err
 }
