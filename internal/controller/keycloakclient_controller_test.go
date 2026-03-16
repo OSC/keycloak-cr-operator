@@ -234,6 +234,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 			}, secret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Data).To(HaveKey("client-secret"))
+			Expect(secret.Data).To(HaveKey("cookie-secret"))
+			cookieSecret, ok := secret.Data["cookie-secret"]
+			Expect(ok).To(BeTrue())
+			Expect(string(cookieSecret)).To(Not(BeEmpty()))
 
 			// Verify the secret has the correct owner reference
 			controllerRefs := secret.GetOwnerReferences()

@@ -18,6 +18,8 @@ package controller
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 	"time"
 
@@ -30,6 +32,10 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/Nerzal/gocloak/v13"
+)
+
+const (
+	cookieSecretKey = "cookie-secret"
 )
 
 func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
@@ -59,6 +65,16 @@ func shouldCreateSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	} else {
 		return false
 	}
+}
+
+// generateRandomString generates a random 32-byte string encoded in hex
+func generateRandomString() (string, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }
 
 func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (string, error) {
@@ -128,6 +144,15 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 	if err != nil && apierrors.IsNotFound(err) {
 		// Secret doesn't exist, create it
 		log.Info("Creating a new Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+
+		// Generate cookie-secret for new secret
+		cookieSecret, err := generateRandomString()
+		if err != nil {
+			log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+			return err
+		}
+		secret.StringData[cookieSecretKey] = cookieSecret
+
 		err = ctrl.SetControllerReference(keycloakClient, secret, r.Scheme)
 		if err != nil {
 			log.Error(err, "Failed to set controller reference for secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
@@ -152,12 +177,31 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			log.Error(err, "Failed to set controller reference for secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 			return err
 		}
-		// Use retry to handle potential conflicts
+		// Use retry to handle potential conflicts and merge data
+		// The merge is performed so that cookie-secret does not get updated
+		// with new random string after creation.  The cookie-secret is only added
+		// if missing during update.
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			return r.Update(ctx, secret)
+			// Merge the data with existing secret data
+			//nolint:gocritic,modernize
+			for key, value := range secret.StringData {
+				found.StringData[key] = value
+			}
+			// Add cookie-secret back if it was removed.
+			if _, ok := found.Data[cookieSecretKey]; !ok {
+				cookieSecret, err := generateRandomString()
+				if err != nil {
+					log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+					return err
+				}
+				found.StringData[cookieSecretKey] = cookieSecret
+			}
+
+			// Update the secret with merged data
+			return r.Update(ctx, found)
 		})
 		if err != nil {
-			log.Error(err, "Failed to update Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+			log.Error(err, "Failed to patch Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 			return err
 		}
 		log.Info("Updated existing Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
