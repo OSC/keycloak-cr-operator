@@ -161,6 +161,9 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 		err = r.Create(ctx, secret)
 		if err != nil {
 			log.Error(err, "Failed to create new Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "CreateSecretFailed", "Create",
+				"Failed to create the Secret %s for KeycloakClient %s in namespace %s: %s",
+				secret.Name, keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
 		log.Info("Created a new Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
@@ -201,7 +204,10 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			return r.Update(ctx, found)
 		})
 		if err != nil {
-			log.Error(err, "Failed to patch Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+			log.Error(err, "Failed to update Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateSecretFailed", "Update",
+				"Failed to update the Secret %s for KeycloakClient %s in namespace %s: %s",
+				secret.Name, keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
 		log.Info("Updated existing Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)

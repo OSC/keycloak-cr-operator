@@ -249,6 +249,7 @@ func main() {
 	reconciler := &controller.KeycloakClientReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
+		Recorder:          mgr.GetEventRecorder("keycloakclient-controller"),
 		SecretWaitTimeout: &secretWaitDuration,
 		Config:            keycloakConfig,
 	}
