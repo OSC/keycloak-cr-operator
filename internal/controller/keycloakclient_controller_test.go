@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"net/url"
 
 	"github.com/Nerzal/gocloak/v13"
 	. "github.com/onsi/ginkgo/v2"
@@ -84,7 +85,6 @@ var _ = Describe("KeycloakClient Controller", func() {
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind KeycloakClient")
 			clientID := "test"
-			realm := "master"
 			err := k8sClient.Get(ctx, typeNamespacedName, keycloakclient)
 			if err != nil && errors.IsNotFound(err) {
 				resource := &keycloakv1alpha1.KeycloakClient{
@@ -94,7 +94,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 					},
 					Spec: keycloakv1alpha1.KeycloakClientSpec{
 						ClientID: &clientID,
-						Realm:    &realm,
+						Realm:    stringPtr("master"),
 					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
@@ -130,6 +130,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Scheme: k8sClient.Scheme(),
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
+					KeycloakURL: &url.URL{
+						Scheme: "http",
+						Host:   "keycloak.keycloak.svc",
+					},
 					AdminUsername:  "admin",
 					AdminPassword:  "password",
 					AdminRealm:     "master",
@@ -153,7 +157,6 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			// Create a KeycloakClient with ClientSecretRef configuration
 			clientID := "test-client-with-secret"
-			realm := "master"
 			keycloakClientWithSecret := &keycloakv1alpha1.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-secret",
@@ -161,7 +164,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 				Spec: keycloakv1alpha1.KeycloakClientSpec{
 					ClientID:                &clientID,
-					Realm:                   &realm,
+					Realm:                   stringPtr("master"),
 					ClientAuthenticatorType: stringPtr("client-secret"),
 					PublicClient:            boolPtr(false),
 					ClientSecretRef: &keycloakv1alpha1.KeycloakClientSecret{
@@ -210,6 +213,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Scheme: k8sClient.Scheme(),
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
+					KeycloakURL: &url.URL{
+						Scheme: "http",
+						Host:   "keycloak.keycloak.svc",
+					},
 					AdminUsername:  "admin",
 					AdminPassword:  "password",
 					AdminRealm:     "master",
@@ -243,6 +250,184 @@ var _ = Describe("KeycloakClient Controller", func() {
 			controllerRefs := secret.GetOwnerReferences()
 			Expect(controllerRefs).To(HaveLen(1))
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret"))
+			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
+
+			// Verify that all expectations were met
+			mockServer.AssertExpectations(GinkgoT())
+		})
+
+		It("should handle config map creation and data population", func() {
+			By("Creating a KeycloakClient with ConfigMapName specified")
+
+			// Create a KeycloakClient with ConfigMapName
+			clientID := "test-client-with-configmap"
+			configMapName := "custom-configmap-name"
+			keycloakClientWithConfigMap := &keycloakv1alpha1.KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-keycloak-client-with-configmap",
+					Namespace: "default",
+				},
+				Spec: keycloakv1alpha1.KeycloakClientSpec{
+					ClientID:      &clientID,
+					Realm:         stringPtr("master"),
+					ConfigMapName: &configMapName,
+				},
+			}
+
+			// Create the resource in the test cluster
+			Expect(k8sClient.Create(ctx, keycloakClientWithConfigMap)).To(Succeed())
+
+			// Clean up after test
+			DeferCleanup(func() {
+				Expect(k8sClient.Delete(ctx, keycloakClientWithConfigMap)).To(Succeed())
+			})
+
+			// Create a mock GoCloak client
+			mockServer := new(MockGoCloak)
+			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
+				AccessToken: "test-token",
+			}, nil)
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
+
+			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
+
+			controllerReconciler := &KeycloakClientReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+				Server: mockServer,
+				Config: &models.KeycloakConfig{
+					KeycloakURL: &url.URL{
+						Scheme: "http",
+						Host:   "keycloak.keycloak.svc",
+					},
+					AdminUsername:  "admin",
+					AdminPassword:  "password",
+					AdminRealm:     "master",
+					DefaultRealm:   "master",
+					ClientIDPrefix: "kubernetes",
+				},
+			}
+
+			// Reconcile the resource
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-keycloak-client-with-configmap",
+					Namespace: "default",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify that the config map was created
+			configMap := &corev1.ConfigMap{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "custom-configmap-name",
+				Namespace: "default",
+			}, configMap)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify ConfigMap data
+			Expect(configMap.Data).To(HaveKey("client-id"))
+			Expect(configMap.Data).To(HaveKey("keycloak-url"))
+			Expect(configMap.Data).To(HaveKey("issuer-url"))
+
+			// Verify the values are correct
+			Expect(configMap.Data["client-id"]).To(Equal("test-client-with-configmap"))
+			Expect(configMap.Data["keycloak-url"]).To(Equal("http://keycloak.keycloak.svc"))
+			Expect(configMap.Data["issuer-url"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
+
+			// Verify the ConfigMap has the correct owner reference
+			controllerRefs := configMap.GetOwnerReferences()
+			Expect(controllerRefs).To(HaveLen(1))
+			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-configmap"))
+			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
+
+			// Verify that all expectations were met
+			mockServer.AssertExpectations(GinkgoT())
+		})
+
+		It("should handle config map creation with default name", func() {
+			By("Creating a KeycloakClient without ConfigMapName specified")
+
+			// Create a KeycloakClient without specifying ConfigMapName
+			clientID := "test-client-default-configmap"
+			keycloakClientWithoutConfigMap := &keycloakv1alpha1.KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-keycloak-client-default-configmap",
+					Namespace: "default",
+				},
+				Spec: keycloakv1alpha1.KeycloakClientSpec{
+					ClientID: &clientID,
+					Realm:    stringPtr("master"),
+				},
+			}
+
+			// Create the resource in the test cluster
+			Expect(k8sClient.Create(ctx, keycloakClientWithoutConfigMap)).To(Succeed())
+
+			// Clean up after test
+			DeferCleanup(func() {
+				Expect(k8sClient.Delete(ctx, keycloakClientWithoutConfigMap)).To(Succeed())
+			})
+
+			// Create a mock GoCloak client
+			mockServer := new(MockGoCloak)
+			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
+				AccessToken: "test-token",
+			}, nil)
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
+
+			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
+
+			controllerReconciler := &KeycloakClientReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+				Server: mockServer,
+				Config: &models.KeycloakConfig{
+					KeycloakURL: &url.URL{
+						Scheme: "http",
+						Host:   "keycloak.keycloak.svc",
+					},
+					AdminUsername:  "admin",
+					AdminPassword:  "password",
+					AdminRealm:     "master",
+					DefaultRealm:   "master",
+					ClientIDPrefix: "kubernetes",
+				},
+			}
+
+			// Reconcile the resource
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-keycloak-client-default-configmap",
+					Namespace: "default",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify that the config map was created with default name
+			configMap := &corev1.ConfigMap{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-keycloak-client-default-configmap-config",
+				Namespace: "default",
+			}, configMap)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify ConfigMap data
+			Expect(configMap.Data).To(HaveKey("client-id"))
+			Expect(configMap.Data).To(HaveKey("keycloak-url"))
+			Expect(configMap.Data).To(HaveKey("issuer-url"))
+
+			// Verify the values are correct
+			Expect(configMap.Data["client-id"]).To(Equal("test-client-default-configmap"))
+			Expect(configMap.Data["keycloak-url"]).To(Equal("http://keycloak.keycloak.svc"))
+			Expect(configMap.Data["issuer-url"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
+
+			// Verify the ConfigMap has the correct owner reference
+			controllerRefs := configMap.GetOwnerReferences()
+			Expect(controllerRefs).To(HaveLen(1))
+			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-default-configmap"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
 			// Verify that all expectations were met

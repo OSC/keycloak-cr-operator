@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"net/url"
 	"os"
 	"slices"
 	"strings"
@@ -118,6 +119,10 @@ func main() {
 	if keycloakUrl == "" {
 		setupLog.Error(fmt.Errorf("keycloak-url is required"), "Missing required flag")
 		os.Exit(1)
+	}
+	keycloakUrlObj, err := url.Parse(keycloakUrl)
+	if err != nil {
+		setupLog.Error(err, "Unable to parse Keycloak URL")
 	}
 	if keycloakAdminPassword == "" {
 		setupLog.Error(fmt.Errorf("keycloak-admin-password is required"), "Missing required flag")
@@ -233,6 +238,7 @@ func main() {
 	}
 
 	keycloakConfig := &models.KeycloakConfig{
+		KeycloakURL:    keycloakUrlObj,
 		AdminUsername:  keycloakAdminUsername,
 		AdminPassword:  keycloakAdminPassword,
 		AdminRealm:     keycloakAdminRealm,

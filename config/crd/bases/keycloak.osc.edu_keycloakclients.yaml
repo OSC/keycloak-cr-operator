@@ -87,6 +87,9 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
+              configMapName:
+                description: The ConfigMap name, will default to "<name>-config"
+                type: string
               consentRequired:
                 description: ConsentRequired indicates if consent is required
                 type: boolean

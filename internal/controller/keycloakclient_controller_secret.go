@@ -185,7 +185,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			// Merge the data with existing secret data
 			//nolint:gocritic,modernize
 			for key, value := range secret.StringData {
-				found.StringData[key] = value
+				found.Data[key] = []byte(value)
 			}
 			// Add cookie-secret back if it was removed.
 			if _, ok := found.Data[cookieSecretKey]; !ok {
