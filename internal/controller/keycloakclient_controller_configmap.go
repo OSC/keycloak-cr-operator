@@ -52,6 +52,9 @@ func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloak
 		err = r.Create(ctx, configMap)
 		if err != nil {
 			log.Error(err, "Failed to create new ConfigMap", "configMap.Namespace", configMap.Namespace, "configMap.Name", configMap.Name)
+			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "CreateConfigMapFailed", "Create",
+				"Failed to create the ConfigMap %s for KeycloakClient %s in namespace %s: %s",
+				configMap.Name, keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
 		log.Info("Created a new ConfigMap", "configMap.Namespace", configMap.Namespace, "configMap.Name", configMap.Name)
@@ -74,6 +77,9 @@ func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloak
 		err = r.Update(ctx, configMap)
 		if err != nil {
 			log.Error(err, "Failed to update ConfigMap", "configMap.Namespace", configMap.Namespace, "configMap.Name", configMap.Name)
+			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateConfigMapFailed", "Update",
+				"Failed to update the ConfigMap %s for KeycloakClient %s in namespace %s: %s",
+				configMap.Name, keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
 		log.Info("Updated existing ConfigMap", "configMap.Namespace", configMap.Namespace, "configMap.Name", configMap.Name)

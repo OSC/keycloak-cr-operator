@@ -27,6 +27,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/tools/events"
 	"k8s.io/client-go/util/retry"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -63,6 +64,7 @@ type GoCloakServer interface {
 type KeycloakClientReconciler struct {
 	runtimeclient.Client
 	Scheme            *runtime.Scheme
+	Recorder          events.EventRecorder
 	Server            GoCloakServer
 	SecretWaitTimeout *time.Duration
 	Config            *models.KeycloakConfig
@@ -71,6 +73,7 @@ type KeycloakClientReconciler struct {
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/finalizers,verbs=update
+// +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 
@@ -121,6 +124,9 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			Reason:  "Failed",
 			Message: "failed to handle finalizer",
 		})
+		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "HandleFinalizerFailed", "Handle",
+			"Failed to handle the finalizer for KeycloakClient %s in namespace %s: %s",
+			keycloakClient.Name, keycloakClient.Namespace, err)
 		return ctrl.Result{}, err
 	}
 	if delete {
@@ -153,6 +159,9 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.Spec.ClientSecretRef.Name),
 			})
 			log.Error(err, "Unable to get secret")
+			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "GetSecretFailed", "Get",
+				"Failed to get the Secret for KeycloakClient %s in namespace %s: %s",
+				keycloakClient.Name, keycloakClient.Namespace, err)
 			return ctrl.Result{}, err
 		}
 		gocloakClient.Secret = &secret
@@ -287,6 +296,9 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 				Reason:  "Failed",
 				Message: "Failed to create Keycloak client",
 			})
+			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "CreateKeycloakClientFailed", "Create",
+				"Failed to create KeycloakClient %s in namespace %s: %s",
+				keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
 		log.Info("Successfully created Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
@@ -301,6 +313,9 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 				Reason:  "Failed",
 				Message: "Failed to update Keycloak client",
 			})
+			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateKeycloakClientFailed", "Update",
+				"Failed to update KeycloakClient %s in namespace %s: %s",
+				keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
 		log.Info("Successfully updated Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
@@ -343,6 +358,9 @@ func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, key
 	err = r.Server.DeleteClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient.ID)
 	if err != nil {
 		log.Error(err, "Failed to delete Keycloak client", "id", *gocloakClient.ID, "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "DeleteKeycloakClientFailed", "Delete",
+			"Failed to delete KeycloakClient %s in namespace %s: %s",
+			keycloakClient.Name, keycloakClient.Namespace, err)
 		return err
 	}
 	log.Info("Successfully deleted Keycloak client", "id", *gocloakClient.ID, "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
