@@ -271,11 +271,11 @@ endef
 ## Helm binary to use for deploying the chart
 HELM ?= helm
 ## Namespace to deploy the Helm release
-HELM_NAMESPACE ?= keycloak-cr-operator-system
+HELM_NAMESPACE ?= keycloak-cr-operator
 ## Name of the Helm release
 HELM_RELEASE ?= keycloak-cr-operator
 ## Path to the Helm chart directory
-HELM_CHART_DIR ?= charts/chart
+HELM_CHART_DIR ?= charts/keycloak-cr-operator
 ## Additional arguments to pass to helm commands
 HELM_EXTRA_ARGS ?=
 
