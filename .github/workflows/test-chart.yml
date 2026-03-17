@@ -65,12 +65,15 @@ jobs:
           helm repo add bitnami https://charts.bitnami.com/bitnami
           helm repo update
           helm install keycloak bitnami/keycloak \
+            --wait \
+            --timeout 300s \
             --namespace keycloak \
             --create-namespace \
             --version 21.2.0 \
             -f test/e2e/keycloak-values.yaml \
             --set auth.adminUser=admin \
             --set auth.adminPassword=secret
+          helm status keycloak -n keycloak
 
       - name: Deploy manager via Helm
         run: |
@@ -90,6 +93,9 @@ jobs:
       - name: Debugging
         if: always()
         run: |
+          set +e
+          kubectl describe pod -n keycloak
+          kubectl logs -n keycloak -l app.kubernetes.io/instance=keycloak
           kubectl describe pod -n keycloak-cr-operator
           kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator
           kubectl describe keycloakclient keycloakclient-test
