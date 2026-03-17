@@ -53,8 +53,8 @@ spec:
         {{- range .Values.manager.extraArgs }}
         - {{ . }}
         {{- end }}
-        - --keycloak-url={{ required "Keycloak URL is required" (tpl .Values.manager.config.keycloakURL .) | quote }}
-        - --keycloak-admin-realm={{ required "Keycloak admin realm is required" (tpl .Values.manager.config.adminRealm .) | quote }}
+        - --keycloak-url={{ required "Keycloak URL is required" (tpl .Values.manager.config.keycloakURL .) }}
+        - --keycloak-admin-realm={{ required "Keycloak admin realm is required" (tpl .Values.manager.config.adminRealm .) }}
         {{- if .Values.manager.config.defaultRealm }}
         - --keycloak-default-realm={{ .Values.manager.config.defaultRealm }}
         {{- end }}

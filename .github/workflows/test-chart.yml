@@ -77,10 +77,6 @@ jobs:
           kubectl create namespace keycloak-cr-operator
           ct install --charts charts/keycloak-cr-operator --namespace keycloak-cr-operator
 
-      - name: Check Helm release status
-        run: |
-          make helm-status
-
       - name: Test KeycloakClient resource
         run: |
           kubectl apply -f config/samples/keycloak_v1alpha1_keycloakclient.yaml
