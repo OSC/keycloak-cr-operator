@@ -241,8 +241,13 @@ var _ = Describe("KeycloakClient Controller", func() {
 			}, secret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Data).To(HaveKey("client-secret"))
+			Expect(secret.Data).To(HaveKey("CLIENT_SECRET"))
 			Expect(secret.Data).To(HaveKey("cookie-secret"))
+			Expect(secret.Data).To(HaveKey("COOKIE_SECRET"))
 			cookieSecret, ok := secret.Data["cookie-secret"]
+			Expect(ok).To(BeTrue())
+			Expect(string(cookieSecret)).To(Not(BeEmpty()))
+			cookieSecret, ok = secret.Data["COOKIE_SECRET"]
 			Expect(ok).To(BeTrue())
 			Expect(string(cookieSecret)).To(Not(BeEmpty()))
 
@@ -328,13 +333,19 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			// Verify ConfigMap data
 			Expect(configMap.Data).To(HaveKey("client-id"))
+			Expect(configMap.Data).To(HaveKey("CLIENT_ID"))
 			Expect(configMap.Data).To(HaveKey("keycloak-url"))
+			Expect(configMap.Data).To(HaveKey("KEYCLOAK_URL"))
 			Expect(configMap.Data).To(HaveKey("issuer-url"))
+			Expect(configMap.Data).To(HaveKey("ISSUER_URL"))
 
 			// Verify the values are correct
 			Expect(configMap.Data["client-id"]).To(Equal("test-client-with-configmap"))
+			Expect(configMap.Data["CLIENT_ID"]).To(Equal("test-client-with-configmap"))
 			Expect(configMap.Data["keycloak-url"]).To(Equal("http://keycloak.keycloak.svc"))
+			Expect(configMap.Data["KEYCLOAK_URL"]).To(Equal("http://keycloak.keycloak.svc"))
 			Expect(configMap.Data["issuer-url"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
+			Expect(configMap.Data["ISSUER_URL"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
 
 			// Verify the ConfigMap has the correct owner reference
 			controllerRefs := configMap.GetOwnerReferences()

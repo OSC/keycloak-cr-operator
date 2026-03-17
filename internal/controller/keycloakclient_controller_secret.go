@@ -35,7 +35,8 @@ import (
 )
 
 const (
-	cookieSecretKey = "cookie-secret"
+	cookieSecretKey    = "cookie-secret"
+	cookieSecretEnvKey = "COOKIE_SECRET"
 )
 
 func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
@@ -152,6 +153,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			return err
 		}
 		secret.StringData[cookieSecretKey] = cookieSecret
+		secret.StringData[cookieSecretEnvKey] = cookieSecret
 
 		err = ctrl.SetControllerReference(keycloakClient, secret, r.Scheme)
 		if err != nil {
@@ -190,14 +192,19 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			for key, value := range secret.StringData {
 				found.Data[key] = []byte(value)
 			}
+			cookieSecret, err := generateRandomString()
+			if err != nil {
+				log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
+				return err
+			}
 			// Add cookie-secret back if it was removed.
-			if _, ok := found.Data[cookieSecretKey]; !ok {
-				cookieSecret, err := generateRandomString()
-				if err != nil {
-					log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
-					return err
-				}
+			if _, ok := found.Data[cookieSecretEnvKey]; !ok {
 				found.StringData[cookieSecretKey] = cookieSecret
+				found.StringData[cookieSecretEnvKey] = cookieSecret
+			}
+			if _, ok := found.Data[cookieSecretEnvKey]; !ok {
+				found.StringData[cookieSecretKey] = cookieSecret
+				found.StringData[cookieSecretEnvKey] = cookieSecret
 			}
 
 			// Update the secret with merged data
