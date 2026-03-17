@@ -75,9 +75,7 @@ jobs:
 
       - name: Deploy manager via Helm
         run: |
-          make helm-deploy \
-            IMG=quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest \
-            HELM_EXTRA_ARGS="-f charts/keycloak-cr-operator/ci/test-values.yaml"
+          ct install --charts charts/keycloak-cr-operator --namespace keycloak-cr-operator
 
       - name: Check Helm release status
         run: |
@@ -91,5 +89,6 @@ jobs:
       - name: Debug failure
         if: failure()
         run: |
+          kubectl describe pod -n keycloak-cr-operator
           kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator
           kubectl describe keycloakclient keycloakclient-test
