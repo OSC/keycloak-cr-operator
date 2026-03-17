@@ -106,6 +106,14 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 lint-config: golangci-lint ## Verify golangci-lint linter configuration
 	"$(GOLANGCI_LINT)" config verify
 
+.PHONY: verify-manifests
+verify-manifests: manifests generate ## Check manifests and generated code are up to date
+	@echo Checking if generated files are up to date... >&2
+	@git --no-pager diff .
+	@echo 'If this test fails, it is because the git diff is non-empty after running "make manifests generate".' >&2
+	@echo 'To correct this, locally run "make manifests generate", commit the changes, and re-run tests.' >&2
+	@git diff --quiet --exit-code .
+
 ##@ Build
 
 .PHONY: build
