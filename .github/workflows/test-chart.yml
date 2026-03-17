@@ -90,6 +90,10 @@ jobs:
           kubectl apply -f config/samples/keycloak_v1alpha1_keycloakclient.yaml
           kubectl wait --for=condition=Available keycloakclient keycloakclient-test --timeout=20s
 
+      - name: Get operator logs
+        if: always()
+        run: |
+          kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator
       - name: Debugging
         if: always()
         run: |
@@ -97,5 +101,4 @@ jobs:
           kubectl describe pod -n keycloak
           kubectl logs -n keycloak -l app.kubernetes.io/instance=keycloak
           kubectl describe pod -n keycloak-cr-operator
-          kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator
           kubectl describe keycloakclient keycloakclient-test
