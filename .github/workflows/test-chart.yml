@@ -40,7 +40,6 @@ jobs:
 
       - name: Prepare keycloak-cr-operator
         run: |
-          go mod tidy
           make docker-build IMG=quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest
           kind load docker-image quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest
 

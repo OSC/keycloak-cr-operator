@@ -7,6 +7,8 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
+GOHOSTOS     ?= $(shell go env GOHOSTOS)
+GOHOSTARCH   ?= $(shell go env GOHOSTARCH)
 
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
@@ -66,8 +68,24 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: unused
+unused: ## Verify go.mod
+	@echo ">> running check for unused/missing packages in go.mod"
+	GO111MODULE=on GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) go mod tidy
+	@git diff --exit-code -- go.sum go.mod
+
+.PHONY: style
+style: ## Verify go fmt style
+	@echo ">> checking code style"
+	@fmtRes=$$(gofmt -d $$(find . -path ./vendor -prune -o -name '*.go' -print)); \
+	if [ -n "$${fmtRes}" ]; then \
+		echo "gofmt checking failed!"; echo "$${fmtRes}"; echo; \
+		echo "Please ensure you are using go for formatting code."; \
+		exit 1; \
+	fi
+
 .PHONY: test
-test: manifests generate fmt vet setup-envtest ## Run tests.
+test: manifests generate unused style vet setup-envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
