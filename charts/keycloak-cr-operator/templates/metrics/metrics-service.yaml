@@ -1,0 +1,23 @@
+{{- if .Values.metrics.enable }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.metrics.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+    control-plane: controller-manager
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}
+  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+spec:
+  ports:
+  - name: {{ .Values.metrics.protocol }}
+    port: {{ get .Values.metrics.ports .Values.metrics.protocol }}
+    protocol: TCP
+    targetPort: {{ get .Values.metrics.ports .Values.metrics.protocol }}
+  selector:
+    {{- include "keycloak-cr-operator.selectorLabels" . | nindent 4 }}
+    control-plane: controller-manager
+{{- end }}

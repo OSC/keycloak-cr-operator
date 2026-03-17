@@ -1,0 +1,16 @@
+---
+manager:
+  image:
+    repository: quay.io/ohiosupercomputercenter/keycloak-cr-operator
+    tag: latest
+    pullPolicy: Always
+  config:
+    keycloakURL: http://keycloak.keycloak.svc.cluster.local
+    adminUsername: admin
+    adminPassword: secret
+    adminRealm: master
+    defaultRealm: master
+    clientIdPrefix: kubernetes
+  env:
+    - name: FOO
+      value: bar

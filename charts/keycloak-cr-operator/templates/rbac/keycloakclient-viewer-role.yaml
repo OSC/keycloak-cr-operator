@@ -1,0 +1,23 @@
+{{- if .Values.rbacHelpers.enable }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+  name: "keycloakclient-viewer-role"
+rules:
+- apiGroups:
+  - keycloak.osc.edu
+  resources:
+  - keycloakclients
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - keycloak.osc.edu
+  resources:
+  - keycloakclients/status
+  verbs:
+  - get
+{{- end }}

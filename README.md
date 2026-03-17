@@ -3,6 +3,7 @@ Keycloak Client Operator for Kubernetes
 
 ## Table of Contents
 - [Description](#description)
+- [Install](#install)
 - [Usage](#usage)
   - [KeycloakClient](#keycloakclient)
     - [CRD Overview](#crd-overview)
@@ -17,6 +18,55 @@ Keycloak Client Operator for Kubernetes
 
 ## Description
 The keycloak-cr-operator is a Kubernetes operator that manages Keycloak resources Custom Resources. Currently the only resource that can be managed is Keycloak Client resources.
+
+The keycloak-cr-operator is designed to work with existing Keycloak deployments that can be deployed outside Kubernetes or within Kubernetes.
+
+## Install
+The primary method to install the keycloak-cr-operator is with Helm.
+
+### Prerequisites
+- Helm 3.x
+- Kubernetes cluster
+- cert-manager (required by default)
+
+### Installation Steps
+1. Add the OSC Helm repository:
+```bash
+helm repo add osc https://osc.github.io/keycloak-cr-operator
+```
+
+2. Install the operator with required configuration:
+```bash
+helm install keycloak-cr-operator osc/keycloak-cr-operator \
+  --namespace keycloak-cr-operator-system \
+  --create-namespace \
+  --set manager.config.keycloakURL="https://keycloak.example.com" \
+  --set manager.config.adminPassword="your-admin-password"
+```
+
+### Required Parameters
+When installing with Helm, the following parameters must be set:
+- `manager.config.keycloakURL`: The URL of your Keycloak server
+- `manager.config.adminPassword`: The admin password for Keycloak
+
+### Optional Configuration
+The operator can be configured with additional parameters:
+- `manager.config.defaultRealm`: The default Keycloak realm (defaults to "master")
+- `manager.config.clientIdPrefix`: Prefix for generated client IDs (defaults to "kubernetes")
+- `manager.config.adminUsername`: Admin username (defaults to "admin")
+- `manager.config.adminRealm`: Admin realm (defaults to "master")
+
+### Cert-manager Dependency
+The operator requires cert-manager for metric and webhook certificate management. Cert-manager is enabled by default. If you're not using cert-manager, you can disable it:
+```bash
+helm install keycloak-cr-operator osc/keycloak-cr-operator \
+  --namespace keycloak-cr-operator-system \
+  --create-namespace \
+  --set manager.config.keycloakURL="https://keycloak.example.com" \
+  --set manager.config.adminPassword="your-admin-password" \
+  --set certManager.enable=false \
+  --set metrics.protocol=http
+```
 
 ## Usage
 

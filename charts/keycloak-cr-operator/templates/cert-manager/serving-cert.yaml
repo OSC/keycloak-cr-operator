@@ -1,0 +1,17 @@
+{{- if .Values.certManager.enable }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
+  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+spec:
+  dnsNames:
+  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}.{{ .Release.Namespace }}.svc
+  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: Issuer
+    name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "selfsigned-issuer" "context" $) }}
+  secretName: webhook-server-cert
+{{- end }}
