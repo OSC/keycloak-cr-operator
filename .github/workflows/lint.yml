@@ -23,3 +23,5 @@ jobs:
         run: make lint-config
       - name: Run linter
         run: make lint
+      - name: Verify generated
+        run: make verify-manifests

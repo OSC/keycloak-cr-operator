@@ -14,6 +14,8 @@ endif
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
 
+CRDOC_IMAGE = ghcr.io/fybrik/crdoc:latest
+
 # Setting SHELL to bash allows bash commands to be executed by recipes.
 # Options are set to exit when a recipe line exits non-zero or a piped command fails.
 SHELL = /usr/bin/env bash -o pipefail
@@ -44,6 +46,7 @@ help: ## Display this help.
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	"$(CONTROLLER_GEN)" rbac:roleName=keycloak-cr-operator-manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTAINER_TOOL) run --rm -v $(shell pwd):/workdir $(CRDOC_IMAGE) --resources /workdir/config/crd/bases --output /workdir/docs/crds.md
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -102,6 +105,14 @@ lint-fix: golangci-lint ## Run golangci-lint linter and perform fixes
 .PHONY: lint-config
 lint-config: golangci-lint ## Verify golangci-lint linter configuration
 	"$(GOLANGCI_LINT)" config verify
+
+.PHONY: verify-manifests
+verify-manifests: manifests generate ## Check manifests and generated code are up to date
+	@echo Checking if generated files are up to date... >&2
+	@git --no-pager diff .
+	@echo 'If this test fails, it is because the git diff is non-empty after running "make manifests generate".' >&2
+	@echo 'To correct this, locally run "make manifests generate", commit the changes, and re-run tests.' >&2
+	@git diff --quiet --exit-code .
 
 ##@ Build
 
