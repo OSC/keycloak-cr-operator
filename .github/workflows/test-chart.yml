@@ -84,6 +84,9 @@ jobs:
       - name: Check Helm release status
         run: |
           make helm-status
+          kubectl get endpointslices.discovery.k8s.io -n keycloak-cr-operator-system -l kubernetes.io/service-name=keycloak-cr-operator-webhook-service -o jsonpath='{range .items[*]}{range .endpoints[*]}{.addresses[*]}{end}{end}'
+          kubectl get mutatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-mutating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
+          kubectl get validatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-validating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
 
       - name: Test KeycloakClient resource
         run: |
@@ -93,12 +96,12 @@ jobs:
       - name: Get operator logs
         if: always()
         run: |
-          kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator
+          kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator --tail=200
       - name: Debugging
         if: always()
         run: |
           set +e
           kubectl describe pod -n keycloak
-          kubectl logs -n keycloak -l app.kubernetes.io/instance=keycloak
+          kubectl logs -n keycloak -l app.kubernetes.io/instance=keycloak --tail=200
           kubectl describe pod -n keycloak-cr-operator
           kubectl describe keycloakclient keycloakclient-test
