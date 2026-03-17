@@ -140,7 +140,7 @@ func KeycloakClientSpec() {
 			By("Client updated in Keycloak with ConfigMap")
 			verifyClientUpdatesConfigMap := func(g Gomega) {
 				cmd := exec.Command("kubectl", "patch", "keycloakclient", "keycloakclient-test",
-					"--type", "merge", "-p", "{\"spec\":{\"id\":\"kubernetes-foo\",\"clientID\":\"kubernetes-foo\"}}")
+					"--type", "merge", "-p", "{\"spec\":{\"clientID\":\"kubernetes-foo\"}}")
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred(), fmt.Sprintf("Patch keycloak client failed: %s", output))
 				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",

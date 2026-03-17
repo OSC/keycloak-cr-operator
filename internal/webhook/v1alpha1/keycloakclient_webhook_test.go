@@ -89,10 +89,6 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			By("Checking that the default Realm is set")
 			Expect(obj.Spec.Realm).NotTo(BeNil())
 			Expect(*obj.Spec.Realm).To(Equal("master"))
-
-			By("Checking that the default ID is set to ClientID")
-			Expect(obj.Spec.ID).NotTo(BeNil())
-			Expect(*obj.Spec.ID).To(Equal(*obj.Spec.ClientID))
 		})
 
 		It("Should not override existing ClientID", func() {
@@ -121,20 +117,6 @@ var _ = Describe("KeycloakClient Webhook", func() {
 			By("Checking that the existing Realm is preserved")
 			Expect(obj.Spec.Realm).NotTo(BeNil())
 			Expect(*obj.Spec.Realm).To(Equal("custom-realm"))
-		})
-
-		It("Should not override existing ID", func() {
-			By("Setting an explicit ID")
-			id := "existing-id"
-			obj.Spec.ID = &id
-
-			By("Calling the Default method to apply defaults")
-			err := defaulter.Default(ctx, obj)
-			Expect(err).ToNot(HaveOccurred())
-
-			By("Checking that the existing ID is preserved")
-			Expect(obj.Spec.ID).NotTo(BeNil())
-			Expect(*obj.Spec.ID).To(Equal("existing-id"))
 		})
 
 		It("Should apply default ConfigMapName when not set", func() {

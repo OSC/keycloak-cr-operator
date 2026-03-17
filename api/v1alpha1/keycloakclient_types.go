@@ -109,10 +109,6 @@ type KeycloakClientSpec struct {
 	// +optional
 	FullScopeAllowed *bool `json:"fullScopeAllowed,omitempty"`
 
-	// ID is the unique identifier for the client
-	// +optional
-	ID *string `json:"id,omitempty"`
-
 	// ImplicitFlowEnabled indicates if implicit flow is enabled
 	// +kubebuilder:default=false
 	// +optional
@@ -290,11 +286,8 @@ func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	} else {
 		client.ClientID = k.Spec.ClientID
 	}
-	if k.Spec.ID == nil || *k.Spec.ID == "" {
-		client.ID = client.ClientID
-	} else {
-		client.ID = k.Spec.ID
-	}
+	client.ID = client.ClientID
+
 	attributes := make(map[string]string)
 	if k.Spec.LoginTheme != nil && *k.Spec.LoginTheme != "" {
 		attributes["login_theme"] = *k.Spec.LoginTheme
