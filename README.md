@@ -1,121 +1,186 @@
 # keycloak-cr-operator
-// TODO(user): Add simple overview of use/purpose
+Keycloak Client Operator for Kubernetes
+
+## Table of Contents
+- [Description](#description)
+- [Usage](#usage)
+  - [KeycloakClient](#keycloakclient)
+    - [CRD Overview](#crd-overview)
+    - [Default Values Applied by Webhook](#default-values-applied-by-webhook)
+    - [Using an Existing Secret](#using-an-existing-secret)
+    - [Creating a Secret Automatically](#creating-a-secret-automatically)
+  - [Resource Management](#resource-management)
+    - [Secret Creation](#secret-creation)
+    - [ConfigMap Creation](#configmap-creation)
+- [Working with Kubebuilder](#working-with-kubebuilder)
+- [License](#license)
 
 ## Description
-// TODO(user): An in-depth paragraph about your project and overview of use
+The keycloak-cr-operator is a Kubernetes operator that manages Keycloak resources Custom Resources. Currently the only resource that can be managed is Keycloak Client resources.
 
-## Getting Started
+## Usage
 
-### Prerequisites
-- go version v1.24.6+
-- docker version 17.03+.
-- kubectl version v1.11.3+.
-- Access to a Kubernetes v1.11.3+ cluster.
+### KeycloakClient
 
-### To Deploy on the cluster
-**Build and push your image to the location specified by `IMG`:**
+#### CRD Overview
+The operator manages Keycloak clients through the `KeycloakClient` Custom Resource Definition (CRD). This CRD supports various Keycloak client properties and configurations.
 
-```sh
-make docker-build docker-push IMG=<some-registry>/keycloak-cr-operator:tag
+For detailed information about all available fields and their usage, please refer to the [KeycloakClient CRD documentation](docs/crds.md).
+
+#### Default Values Applied by Webhook
+When creating or updating a KeycloakClient, the webhook automatically applies the following defaults:
+
+- **ClientID**: If not specified, it will be auto-generated using the pattern:
+  - If `ClientIDPrefix` is set in the operator configuration: `prefix-namespace-name`
+  - If no prefix: `namespace-name`
+
+- **Realm**: If not specified, it will default to the operator's configured `DefaultRealm`
+
+- **ClientSecretRef**: When `clientAuthenticatorType` is "client-secret" and `publicClient` is false:
+  - If `clientSecretRef` is not set, it will be auto-created with:
+    - `name`: `name-secret` (where `name` is the KeycloakClient resource name)
+    - `key`: `client-secret`
+    - `create`: `true` (indicating the secret should be auto-created)
+
+- **ConfigMapName**: If not specified, it will default to `name-config` (where `name` is the KeycloakClient resource name)
+
+#### Using an Existing Secret
+To reference an existing Kubernetes Secret for the client secret:
+
+```yaml
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: example-client
+  namespace: default
+spec:
+  # Define the Keycloak realm
+  realm: "my-realm"
+
+  # Define the client ID (optional - will default to namespace-name)
+  clientID: "my-client-id"
+
+  # Reference an existing secret
+  clientSecretRef:
+    name: "existing-secret"
+    key: "client-secret"
+    # Set to false if you want to use an existing secret without creating it
+    create: false
+
+  # Other client properties
+  name: "Example Client"
+  description: "An example Keycloak client"
+  enabled: true
+  publicClient: false
+  redirectUris:
+    - "https://example.com/callback"
+  webOrigins:
+    - "https://example.com"
 ```
 
-**NOTE:** This image ought to be published in the personal registry you specified.
-And it is required to have access to pull the image from the working environment.
-Make sure you have the proper permission to the registry if the above commands don’t work.
+When referencing an existing secret, the operator uses the label `keycloak.osc.edu/keycloakclient` to identify which KeycloakClient owns the secret. This allows the operator to properly manage the relationship between Keycloak clients and their secrets.
 
-**Install the CRDs into the cluster:**
-
-```sh
-make install
+Example of a secret with the required label:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: existing-secret
+  namespace: default
+  labels:
+    keycloak.osc.edu/keycloakclient: "example-client"
+type: Opaque
+data:
+  client-secret: <base64-encoded-secret>
 ```
 
-**Deploy the Manager to the cluster with the image specified by `IMG`:**
+#### Creating a Secret Automatically
+To have the operator automatically create a secret with a generated client secret:
 
-```sh
-make deploy IMG=<some-registry>/keycloak-cr-operator:tag
+```yaml
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: example-client-auto-secret
+  namespace: default
+spec:
+  # Define the Keycloak realm
+  realm: "my-realm"
+
+  # Define the client ID (optional - will default to namespace-name)
+  clientID: "my-client-id"
+
+  # Configure secret creation
+  clientSecretRef:
+    # Name will default to name-secret if not specified
+    name: "my-client-secret"
+    key: "client-secret"
+    # Set to true (default) to create the secret automatically
+    create: true
+
+  # Other client properties
+  name: "Example Client with Auto Secret"
+  description: "An example Keycloak client with auto-created secret"
+  enabled: true
+  publicClient: false
+  redirectUris:
+    - "https://example.com/callback"
+  webOrigins:
+    - "https://example.com"
 ```
 
-> **NOTE**: If you encounter RBAC errors, you may need to grant yourself cluster-admin
-privileges or be logged in as admin.
+#### Secret Creation
+The operator creates Kubernetes Secrets containing client credentials with the following structure:
+- `client-secret`: The raw client secret value
+- `CLIENT_SECRET`: The client secret value in uppercase snake_case format
+- `cookie-secret`: A randomly generated secret used for OAuth2 Proxy cookie encryption
+- `COOKIE_SECRET`: The cookie secret value in uppercase snake_case format
 
-**Create instances of your solution**
-You can apply the samples (examples) from the config/sample:
+The `cookie-secret` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
 
-```sh
-kubectl apply -k config/samples/
+Example Secret structure:
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: example-client-secret
+  namespace: default
+type: Opaque
+data:
+  client-secret: <base64-encoded-secret>
+  CLIENT_SECRET: <base64-encoded-secret>
+  cookie-secret: <base64-encoded-cookie-secret>
+  COOKIE_SECRET: <base64-encoded-cookie-secret>
 ```
 
->**NOTE**: Ensure that the samples has default values to test it out.
+#### ConfigMap Creation
+The operator creates Kubernetes ConfigMaps with Keycloak client configuration:
+- `client-id`: The client ID
+- `CLIENT_ID`: The client ID in uppercase snake_case format
+- `keycloak-url`: The Keycloak server URL
+- `KEYCLOAK_URL`: The Keycloak server URL in uppercase snake_case format
+- `issuer-url`: The issuer URL for OpenID Connect
+- `ISSUER_URL`: The issuer URL in uppercase snake_case format
 
-### To Uninstall
-**Delete the instances (CRs) from the cluster:**
-
-```sh
-kubectl delete -k config/samples/
+Example ConfigMap structure:
+```yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: example-client-config
+  namespace: default
+data:
+  client-id: "example-client"
+  CLIENT_ID: "example-client"
+  keycloak-url: "https://keycloak.example.com"
+  KEYCLOAK_URL: "https://keycloak.example.com"
+  issuer-url: "https://keycloak.example.com/realms/my-realm"
+  ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
 ```
 
-**Delete the APIs(CRDs) from the cluster:**
+## Working with Kubebuilder
 
-```sh
-make uninstall
-```
-
-**UnDeploy the controller from the cluster:**
-
-```sh
-make undeploy
-```
-
-## Project Distribution
-
-Following the options to release and provide this solution to the users.
-
-### By providing a bundle with all YAML files
-
-1. Build the installer for the image built and published in the registry:
-
-```sh
-make build-installer IMG=<some-registry>/keycloak-cr-operator:tag
-```
-
-**NOTE:** The makefile target mentioned above generates an 'install.yaml'
-file in the dist directory. This file contains all the resources built
-with Kustomize, which are necessary to install this project without its
-dependencies.
-
-2. Using the installer
-
-Users can just run 'kubectl apply -f <URL for YAML BUNDLE>' to install
-the project, i.e.:
-
-```sh
-kubectl apply -f https://raw.githubusercontent.com/<org>/keycloak-cr-operator/<tag or branch>/dist/install.yaml
-```
-
-### By providing a Helm Chart
-
-1. Build the chart using the optional helm plugin
-
-```sh
-kubebuilder edit --plugins=helm/v2-alpha
-```
-
-2. See that a chart was generated under 'dist/chart', and users
-can obtain this solution from there.
-
-**NOTE:** If you change the project, you need to update the Helm Chart
-using the same command above to sync the latest changes. Furthermore,
-if you create webhooks, you need to use the above command with
-the '--force' flag and manually ensure that any custom configuration
-previously added to 'dist/chart/values.yaml' or 'dist/chart/manager/manager.yaml'
-is manually re-applied afterwards.
-
-## Contributing
-// TODO(user): Add detailed information on how you would like others to contribute to this project
-
-**NOTE:** Run `make help` for more information on all potential `make` targets
-
-More information can be found via the [Kubebuilder Documentation](https://book.kubebuilder.io/introduction.html)
+Refer to [Kubebuilder Usage](./docs/kubebuilder_usage.md) for additional information about interacting with this project via Kubebuilder.
 
 ## License
 
