@@ -1,3 +1,7 @@
+[![CI Status](https://github.com/OSC/keycloak-cr-operator/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/OSC/keycloak-cr-operator/actions?query=workflow%3Atest)
+[![GitHub release](https://img.shields.io/github/v/release/OSC/keycloak-cr-operator?include_prereleases&sort=semver)](https://github.com/OSC/keycloak-cr-operator/releases/latest)
+![GitHub All Releases](https://img.shields.io/github/downloads/OSC/keycloak-cr-operator/total)
+
 # keycloak-cr-operator
 Keycloak Client Operator for Kubernetes
 
