@@ -80,14 +80,6 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		obj.Spec.Realm = &defaultRealm
 	}
 
-	// Set default ID if not set
-	if obj.Spec.ID == nil || *obj.Spec.ID == "" {
-		if obj.Spec.ClientID != nil && *obj.Spec.ClientID != "" {
-			clientID := *obj.Spec.ClientID
-			obj.Spec.ID = &clientID
-		}
-	}
-
 	if obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == "client-secret" &&
 		obj.Spec.PublicClient != nil && !*obj.Spec.PublicClient {
 		if obj.Spec.ClientSecretRef == nil {
