@@ -14,6 +14,7 @@ endif
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
 
+HELM_DOCS_IMAGE = jnorwood/helm-docs:v1.11.0
 CRDOC_IMAGE = ghcr.io/fybrik/crdoc:latest
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -51,6 +52,11 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	"$(CONTROLLER_GEN)" object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: helm-docs
+helm-docs: ## Generate helm docs
+	@echo Generate helm docs... >&2
+	@$(CONTAINER_TOOL) run --rm -v ${PWD}/charts:/helm-docs -w /helm-docs $(HELM_DOCS_IMAGE) -s file
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -113,6 +119,14 @@ verify-manifests: manifests generate ## Check manifests and generated code are u
 	@echo 'If this test fails, it is because the git diff is non-empty after running "make manifests generate".' >&2
 	@echo 'To correct this, locally run "make manifests generate", commit the changes, and re-run tests.' >&2
 	@git diff --quiet --exit-code .
+
+.PHONY: verify-helm-docs
+verify-helm-docs: helm-docs ## Check Helm charts docs are up to date
+	@echo Checking helm charts are up to date... >&2
+	@git --no-pager diff charts
+	@echo 'If this test fails, it is because the git diff is non-empty after running "make helm-docs".' >&2
+	@echo 'To correct this, locally run "make helm-docs", commit the changes, and re-run tests.' >&2
+	@git diff --quiet --exit-code charts
 
 ##@ Build
 

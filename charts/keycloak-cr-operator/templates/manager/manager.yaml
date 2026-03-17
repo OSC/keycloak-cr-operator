@@ -38,7 +38,7 @@ spec:
       containers:
       - args:
         {{- if .Values.metrics.enable }}
-        - --metrics-bind-address=:{{ .Values.metrics.port }}
+        - --metrics-bind-address=:{{ get .Values.metrics.ports .Values.metrics.protocol }}
         {{- else }}
         # Bind to :0 to disable the controller-runtime managed metrics server
         - --metrics-bind-address=0

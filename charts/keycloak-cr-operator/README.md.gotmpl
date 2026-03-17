@@ -1,0 +1,23 @@
+{{ template "chart.header" . }}
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.description" . }}
+
+## Installing the Chart
+
+```console
+helm repo add osc https://osc.github.io/keycloak-cr-operator
+helm install keycloak-cr-operator osc/keycloak-cr-operator \
+  --namespace keycloak-cr-operator-system \
+  --create-namespace \
+  --set manager.config.keycloakURL="https://keycloak.example.com" \
+  --set manager.config.adminPassword="your-admin-password"
+```
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+{{ template "helm-docs.versionFooter" . }}
