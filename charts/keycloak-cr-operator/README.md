@@ -30,6 +30,7 @@ helm install keycloak-cr-operator osc/keycloak-cr-operator \
 | manager.config.adminPassword | string | `""` | Keycloak admin password. **required** |
 | manager.config.adminRealm | string | `"master"` | Keycloak admin realm |
 | manager.config.defaultRealm | string | `nil` | Default Keycloak realm for new resources |
+| manager.config.allowedRealms | list | `[]` | Realms that can be used for custom resources |
 | manager.config.clientIdPrefix | string | `"kubernetes"` | Prefix for generated client IDs |
 | manager.config.clientIDRequired | string | `""` | Required ClientID template |
 | manager.extraArgs | list | `[]` | Extra arguments to pass to the manager |

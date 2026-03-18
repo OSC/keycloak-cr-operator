@@ -8,6 +8,8 @@ manager:
     adminPassword: secret
     adminRealm: master
     defaultRealm: master
+    allowedRealms:
+      - master
     clientIdPrefix: kubernetes
     clientIDRequired: '{{ .Config.ClientIDPrefix }}-{{ .Obj.Namespace }}-{{ .Obj.Name }}'
   env:

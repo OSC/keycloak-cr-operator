@@ -58,6 +58,9 @@ spec:
         {{- if .Values.manager.config.defaultRealm }}
         - --keycloak-default-realm={{ .Values.manager.config.defaultRealm }}
         {{- end }}
+        {{- if .Values.manager.config.allowedRealms }}
+        - --keycloak-allowed-realms={{ .Values.manager.config.allowedRealms | join "," }}
+        {{- end }}
         {{- if .Values.manager.config.clientIdPrefix }}
         - --keycloak-client-id-prefix={{ .Values.manager.config.clientIdPrefix }}
         {{- end }}

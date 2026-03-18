@@ -30,6 +30,8 @@ manager:
     adminRealm: master
     # -- Default Keycloak realm for new resources
     defaultRealm:
+    # -- Realms that can be used for custom resources
+    allowedRealms: []
     # -- Prefix for generated client IDs
     clientIdPrefix: kubernetes
     # -- Required ClientID template
