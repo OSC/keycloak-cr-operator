@@ -38,7 +38,6 @@ var (
 	managerImage = "example.com/keycloak-cr-operator:v0.0.1"
 	// shouldCleanupCertManager tracks whether CertManager was installed by this suite.
 	shouldCleanupCertManager = false
-	shouldCleanupKeycloak    = false
 )
 
 // TestE2E runs the e2e test suite to validate the solution in an isolated environment.
@@ -94,15 +93,6 @@ func setupCertManager() {
 }
 
 func setupKeycloak() {
-	By("checking if Keycloak is already running")
-	if utils.IsKeycloakRunning() {
-		_, _ = fmt.Fprintf(GinkgoWriter, "Keycloak is already running. Skipping installation.\n")
-		return
-	}
-
-	// Mark for cleanup before installation to handle interruptions and partial installs.
-	shouldCleanupKeycloak = true
-
 	By("installing Keycloak")
 	Expect(utils.InstallKeycloak()).To(Succeed(), "Failed to install Keycloak")
 }
@@ -120,11 +110,6 @@ func teardownCertManager() {
 }
 
 func teardownKeycloak() {
-	if !shouldCleanupKeycloak {
-		_, _ = fmt.Fprintf(GinkgoWriter, "Skipping Keycloak cleanup (not installed by this suite)\n")
-		return
-	}
-
 	By("uninstalling Keycloak")
 	utils.UninstallKeycloak()
 }

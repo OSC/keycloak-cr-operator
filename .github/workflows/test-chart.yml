@@ -51,30 +51,11 @@ jobs:
 
       - name: Install cert-manager via Helm (wait for readiness)
         run: |
-          helm repo add jetstack https://charts.jetstack.io
-          helm repo update
-          helm install cert-manager jetstack/cert-manager \
-            --namespace cert-manager \
-            --create-namespace \
-            --version v1.20.0 \
-            --set crds.enabled=true \
-            --wait \
-            --timeout 300s
+          make install-cert-manager
 
       - name: Install Keycloak via Helm (wait for readiness)
         run: |
-          helm repo add bitnami https://charts.bitnami.com/bitnami
-          helm repo update
-          helm install keycloak bitnami/keycloak \
-            --wait \
-            --timeout 300s \
-            --namespace keycloak \
-            --create-namespace \
-            --version 21.2.0 \
-            -f test/e2e/keycloak-values.yaml \
-            --set auth.adminUser=admin \
-            --set auth.adminPassword=secret
-          helm status keycloak -n keycloak
+          make install-keycloak
 
       - name: Deploy manager via Helm
         run: |
