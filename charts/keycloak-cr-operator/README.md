@@ -30,7 +30,9 @@ helm install keycloak-cr-operator osc/keycloak-cr-operator \
 | manager.config.adminPassword | string | `""` | Keycloak admin password. **required** |
 | manager.config.adminRealm | string | `"master"` | Keycloak admin realm |
 | manager.config.defaultRealm | string | `nil` | Default Keycloak realm for new resources |
+| manager.config.allowedRealms | list | `[]` | Realms that can be used for custom resources |
 | manager.config.clientIdPrefix | string | `"kubernetes"` | Prefix for generated client IDs |
+| manager.config.clientIdRequired | string | `""` | Required ClientID template |
 | manager.extraArgs | list | `[]` | Extra arguments to pass to the manager |
 | manager.annotations | object | `{}` | Annotations to add to manager Deployment |
 | manager.podAnnotations | object | `{"kubectl.kubernetes.io/default-container":"manager"}` | Pod annotations to add to manager pods |
@@ -60,6 +62,7 @@ helm install keycloak-cr-operator osc/keycloak-cr-operator \
 | webhook.port | int | `9443` | Webhook server port |
 | webhook.annotations | object | `{}` | Annotations to add to webhook server |
 | networkPolicy.enable | bool | `true` | Enable NetworkPolicy resources for this operator |
+| networkPolicy.allowMetricsFromPods | bool | `false` | Allow all pods in operator's namespace to access the operator's metrics |
 | networkPolicy.prometheusLabels | object | `{"app.kubernetes.io/name":"prometheus"}` | The Prometheus namespace to allow access |
 | networkPolicy.apiServerNamespace | string | `"kube-system"` | The API server namespace name |
 | networkPolicy.apiServerPodLabels | object | `{"tier":"control-plane"}` | The API server pod labels to allow |

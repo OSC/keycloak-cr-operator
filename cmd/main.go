@@ -24,6 +24,7 @@ import (
 	"os"
 	"slices"
 	"strings"
+	"text/template"
 	"time"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
@@ -65,7 +66,8 @@ func init() {
 // nolint:gocyclo
 func main() {
 	var keycloakUrl, keycloakAdminUsername, keycloakAdminPassword, keycloakAdminRealm string
-	var keycloakDefaultRealm, keycloakAllowedRealms, keycloakClientIDPrefix, secretWaitTimeout string
+	var keycloakDefaultRealm, keycloakAllowedRealms, keycloakClientIDPrefix string
+	var keycloakClientIDRequired, secretWaitTimeout string
 	var metricsAddr string
 	var metricsCertPath, metricsCertName, metricsCertKey string
 	var webhookCertPath, webhookCertName, webhookCertKey string
@@ -83,6 +85,8 @@ func main() {
 		"The Keycloak allowed realm. Comma separated for multiple realms.")
 	flag.StringVar(&keycloakClientIDPrefix, "keycloak-client-id-prefix", "kubernetes",
 		"The prefix used when creating Keycloak client ID")
+	flag.StringVar(&keycloakClientIDRequired, "keycloak-client-id-required", "",
+		"The Go template used to enforce the ClientID using the defaulting and validating webhooks")
 	flag.StringVar(&secretWaitTimeout, "secret-wait-timeout", "10s",
 		"The time to wait for secrets to be available when needed for a custom resource")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
@@ -123,6 +127,7 @@ func main() {
 	keycloakUrlObj, err := url.Parse(keycloakUrl)
 	if err != nil {
 		setupLog.Error(err, "Unable to parse Keycloak URL")
+		os.Exit(1)
 	}
 	if keycloakAdminPassword == "" {
 		setupLog.Error(fmt.Errorf("keycloak-admin-password is required"), "Missing required flag")
@@ -135,6 +140,14 @@ func main() {
 	if len(allowedRealms) > 0 && keycloakDefaultRealm != "" {
 		if !slices.Contains(allowedRealms, keycloakDefaultRealm) {
 			setupLog.Error(fmt.Errorf("keycloak-default-realm is not listed in keycloak-allowed-realms"), "Invalid flags")
+			os.Exit(1)
+		}
+	}
+	var clientIDRequiredTmpl *template.Template
+	if keycloakClientIDRequired != "" {
+		clientIDRequiredTmpl, err = template.New("clientID").Parse(keycloakClientIDRequired)
+		if err != nil {
+			setupLog.Error(err, "Unable to parse keycloak-client-id-required template")
 			os.Exit(1)
 		}
 	}
@@ -238,13 +251,14 @@ func main() {
 	}
 
 	keycloakConfig := &models.KeycloakConfig{
-		KeycloakURL:    keycloakUrlObj,
-		AdminUsername:  keycloakAdminUsername,
-		AdminPassword:  keycloakAdminPassword,
-		AdminRealm:     keycloakAdminRealm,
-		DefaultRealm:   keycloakDefaultRealm,
-		AllowedRealms:  allowedRealms,
-		ClientIDPrefix: keycloakClientIDPrefix,
+		KeycloakURL:      keycloakUrlObj,
+		AdminUsername:    keycloakAdminUsername,
+		AdminPassword:    keycloakAdminPassword,
+		AdminRealm:       keycloakAdminRealm,
+		DefaultRealm:     keycloakDefaultRealm,
+		AllowedRealms:    allowedRealms,
+		ClientIDPrefix:   keycloakClientIDPrefix,
+		ClientIDRequired: clientIDRequiredTmpl,
 	}
 	reconciler := &controller.KeycloakClientReconciler{
 		Client:            mgr.GetClient(),

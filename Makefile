@@ -344,3 +344,72 @@ helm-history: ## Show Helm release history.
 .PHONY: helm-rollback
 helm-rollback: ## Rollback to previous Helm release.
 	$(HELM) rollback $(HELM_RELEASE) --namespace $(HELM_NAMESPACE)
+
+## Namespace to deploy the cert-manager Helm release
+CERT_MANAGER_NAMESPACE ?= cert-manager
+## Name of the Helm release
+CERT_MANAGER_RELEASE ?= cert-manager
+## cert-manager chart version
+CERT_MANAGER_VERSION ?= v1.20.0
+## Additional arguments to pass to helm commands
+CERT_MANAGER_EXTRA_ARGS ?=
+##@ Helm Cert-Manager Installation
+.PHONY: install-cert-manager
+install-cert-manager: ## Install cert-manager via Helm (wait for readiness)
+	$(HELM) repo add jetstack https://charts.jetstack.io
+	$(HELM) repo update
+	$(HELM) upgrade $(CERT_MANAGER_RELEASE) jetstack/cert-manager \
+		--install \
+		--namespace $(CERT_MANAGER_NAMESPACE) \
+		--create-namespace \
+		--version $(CERT_MANAGER_VERSION) \
+		--set crds.enabled=true \
+		--set crds.keep=false \
+		--wait \
+		--timeout 300s \
+		$(CERT_MANAGER_EXTRA_ARGS)
+	$(KUBECTL) wait deployment.apps/cert-manager-webhook --for condition=Available \
+		--namespace $(CERT_MANAGER_NAMESPACE) --timeout 5m
+
+.PHONY: uninstall-cert-manager
+uninstall-cert-manager: ## Uninstall cert-manager via Helm
+	$(HELM) uninstall $(CERT_MANAGER_RELEASE) --namespace $(CERT_MANAGER_NAMESPACE)
+	$(KUBECTL) delete namespace $(CERT_MANAGER_NAMESPACE)
+	$(KUBECTL) delete lease cert-manager-cainjector-leader-election -n kube-system --ignore-not-found --force --grace-period=0
+	$(KUBECTL) delete lease cert-manager-controller -n kube-system --ignore-not-found --force --grace-period=0
+
+##@ Helm Keycloak Installation
+## Namespace to deploy the Keycloak Helm release
+KEYCLOAK_NAMESPACE ?= keycloak
+## Name of the Helm release
+KEYCLOAK_RELEASE ?= keycloak
+## Keycloak chart version
+KEYCLOAK_VERSION ?= 21.2.0
+## Keycloak admin username
+KEYCLOAK_ADMIN_USER ?= admin
+## Keycloak admin password
+KEYCLOAK_ADMIN_PASSWORD ?= secret
+## Path to Keycloak values file
+KEYCLOAK_VALUES_FILE ?= test/e2e/keycloak-values.yaml
+## Additional arguments to pass to helm commands
+KEYCLOAK_EXTRA_ARGS ?=
+.PHONY: install-keycloak
+install-keycloak: ## Install Keycloak via Helm (wait for readiness)
+	$(HELM) repo add bitnami https://charts.bitnami.com/bitnami
+	$(HELM) repo update
+	$(HELM) upgrade $(KEYCLOAK_RELEASE) bitnami/keycloak \
+		--install \
+		--wait \
+		--timeout 300s \
+		--namespace $(KEYCLOAK_NAMESPACE) \
+		--create-namespace \
+		--version $(KEYCLOAK_VERSION) \
+		-f $(KEYCLOAK_VALUES_FILE) \
+		--set auth.adminUser=$(KEYCLOAK_ADMIN_USER) \
+		--set auth.adminPassword=$(KEYCLOAK_ADMIN_PASSWORD) \
+		$(KEYCLOAK_EXTRA_ARGS)
+
+.PHONY: uninstall-keycloak
+uninstall-keycloak: ## Uninstall cert-manager via Helm
+	$(HELM) uninstall $(KEYCLOAK_RELEASE) --namespace $(KEYCLOAK_NAMESPACE)
+	$(KUBECTL) delete namespace $(KEYCLOAK_NAMESPACE)

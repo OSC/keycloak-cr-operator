@@ -8,7 +8,12 @@ manager:
     adminPassword: secret
     adminRealm: master
     defaultRealm: master
+    allowedRealms:
+      - master
     clientIdPrefix: kubernetes
+    clientIdRequired: '{{ .Config.ClientIDPrefix }}-{{ .Obj.Namespace }}-{{ .Obj.Name }}'
   env:
     - name: FOO
       value: bar
+networkPolicy:
+  allowMetricsFromPods: true

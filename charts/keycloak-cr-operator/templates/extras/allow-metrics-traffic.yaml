@@ -9,6 +9,9 @@ metadata:
 spec:
   ingress:
   - from:
+  {{- if .Values.networkPolicy.allowMetricsFromPods }}
+    - podSelector: {}
+  {{- end }}
     - namespaceSelector:
         matchLabels:
         {{- with .Values.networkPolicy.prometheusLabels }}

@@ -17,6 +17,7 @@ Keycloak Client Operator for Kubernetes
   - [Resource Management](#resource-management)
     - [Secret Creation](#secret-creation)
     - [ConfigMap Creation](#configmap-creation)
+- [Development](#development)
 - [Working with Kubebuilder](#working-with-kubebuilder)
 - [License](#license)
 
@@ -230,6 +231,31 @@ data:
   KEYCLOAK_URL: "https://keycloak.example.com"
   issuer-url: "https://keycloak.example.com/realms/my-realm"
   ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
+```
+
+## Development
+
+**Requires**
+
+* Kind
+* kubectl
+* Helm
+
+The following outlines the steps to setup a development environment:
+
+```
+make setup-test-e2e
+make install-cert-manager
+make install-keycloak
+
+make docker-build IMG=quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest
+kind load docker-image quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest --name keycloak-cr-operator-test-e2e
+
+make helm-deploy IMG=quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest HELM_EXTRA_ARGS="-f charts/keycloak-cr-operator/ci/test-values.yaml --cleanup-on-fail=false"
+
+kubectl apply -f config/samples/keycloak_v1alpha1_keycloakclient.yaml
+
+kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator
 ```
 
 ## Working with Kubebuilder

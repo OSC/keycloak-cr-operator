@@ -237,6 +237,10 @@ type KeycloakClientStatus struct {
 	// +listMapKey=type
 	// +optional
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// The ID of the Keycloak Client object in Keycloak
+	// +optional
+	ID *string `json:"id"`
 }
 
 // +kubebuilder:object:root=true
@@ -286,7 +290,6 @@ func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	} else {
 		client.ClientID = k.Spec.ClientID
 	}
-	client.ID = client.ClientID
 
 	attributes := make(map[string]string)
 	if k.Spec.LoginTheme != nil && *k.Spec.LoginTheme != "" {

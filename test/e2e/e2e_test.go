@@ -34,7 +34,7 @@ import (
 )
 
 // namespace where the project is deployed in
-const namespace = "keycloak-cr-operator-system"
+const namespace = "keycloak-cr-operator"
 
 // serviceAccountName created for the project
 const serviceAccountName = "keycloak-cr-operator-manager"
@@ -66,13 +66,12 @@ var _ = Describe("Manager", Ordered, func() {
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to label namespace with restricted policy")
 
-		By("installing CRDs")
-		cmd = exec.Command("make", "install")
-		_, err = utils.Run(cmd)
-		Expect(err).NotTo(HaveOccurred(), "Failed to install CRDs")
-
 		By("deploying the manager")
-		cmd = exec.Command("make", "deploy", fmt.Sprintf("IMG=%s", managerImage))
+		cmd = exec.Command("make", "helm-deploy",
+			fmt.Sprintf("IMG=%s", managerImage),
+			fmt.Sprintf("HELM_NAMESPACE=%s", namespace),
+			"HELM_EXTRA_ARGS=-f charts/keycloak-cr-operator/ci/test-values.yaml --set crd.keep=false --set manager.config.clientIdRequired=false",
+		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the manager")
 	})
@@ -89,11 +88,7 @@ var _ = Describe("Manager", Ordered, func() {
 		_, _ = utils.Run(cmd)
 
 		By("undeploying the manager")
-		cmd = exec.Command("make", "undeploy")
-		_, _ = utils.Run(cmd)
-
-		By("uninstalling CRDs")
-		cmd = exec.Command("make", "uninstall")
+		cmd = exec.Command("make", "helm-uninstall")
 		_, _ = utils.Run(cmd)
 
 		By("removing manager namespace")

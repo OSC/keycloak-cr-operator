@@ -30,8 +30,12 @@ manager:
     adminRealm: master
     # -- Default Keycloak realm for new resources
     defaultRealm:
+    # -- Realms that can be used for custom resources
+    allowedRealms: []
     # -- Prefix for generated client IDs
     clientIdPrefix: kubernetes
+    # -- Required ClientID template
+    clientIdRequired: ""
 
   # @ignored
   args:
@@ -145,6 +149,8 @@ webhook:
 networkPolicy:
   # -- Enable NetworkPolicy resources for this operator
   enable: true
+  # -- Allow all pods in operator's namespace to access the operator's metrics
+  allowMetricsFromPods: false
   # --  The Prometheus namespace to allow access
   prometheusLabels:
     app.kubernetes.io/name: prometheus
