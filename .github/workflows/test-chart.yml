@@ -74,8 +74,8 @@ jobs:
           set -x
           kubectl wait --for=jsonpath='{.subsets[0].addresses[0].ip}' endpoints/keycloak-cr-operator-webhook-service -n keycloak-cr-operator --timeout=1m
           kubectl wait --for=jsonpath='{.endpoints[0].addresses[0]}' endpointslices -l kubernetes.io/service-name=keycloak-cr-operator-webhook-service -n keycloak-cr-operator --timeout=1m
-          kubectl get mutatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-mutating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
-          kubectl get validatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-validating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
+          kubectl wait --for=jsonpath='{.webhooks[0].clientConfig.caBundle}' mutatingwebhookconfigurations keycloak-cr-operator-mutating-webhook-configuration
+          kubectl wait --for=jsonpath='{.webhooks[0].clientConfig.caBundle}' validatingwebhookconfigurations keycloak-cr-operator-validating-webhook-configuration
 
       - name: Test KeycloakClient resource
         run: |
