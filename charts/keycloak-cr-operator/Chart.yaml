@@ -2,8 +2,8 @@ apiVersion: v2
 name: keycloak-cr-operator
 description: A Helm chart to distribute keycloak-cr-operator
 type: application
-version: 0.0.1
-appVersion: "v0.0.1"
+version: v0.0.1
+appVersion: v0.0.1
 maintainers:
   - name: treydock
 keywords:
