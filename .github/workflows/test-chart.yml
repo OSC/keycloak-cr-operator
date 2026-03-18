@@ -48,6 +48,10 @@ jobs:
       - name: Lint Helm Chart
         run: |
           helm lint ./charts/keycloak-cr-operator
+      - name: Verify Helm Resources
+        run: |
+          make verify-helm-crds
+          make verify-helm-role
 
       - name: Install cert-manager via Helm (wait for readiness)
         run: |

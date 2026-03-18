@@ -146,6 +146,22 @@ verify-helm-docs: helm-docs ## Check Helm charts docs are up to date
 	@echo 'To correct this, locally run "make helm-docs", commit the changes, and re-run tests.' >&2
 	@git diff --quiet --exit-code charts
 
+.PHONY: verify-helm-crds
+verify-helm-crds: manifests generate ## Verify Helm CRDs match Kustomize
+	@diff -uw <( helm template keycloak-cr-operator charts/keycloak-cr-operator \
+		-f charts/keycloak-cr-operator/ci/test-values.yaml \
+		--api-versions "cert-manager.io/v1" \
+		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" ) \
+		config/crd/bases/keycloak.osc.edu_keycloakclients.yaml
+
+.PHONY: verify-helm-role
+verify-helm-role: manifests generate ## Verify Helm role for this operator matches Kustomize
+	@diff -uw <( helm template keycloak-cr-operator charts/keycloak-cr-operator \
+		-f charts/keycloak-cr-operator/ci/test-values.yaml \
+		--api-versions "cert-manager.io/v1" \
+		-s templates/rbac/keycloak-cr-operator-manager-role.yaml | grep -E -v "^#" | yq --no-doc '.' ) \
+		<( ./bin/kustomize build config/default | yq eval 'select(.kind == "ClusterRole" and .metadata.name == "keycloak-cr-operator-manager-role")' )
+
 ##@ Build
 
 .PHONY: build
