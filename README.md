@@ -38,12 +38,12 @@ The primary method to install the keycloak-cr-operator is with Helm.
 ### Installation Steps
 1. Add the OSC Helm repository:
 ```bash
-helm repo add osc https://osc.github.io/keycloak-cr-operator
+helm repo add keycloak-cr-operator https://osc.github.io/keycloak-cr-operator
 ```
 
 2. Install the operator with required configuration:
 ```bash
-helm install keycloak-cr-operator osc/keycloak-cr-operator \
+helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
   --namespace keycloak-cr-operator-system \
   --create-namespace \
   --set manager.config.keycloakURL="https://keycloak.example.com" \

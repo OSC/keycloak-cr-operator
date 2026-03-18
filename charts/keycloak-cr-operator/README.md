@@ -7,8 +7,8 @@ A Helm chart to distribute keycloak-cr-operator
 ## Installing the Chart
 
 ```console
-helm repo add osc https://osc.github.io/keycloak-cr-operator
-helm install keycloak-cr-operator osc/keycloak-cr-operator \
+helm repo add keycloak-cr-operator https://osc.github.io/keycloak-cr-operator
+helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
   --namespace keycloak-cr-operator-system \
   --create-namespace \
   --set manager.config.keycloakURL="https://keycloak.example.com" \
