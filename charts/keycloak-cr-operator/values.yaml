@@ -142,6 +142,18 @@ webhook:
   # -- Annotations to add to webhook server
   annotations: {}
 
+networkPolicy:
+  # -- Enable NetworkPolicy resources for this operator
+  enable: true
+  # --  The Prometheus namespace to allow access
+  prometheusLabels:
+    app.kubernetes.io/name: prometheus
+  # -- The API server namespace name
+  apiServerNamespace: kube-system
+  # -- The API server pod labels to allow
+  apiServerPodLabels:
+    tier: control-plane
+
 # Prometheus ServiceMonitor for metrics scraping
 prometheus:
   # -- Enable Prometheus ServiceMonitor.
