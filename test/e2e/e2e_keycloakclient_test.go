@@ -46,11 +46,21 @@ func KeycloakClientSpec() {
 				waitOut, waitErr := utils.Run(waitCmd)
 				g.Expect(waitOut).To(ContainSubstring("condition met"))
 				g.Expect(waitErr).NotTo(HaveOccurred())
+				idCmd := exec.Command("kubectl", "get", "keycloakclient", "keycloakclient-test",
+					"-o", "jsonpath={.status.id}")
+				idOut, idErr := utils.Run(idCmd)
+				g.Expect(idErr).NotTo(HaveOccurred())
+				g.Expect(idOut).NotTo(BeEmpty())
 				waitCmd = exec.Command("kubectl", "wait", "--for=condition=Available",
 					"keycloakclient", "keycloakclient-sample", "--timeout=20s")
 				waitOut, waitErr = utils.Run(waitCmd)
 				g.Expect(waitOut).To(ContainSubstring("condition met"))
 				g.Expect(waitErr).NotTo(HaveOccurred())
+				idCmd = exec.Command("kubectl", "get", "keycloakclient", "keycloakclient-sample",
+					"-o", "jsonpath={.status.id}")
+				idOut, idErr = utils.Run(idCmd)
+				g.Expect(idErr).NotTo(HaveOccurred())
+				g.Expect(idOut).NotTo(BeEmpty())
 			}
 			Eventually(verifyKeycloakClientResource, 2*time.Minute).Should(Succeed())
 
