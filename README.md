@@ -253,7 +253,6 @@ kind load docker-image quay.io/ohiosupercomputercenter/keycloak-cr-operator:late
 
 make helm-deploy IMG=quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest HELM_EXTRA_ARGS="-f charts/keycloak-cr-operator/ci/test-values.yaml --cleanup-on-fail=false"
 
-
 kubectl apply -f config/samples/keycloak_v1alpha1_keycloakclient.yaml
 
 kubectl logs -n keycloak-cr-operator -l app.kubernetes.io/name=keycloak-cr-operator

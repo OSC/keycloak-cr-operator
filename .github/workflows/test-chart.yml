@@ -66,7 +66,9 @@ jobs:
       - name: Check Helm release status
         run: |
           make helm-status
-          kubectl get endpointslices.discovery.k8s.io -n keycloak-cr-operator-system -l kubernetes.io/service-name=keycloak-cr-operator-webhook-service -o jsonpath='{range .items[*]}{range .endpoints[*]}{.addresses[*]}{end}{end}'
+          set -x
+          kubectl wait --for=jsonpath='{.subsets[0].addresses[0].ip}' endpoints/keycloak-cr-operator-webhook-service -n keycloak-cr-operator --timeout=1m
+          kubectl wait --for=jsonpath='{.endpoints[0].addresses[0]}' endpointslices -l kubernetes.io/service-name=keycloak-cr-operator-webhook-service -n keycloak-cr-operator --timeout=1m
           kubectl get mutatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-mutating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
           kubectl get validatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-validating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
 
