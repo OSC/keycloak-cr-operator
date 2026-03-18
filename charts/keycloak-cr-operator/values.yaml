@@ -35,7 +35,7 @@ manager:
     # -- Prefix for generated client IDs
     clientIdPrefix: kubernetes
     # -- Required ClientID template
-    clientIDRequired: ""
+    clientIdRequired: ""
 
   # @ignored
   args:

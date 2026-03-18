@@ -64,8 +64,8 @@ spec:
         {{- if .Values.manager.config.clientIdPrefix }}
         - --keycloak-client-id-prefix={{ .Values.manager.config.clientIdPrefix }}
         {{- end }}
-        {{- if .Values.manager.config.clientIDRequired }}
-        - --keycloak-client-id-required={{ .Values.manager.config.clientIDRequired }}
+        {{- if .Values.manager.config.clientIdRequired }}
+        - --keycloak-client-id-required={{ .Values.manager.config.clientIdRequired }}
         {{- end }}
         {{- if .Values.certManager.enable }}
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs

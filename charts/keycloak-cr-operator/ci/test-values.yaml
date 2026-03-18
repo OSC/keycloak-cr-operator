@@ -11,7 +11,7 @@ manager:
     allowedRealms:
       - master
     clientIdPrefix: kubernetes
-    clientIDRequired: '{{ .Config.ClientIDPrefix }}-{{ .Obj.Namespace }}-{{ .Obj.Name }}'
+    clientIdRequired: '{{ .Config.ClientIDPrefix }}-{{ .Obj.Namespace }}-{{ .Obj.Name }}'
   env:
     - name: FOO
       value: bar

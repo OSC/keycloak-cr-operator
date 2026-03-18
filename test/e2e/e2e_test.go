@@ -70,7 +70,7 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd = exec.Command("make", "helm-deploy",
 			fmt.Sprintf("IMG=%s", managerImage),
 			fmt.Sprintf("HELM_NAMESPACE=%s", namespace),
-			"HELM_EXTRA_ARGS=-f charts/keycloak-cr-operator/ci/test-values.yaml --set crd.keep=false --set manager.config.clientIDRequired=false",
+			"HELM_EXTRA_ARGS=-f charts/keycloak-cr-operator/ci/test-values.yaml --set crd.keep=false --set manager.config.clientIdRequired=false",
 		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the manager")
