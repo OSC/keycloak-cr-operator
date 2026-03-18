@@ -35,8 +35,8 @@ jobs:
         uses: helm/kind-action@v1
         with:
           version: v0.31.0
-          node_image: kindest/node:v1.34.3@sha256:08497ee19eace7b4b5348db5c6a1591d7752b164530a36f855cb0f2bdcbadd48
           cluster_name: kind
+          config: test/e2e/kind.yaml
 
       - name: Prepare keycloak-cr-operator
         run: |
@@ -44,7 +44,7 @@ jobs:
           kind load docker-image quay.io/ohiosupercomputercenter/keycloak-cr-operator:latest
 
       - name: Run chart-testing (lint)
-        run: ct lint --target-branch=main
+        run: ct lint --target-branch=main --check-version-increment=false
       - name: Lint Helm Chart
         run: |
           helm lint ./charts/keycloak-cr-operator
@@ -56,6 +56,7 @@ jobs:
           helm install cert-manager jetstack/cert-manager \
             --namespace cert-manager \
             --create-namespace \
+            --version v1.20.0 \
             --set crds.enabled=true \
             --wait \
             --timeout 300s

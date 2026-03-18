@@ -287,7 +287,7 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 	}
 	if client == nil {
 		log.Info("Keycloak client not found, creating new one", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
-		_, err = r.Server.CreateClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient)
+		id, err := r.Server.CreateClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to create Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
@@ -301,9 +301,11 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 				keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
+		keycloakClient.Status.ID = &id
 		log.Info("Successfully created Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	} else {
 		log.Info("Keycloak client already exists, updating", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+		gocloakClient.ID = client.ID
 		err = r.Server.UpdateClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to update Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
@@ -318,9 +320,18 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 				keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
+		keycloakClient.Status.ID = client.ID
 		log.Info("Successfully updated Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	}
 
+	log.V(1).Info("Updating KeycloakClient with ID status", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		return r.Status().Update(ctx, keycloakClient)
+	})
+	if err != nil {
+		log.Error(err, "Failed to update KeycloakClient status")
+		return err
+	}
 	return nil
 }
 

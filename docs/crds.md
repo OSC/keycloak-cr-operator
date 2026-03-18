@@ -440,6 +440,13 @@ Standard condition types include:
 The status of each condition is one of True, False, or Unknown.<br/>
         </td>
         <td>false</td>
+      </tr><tr>
+        <td><b>id</b></td>
+        <td>string</td>
+        <td>
+          The ID of the Keycloak Client object in Keycloak<br/>
+        </td>
+        <td>false</td>
       </tr></tbody>
 </table>
 

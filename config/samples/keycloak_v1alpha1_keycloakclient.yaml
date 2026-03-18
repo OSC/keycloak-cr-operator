@@ -5,8 +5,9 @@ metadata:
     app.kubernetes.io/name: keycloak-cr-operator
     app.kubernetes.io/managed-by: kustomize
   name: keycloakclient-test
+  namespace: default
 spec:
-  clientID: kubernetes-keycloakclient-test
+  clientID: kubernetes-default-keycloakclient-test
   realm: master
   clientSecretRef:
     name: keycloak-test

@@ -9,6 +9,7 @@ manager:
     adminRealm: master
     defaultRealm: master
     clientIdPrefix: kubernetes
+    clientIDRequired: '{{ .Config.ClientIDPrefix }}-{{ .Obj.Namespace }}-{{ .Obj.Name }}'
   env:
     - name: FOO
       value: bar

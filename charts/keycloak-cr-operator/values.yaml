@@ -32,6 +32,8 @@ manager:
     defaultRealm:
     # -- Prefix for generated client IDs
     clientIdPrefix: kubernetes
+    # -- Required ClientID template
+    clientIDRequired: ""
 
   # @ignored
   args:
