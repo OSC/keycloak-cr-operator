@@ -1,0 +1,26 @@
+{{- if .Values.networkPolicy.enable }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "allow-metrics-traffic" "context" $) }}
+  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+spec:
+  ingress:
+  - from:
+    - namespaceSelector:
+        matchLabels:
+        {{- with .Values.networkPolicy.prometheusLabels }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+    ports:
+    - port: {{ get .Values.metrics.ports .Values.metrics.protocol }}
+      protocol: TCP
+  podSelector:
+    matchLabels:
+      {{- include "keycloak-cr-operator.selectorLabels" . | nindent 6 }}
+      control-plane: controller-manager
+  policyTypes:
+  - Ingress
+{{- end }}

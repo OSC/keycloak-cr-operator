@@ -1,0 +1,32 @@
+{{- if .Values.webhook.enable }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: MutatingWebhookConfiguration
+metadata:
+  annotations:
+    {{- if .Values.certManager.enable }}
+    cert-manager.io/inject-ca-from: "{{ include "keycloak-cr-operator.namespaceName" . }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}"
+    {{- end }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "mutating-webhook-configuration" "context" $) }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+      path: /mutate-keycloak-osc-edu-v1alpha1-keycloakclient
+  failurePolicy: Fail
+  name: mkeycloakclient-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - keycloak.osc.edu
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - keycloakclients
+  sideEffects: None
+{{- end }}

@@ -1,0 +1,126 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  {{- with .Values.manager.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+    control-plane: controller-manager
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" $) }}
+  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+spec:
+  replicas: {{ .Values.manager.replicas }}
+  selector:
+    matchLabels:
+      {{- include "keycloak-cr-operator.selectorLabels" . | nindent 6 }}
+      control-plane: controller-manager
+  template:
+    metadata:
+      {{- with .Values.manager.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "keycloak-cr-operator.labels" . | nindent 8 }}
+        control-plane: controller-manager
+    spec:
+      {{- with .Values.manager.tolerations }}
+      tolerations: {{ toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.manager.affinity }}
+      affinity: {{ toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.manager.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 10 }}
+      {{- end }}
+      containers:
+      - args:
+        {{- if .Values.metrics.enable }}
+        - --metrics-bind-address=:{{ get .Values.metrics.ports .Values.metrics.protocol }}
+        {{- else }}
+        # Bind to :0 to disable the controller-runtime managed metrics server
+        - --metrics-bind-address=0
+        {{- end }}
+        {{- if ne .Values.metrics.protocol "https" }}
+        - --metrics-secure=false
+        {{- end }}
+        - --health-probe-bind-address=:{{ .Values.manager.healthPort }}
+        {{- range .Values.manager.args }}
+        - {{ . }}
+        {{- end }}
+        {{- range .Values.manager.extraArgs }}
+        - {{ . }}
+        {{- end }}
+        - --keycloak-url={{ required "Keycloak URL is required" (tpl .Values.manager.config.keycloakURL .) }}
+        - --keycloak-admin-realm={{ required "Keycloak admin realm is required" (tpl .Values.manager.config.adminRealm .) }}
+        {{- if .Values.manager.config.defaultRealm }}
+        - --keycloak-default-realm={{ .Values.manager.config.defaultRealm }}
+        {{- end }}
+        {{- if .Values.manager.config.clientIdPrefix }}
+        - --keycloak-client-id-prefix={{ .Values.manager.config.clientIdPrefix }}
+        {{- end }}
+        {{- if .Values.certManager.enable }}
+        - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
+        {{- end }}
+        command:
+        - /manager
+        envFrom:
+        - secretRef:
+            name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager-secret" "context" $) }}
+        {{- with .Values.manager.env }}
+        env:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+        image: "{{ .Values.manager.image.repository }}:{{ .Values.manager.image.tag | default .Chart.AppVersion }}"
+        imagePullPolicy: {{ .Values.manager.image.pullPolicy }}
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: {{ .Values.manager.healthPort }}
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        name: manager
+        ports:
+        - containerPort: {{ .Values.webhook.port }}
+          name: webhook-server
+          protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.manager.healthPort }}
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        resources:
+          {{- if .Values.manager.resources }}
+          {{- toYaml .Values.manager.resources | nindent 10 }}
+          {{- else }}
+          {}
+          {{- end }}
+        securityContext:
+          {{- if .Values.manager.securityContext }}
+          {{- toYaml .Values.manager.securityContext | nindent 10 }}
+          {{- else }}
+          {}
+          {{- end }}
+        volumeMounts:
+        {{- if .Values.certManager.enable }}
+        - mountPath: /tmp/k8s-webhook-server/serving-certs
+          name: webhook-certs
+          readOnly: true
+        {{- end }}
+      securityContext:
+        {{- if .Values.manager.podSecurityContext }}
+        {{- toYaml .Values.manager.podSecurityContext | nindent 8 }}
+        {{- else }}
+        {}
+        {{- end }}
+      serviceAccountName: {{ include "keycloak-cr-operator.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 10
+      volumes:
+      {{- if .Values.certManager.enable }}
+      - name: webhook-certs
+        secret:
+          secretName: webhook-server-cert
+      {{- end }}

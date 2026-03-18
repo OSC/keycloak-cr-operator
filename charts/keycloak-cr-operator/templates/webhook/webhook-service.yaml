@@ -1,0 +1,21 @@
+{{- if .Values.webhook.enable }}
+apiVersion: v1
+kind: Service
+metadata:
+  {{- with .Values.webhook.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+spec:
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: {{ .Values.webhook.port }}
+  selector:
+    {{- include "keycloak-cr-operator.selectorLabels" . | nindent 4 }}
+    control-plane: controller-manager
+{{- end }}

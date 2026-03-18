@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+  name: {{ include "keycloak-cr-operator.serviceAccountName" . }}
+  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}

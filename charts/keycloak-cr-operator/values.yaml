@@ -1,0 +1,161 @@
+# -- String to partially override chart.fullname template (will maintain the release name)
+nameOverride: ""
+
+# -- String to fully override chart.fullname template
+fullnameOverride: ""
+
+manager:
+  # -- Number of manager replicas
+  replicas: 1
+
+  image:
+    # -- Manager image repository
+    repository: quay.io/ohiosupercomputercenter/keycloak-cr-operator
+    # -- Manager image tag
+    # @default -- The chart's app version
+    tag: ""
+    # -- Manager image pull policy
+    pullPolicy: IfNotPresent
+
+  config:
+    # -- Keycloak server URL, eg: https://keycloak.example.com.
+    # **required**
+    keycloakURL: ""
+    # -- Keycloak admin username
+    adminUsername: admin
+    # -- Keycloak admin password.
+    # **required**
+    adminPassword: ""
+    # -- Keycloak admin realm
+    adminRealm: master
+    # -- Default Keycloak realm for new resources
+    defaultRealm:
+    # -- Prefix for generated client IDs
+    clientIdPrefix: kubernetes
+
+  # @ignored
+  args:
+    - --keycloak-admin-username=$(KEYCLOAK_ADMIN_USERNAME)
+    - --keycloak-admin-password=$(KEYCLOAK_ADMIN_PASSWORD)
+    - --leader-elect
+  # -- Extra arguments to pass to the manager
+  extraArgs: []
+
+  # -- Annotations to add to manager Deployment
+  annotations: {}
+  # -- Pod annotations to add to manager pods
+  podAnnotations:
+    kubectl.kubernetes.io/default-container: manager
+
+  # -- Health check port
+  healthPort: 8081
+
+  # -- Environment variables to add to manager pods
+  env: []
+
+  # -- Image pull secrets
+  imagePullSecrets: []
+
+  # -- Pod-level security settings
+  # @default -- unprivileged
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+
+  # -- Container-level security settings
+  # @default -- unprivileged
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    seccompProfile:
+      type: RuntimeDefault
+    privileged: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+
+  # Resource limits and requests
+  resources:
+    limits:
+      # -- CPU limit
+      cpu: 1
+      # -- Memory limit
+      memory: 256Mi
+    requests:
+      # -- CPU request
+      cpu: 100m
+      # -- Memory request
+      memory: 64Mi
+
+  # -- Manager pod's affinity
+  affinity: {}
+
+  # -- Manager pod's node selector
+  nodeSelector: {}
+
+  # -- Manager pod's tolerations
+  tolerations: []
+
+# Helper RBAC roles for managing custom resources
+rbacHelpers:
+  # -- Install convenience admin/editor/viewer roles for CRDs
+  enable: false
+
+# Custom Resource Definitions
+crd:
+  # -- Install CRDs with the chart
+  enable: true
+  # -- Keep CRDs when uninstalling
+  keep: true
+
+# Controller metrics endpoint
+metrics:
+  # -- Enable to expose /metrics endpoint with RBAC protection
+  enable: true
+  # -- Metrics protocol (http or https)
+  protocol: https
+  # -- Metrics server ports.  Only supports http and https keys
+  ports:
+    # -- HTTP port
+    http: 8080
+    # -- HTTPS port
+    https: 8443
+  # -- Annotations to add to metrics endpoint
+  annotations: {}
+
+# Cert-manager integration for TLS certificates
+certManager:
+  # -- Enable cert-manager integration.
+  # Required for webhook certificates and metrics endpoint certificates
+  enable: true
+
+# Webhook server configuration
+webhook:
+  # -- Enable webhook server
+  enable: true
+  # -- Webhook server port
+  port: 9443
+  # -- Annotations to add to webhook server
+  annotations: {}
+
+networkPolicy:
+  # -- Enable NetworkPolicy resources for this operator
+  enable: true
+  # --  The Prometheus namespace to allow access
+  prometheusLabels:
+    app.kubernetes.io/name: prometheus
+  # -- The API server namespace name
+  apiServerNamespace: kube-system
+  # -- The API server pod labels to allow
+  apiServerPodLabels:
+    tier: control-plane
+
+# Prometheus ServiceMonitor for metrics scraping
+prometheus:
+  # -- Enable Prometheus ServiceMonitor.
+  # Requires prometheus-operator to be installed in the cluster
+  enable: false

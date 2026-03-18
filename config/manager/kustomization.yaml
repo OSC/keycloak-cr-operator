@@ -5,7 +5,3 @@ secretGenerator:
   - KEYCLOAK_ADMIN_USERNAME=admin
   - KEYCLOAK_ADMIN_PASSWORD=secret
   name: keycloak-cr-operator
-configMapGenerator:
-- literals:
-  - KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local
-  name: keycloak-cr-operator

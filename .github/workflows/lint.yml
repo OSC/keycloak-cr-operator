@@ -25,3 +25,5 @@ jobs:
         run: make lint
       - name: Verify generated
         run: make verify-manifests
+      - name: Verify Helm docs
+        run: make verify-helm-docs

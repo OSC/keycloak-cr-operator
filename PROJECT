@@ -6,6 +6,10 @@ cliVersion: 4.13.0
 domain: osc.edu
 layout:
 - go.kubebuilder.io/v4
+plugins:
+  helm.kubebuilder.io/v2-alpha:
+    manifests: dist/install.yaml
+    output: charts
 projectName: keycloak-cr-operator
 repo: github.com/OSC/keycloak-cr-operator
 resources:

@@ -7,6 +7,8 @@ GOBIN=$(shell go env GOPATH)/bin
 else
 GOBIN=$(shell go env GOBIN)
 endif
+GOHOSTOS     ?= $(shell go env GOHOSTOS)
+GOHOSTARCH   ?= $(shell go env GOHOSTARCH)
 
 # CONTAINER_TOOL defines the container tool to be used for building images.
 # Be aware that the target commands are only tested with Docker which is
@@ -14,6 +16,7 @@ endif
 # tools. (i.e. podman)
 CONTAINER_TOOL ?= docker
 
+HELM_DOCS_IMAGE = jnorwood/helm-docs:v1.11.0
 CRDOC_IMAGE = ghcr.io/fybrik/crdoc:latest
 
 # Setting SHELL to bash allows bash commands to be executed by recipes.
@@ -45,12 +48,17 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	"$(CONTROLLER_GEN)" rbac:roleName=keycloak-cr-operator-manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(CONTAINER_TOOL) run --rm -v $(shell pwd):/workdir $(CRDOC_IMAGE) --resources /workdir/config/crd/bases --output /workdir/docs/crds.md
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	"$(CONTROLLER_GEN)" object:headerFile="hack/boilerplate.go.txt" paths="./..."
+
+.PHONY: helm-docs
+helm-docs: ## Generate helm docs
+	@echo Generate helm docs... >&2
+	@$(CONTAINER_TOOL) run --rm -v ${PWD}/charts:/helm-docs -w /helm-docs $(HELM_DOCS_IMAGE) -s file
 
 .PHONY: fmt
 fmt: ## Run go fmt against code.
@@ -60,8 +68,24 @@ fmt: ## Run go fmt against code.
 vet: ## Run go vet against code.
 	go vet ./...
 
+.PHONY: unused
+unused: ## Verify go.mod
+	@echo ">> running check for unused/missing packages in go.mod"
+	GO111MODULE=on GOOS=$(GOHOSTOS) GOARCH=$(GOHOSTARCH) go mod tidy
+	@git diff --exit-code -- go.sum go.mod
+
+.PHONY: style
+style: ## Verify go fmt style
+	@echo ">> checking code style"
+	@fmtRes=$$(gofmt -d $$(find . -path ./vendor -prune -o -name '*.go' -print)); \
+	if [ -n "$${fmtRes}" ]; then \
+		echo "gofmt checking failed!"; echo "$${fmtRes}"; echo; \
+		echo "Please ensure you are using go for formatting code."; \
+		exit 1; \
+	fi
+
 .PHONY: test
-test: manifests generate fmt vet setup-envtest ## Run tests.
+test: manifests generate unused style vet setup-envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell "$(ENVTEST)" use $(ENVTEST_K8S_VERSION) --bin-dir "$(LOCALBIN)" -p path)" go test $$(go list ./... | grep -v /e2e) -coverprofile cover.out
 
 # TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
@@ -113,6 +137,14 @@ verify-manifests: manifests generate ## Check manifests and generated code are u
 	@echo 'If this test fails, it is because the git diff is non-empty after running "make manifests generate".' >&2
 	@echo 'To correct this, locally run "make manifests generate", commit the changes, and re-run tests.' >&2
 	@git diff --quiet --exit-code .
+
+.PHONY: verify-helm-docs
+verify-helm-docs: helm-docs ## Check Helm charts docs are up to date
+	@echo Checking helm charts are up to date... >&2
+	@git --no-pager diff charts
+	@echo 'If this test fails, it is because the git diff is non-empty after running "make helm-docs".' >&2
+	@echo 'To correct this, locally run "make helm-docs", commit the changes, and re-run tests.' >&2
+	@git diff --quiet --exit-code charts
 
 ##@ Build
 
@@ -265,3 +297,50 @@ endef
 define gomodver
 $(shell go list -m -f '{{if .Replace}}{{.Replace.Version}}{{else}}{{.Version}}{{end}}' $(1) 2>/dev/null)
 endef
+
+##@ Helm Deployment
+
+## Helm binary to use for deploying the chart
+HELM ?= helm
+## Namespace to deploy the Helm release
+HELM_NAMESPACE ?= keycloak-cr-operator
+## Name of the Helm release
+HELM_RELEASE ?= keycloak-cr-operator
+## Path to the Helm chart directory
+HELM_CHART_DIR ?= charts/keycloak-cr-operator
+## Additional arguments to pass to helm commands
+HELM_EXTRA_ARGS ?=
+
+.PHONY: install-helm
+install-helm: ## Install the latest version of Helm.
+	@command -v $(HELM) >/dev/null 2>&1 || { \
+		echo "Installing Helm..." && \
+		curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-4 | bash; \
+	}
+
+.PHONY: helm-deploy
+helm-deploy: install-helm ## Deploy manager to the K8s cluster via Helm. Specify an image with IMG.
+	$(HELM) upgrade --install $(HELM_RELEASE) $(HELM_CHART_DIR) \
+		--namespace $(HELM_NAMESPACE) \
+		--create-namespace \
+		--set manager.image.repository=$${IMG%:*} \
+		--set manager.image.tag=$${IMG##*:} \
+		--wait \
+		--timeout 5m \
+		$(HELM_EXTRA_ARGS)
+
+.PHONY: helm-uninstall
+helm-uninstall: ## Uninstall the Helm release from the K8s cluster.
+	$(HELM) uninstall $(HELM_RELEASE) --namespace $(HELM_NAMESPACE)
+
+.PHONY: helm-status
+helm-status: ## Show Helm release status.
+	$(HELM) status $(HELM_RELEASE) --namespace $(HELM_NAMESPACE)
+
+.PHONY: helm-history
+helm-history: ## Show Helm release history.
+	$(HELM) history $(HELM_RELEASE) --namespace $(HELM_NAMESPACE)
+
+.PHONY: helm-rollback
+helm-rollback: ## Rollback to previous Helm release.
+	$(HELM) rollback $(HELM_RELEASE) --namespace $(HELM_NAMESPACE)

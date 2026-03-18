@@ -10,7 +10,7 @@ metadata:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: controller-manager
+  name: manager
   namespace: system
   labels:
     control-plane: controller-manager
@@ -61,7 +61,7 @@ spec:
       - command:
         - /manager
         args:
-          - --keycloak-url=$(KEYCLOAK_URL)
+          - --keycloak-url=http://keycloak.keycloak.svc.cluster.local
           - --keycloak-admin-username=$(KEYCLOAK_ADMIN_USERNAME)
           - --keycloak-admin-password=$(KEYCLOAK_ADMIN_PASSWORD)
           - --leader-elect
@@ -69,8 +69,6 @@ spec:
         image: controller:latest
         name: manager
         envFrom:
-        - configMapRef:
-            name: keycloak-cr-operator
         - secretRef:
             name: keycloak-cr-operator
         ports: []
@@ -103,5 +101,5 @@ spec:
             memory: 64Mi
         volumeMounts: []
       volumes: []
-      serviceAccountName: controller-manager
+      serviceAccountName: manager
       terminationGracePeriodSeconds: 10
