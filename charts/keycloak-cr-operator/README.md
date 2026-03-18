@@ -62,6 +62,7 @@ helm install keycloak-cr-operator osc/keycloak-cr-operator \
 | webhook.port | int | `9443` | Webhook server port |
 | webhook.annotations | object | `{}` | Annotations to add to webhook server |
 | networkPolicy.enable | bool | `true` | Enable NetworkPolicy resources for this operator |
+| networkPolicy.allowMetricsFromPods | bool | `false` | Allow all pods in operator's namespace to access the operator's metrics |
 | networkPolicy.prometheusLabels | object | `{"app.kubernetes.io/name":"prometheus"}` | The Prometheus namespace to allow access |
 | networkPolicy.apiServerNamespace | string | `"kube-system"` | The API server namespace name |
 | networkPolicy.apiServerPodLabels | object | `{"tier":"control-plane"}` | The API server pod labels to allow |

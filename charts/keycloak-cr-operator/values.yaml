@@ -149,6 +149,8 @@ webhook:
 networkPolicy:
   # -- Enable NetworkPolicy resources for this operator
   enable: true
+  # -- Allow all pods in operator's namespace to access the operator's metrics
+  allowMetricsFromPods: false
   # --  The Prometheus namespace to allow access
   prometheusLabels:
     app.kubernetes.io/name: prometheus

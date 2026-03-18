@@ -15,3 +15,5 @@ manager:
   env:
     - name: FOO
       value: bar
+networkPolicy:
+  allowMetricsFromPods: true

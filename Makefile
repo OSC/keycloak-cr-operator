@@ -364,6 +364,7 @@ install-cert-manager: ## Install cert-manager via Helm (wait for readiness)
 		--create-namespace \
 		--version $(CERT_MANAGER_VERSION) \
 		--set crds.enabled=true \
+		--set crds.keep=false \
 		--wait \
 		--timeout 300s \
 		$(CERT_MANAGER_EXTRA_ARGS)

@@ -285,9 +285,10 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 	if err != nil {
 		return err
 	}
+	var id string
 	if client == nil {
 		log.Info("Keycloak client not found, creating new one", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
-		id, err := r.Server.CreateClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient)
+		id, err = r.Server.CreateClient(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *gocloakClient)
 		if err != nil {
 			log.Error(err, "Failed to create Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
@@ -301,7 +302,6 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 				keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
-		keycloakClient.Status.ID = &id
 		log.Info("Successfully created Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	} else {
 		log.Info("Keycloak client already exists, updating", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
@@ -320,10 +320,16 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 				keycloakClient.Name, keycloakClient.Namespace, err)
 			return err
 		}
-		keycloakClient.Status.ID = client.ID
+		id = *client.ID
 		log.Info("Successfully updated Keycloak client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	}
 
+	// Re-fetch object to avoid "the object has been modified" errors
+	if err := r.Get(ctx, types.NamespacedName{Name: keycloakClient.Name, Namespace: keycloakClient.Namespace}, keycloakClient); err != nil {
+		log.Error(err, "Failed to re-fetch keycloakClient")
+		return err
+	}
+	keycloakClient.Status.ID = &id
 	log.V(1).Info("Updating KeycloakClient with ID status", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
 	err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 		return r.Status().Update(ctx, keycloakClient)
