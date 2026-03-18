@@ -12,14 +12,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Clone the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v6
         with:
           go-version-file: go.mod
+          cache-dependency-path: go.sum
 
       - name: Set up Helm
         uses: azure/setup-helm@v4
@@ -48,6 +49,10 @@ jobs:
       - name: Lint Helm Chart
         run: |
           helm lint ./charts/keycloak-cr-operator
+      - name: Verify Helm Resources
+        run: |
+          make verify-helm-crds
+          make verify-helm-role
 
       - name: Install cert-manager via Helm (wait for readiness)
         run: |
@@ -69,8 +74,8 @@ jobs:
           set -x
           kubectl wait --for=jsonpath='{.subsets[0].addresses[0].ip}' endpoints/keycloak-cr-operator-webhook-service -n keycloak-cr-operator --timeout=1m
           kubectl wait --for=jsonpath='{.endpoints[0].addresses[0]}' endpointslices -l kubernetes.io/service-name=keycloak-cr-operator-webhook-service -n keycloak-cr-operator --timeout=1m
-          kubectl get mutatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-mutating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
-          kubectl get validatingwebhookconfigurations.admissionregistration.k8s.io keycloak-cr-operator-validating-webhook-configuration -o jsonpath='{.webhooks[0].clientConfig.caBundle}'
+          kubectl wait --for=jsonpath='{.webhooks[0].clientConfig.caBundle}' mutatingwebhookconfigurations keycloak-cr-operator-mutating-webhook-configuration
+          kubectl wait --for=jsonpath='{.webhooks[0].clientConfig.caBundle}' validatingwebhookconfigurations keycloak-cr-operator-validating-webhook-configuration
 
       - name: Test KeycloakClient resource
         run: |

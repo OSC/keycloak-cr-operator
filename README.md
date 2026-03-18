@@ -3,7 +3,7 @@
 ![GitHub All Releases](https://img.shields.io/github/downloads/OSC/keycloak-cr-operator/total)
 
 # keycloak-cr-operator
-Keycloak Client Operator for Kubernetes
+Keycloak Custom Resource Operator for Kubernetes
 
 ## Table of Contents
 - [Description](#description)
@@ -22,7 +22,9 @@ Keycloak Client Operator for Kubernetes
 - [License](#license)
 
 ## Description
-The keycloak-cr-operator is a Kubernetes operator that manages Keycloak resources Custom Resources. Currently the only resource that can be managed is Keycloak Client resources.
+The keycloak-cr-operator is a Kubernetes operator that manages Keycloak resources as Custom Resources within Kubernetes. The following types of resources can be managed:
+
+* Keycloak Clients
 
 The keycloak-cr-operator is designed to work with existing Keycloak deployments that can be deployed outside Kubernetes or within Kubernetes.
 
