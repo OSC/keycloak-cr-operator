@@ -1,4 +1,4 @@
-[![CI Status](https://github.com/OSC/keycloak-cr-operator/actions/workflows/test.yaml/badge.svg?branch=main)](https://github.com/OSC/keycloak-cr-operator/actions?query=workflow%3Atest)
+[![CI Status](https://github.com/OSC/keycloak-cr-operator/actions/workflows/test-e2e.yml/badge.svg?branch=main)](https://github.com/OSC/keycloak-cr-operator/actions)
 [![GitHub release](https://img.shields.io/github/v/release/OSC/keycloak-cr-operator?include_prereleases&sort=semver)](https://github.com/OSC/keycloak-cr-operator/releases/latest)
 ![GitHub All Releases](https://img.shields.io/github/downloads/OSC/keycloak-cr-operator/total)
 
@@ -14,7 +14,6 @@ Keycloak Custom Resource Operator for Kubernetes
     - [Default Values Applied by Webhook](#default-values-applied-by-webhook)
     - [Using an Existing Secret](#using-an-existing-secret)
     - [Creating a Secret Automatically](#creating-a-secret-automatically)
-  - [Resource Management](#resource-management)
     - [Secret Creation](#secret-creation)
     - [ConfigMap Creation](#configmap-creation)
 - [Development](#development)
@@ -22,9 +21,9 @@ Keycloak Custom Resource Operator for Kubernetes
 - [License](#license)
 
 ## Description
-The keycloak-cr-operator is a Kubernetes operator that manages Keycloak resources as Custom Resources within Kubernetes. The following types of resources can be managed:
+The keycloak-cr-operator is a Kubernetes operator that manages Keycloak resources based on Custom Resources defined in Kubernetes. The following types of resources can be managed:
 
-* Keycloak Clients
+* Keycloak Clients using [KeycloakClient](#keycloakclient)
 
 The keycloak-cr-operator is designed to work with existing Keycloak deployments that can be deployed outside Kubernetes or within Kubernetes.
 
