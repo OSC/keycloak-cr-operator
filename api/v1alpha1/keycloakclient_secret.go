@@ -32,7 +32,11 @@ func (k *KeycloakClient) GetSecret(clientSecret string) *corev1.Secret {
 	if k.Spec.ClientSecretRef != nil {
 		name = k.Spec.ClientSecretRef.Name
 		defKey = k.Spec.ClientSecretRef.Key
-		envVarKeys = *k.Spec.ClientSecretRef.EnvVarKeys
+		if k.Spec.ClientSecretRef.EnvVarKeys == nil {
+			envVarKeys = true
+		} else {
+			envVarKeys = *k.Spec.ClientSecretRef.EnvVarKeys
+		}
 	} else {
 		name = fmt.Sprintf("%s-secret", k.Name)
 		envVarKeys = true

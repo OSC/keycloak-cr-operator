@@ -31,6 +31,7 @@ import (
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
+	"github.com/stoewer/go-strcase"
 )
 
 var (
@@ -255,6 +256,15 @@ func (v *KeycloakClientCustomValidator) validateClientSecretRef(obj *keycloakv1a
 			// Validate EnvVarKeys is set for ClientSecretRef
 			if obj.Spec.ClientSecretRef.EnvVarKeys == nil {
 				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "envVarKeys"), fmt.Sprintf("clientSecretRef envVarKeys must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+			}
+			// Validate that ClientSecretRef.Key is upper snake case when EnvVarKeys is true
+			if obj.Spec.ClientSecretRef.EnvVarKeys != nil && *obj.Spec.ClientSecretRef.EnvVarKeys {
+				if obj.Spec.ClientSecretRef.Key != "" {
+					upperSnakeCase := strcase.UpperSnakeCase(obj.Spec.ClientSecretRef.Key)
+					if upperSnakeCase != obj.Spec.ClientSecretRef.Key {
+						allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientSecretRef", "key"), obj.Spec.ClientSecretRef.Key, fmt.Sprintf("clientSecretRef key must be upper snake case when envVarKeys is true, expected: %s", upperSnakeCase)))
+					}
+				}
 			}
 		}
 	}
