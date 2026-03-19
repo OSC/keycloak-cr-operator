@@ -87,18 +87,22 @@ For detailed information about all available fields and their usage, please refe
 When creating or updating a KeycloakClient, the webhook automatically applies the following defaults:
 
 - **ClientID**: If not specified, it will be auto-generated using the pattern:
-  - If `ClientIDPrefix` is set in the operator configuration: `prefix-namespace-name`
+  - If `--keycloak-client-id-required` template is used, that template is the value used for `clientID`
+  - If `--keycloak-client-id-prefix` is set in the operator configuration: `prefix-namespace-name`
   - If no prefix: `namespace-name`
 
-- **Realm**: If not specified, it will default to the operator's configured `DefaultRealm`
+- **Realm**: If not specified, it will default to the operator's configured `--keycloak-default-realm`
 
 - **ClientSecretRef**: When `clientAuthenticatorType` is "client-secret" and `publicClient` is false:
   - If `clientSecretRef` is not set, it will be auto-created with:
     - `name`: `name-secret` (where `name` is the KeycloakClient resource name)
     - `key`: `client-secret`
     - `create`: `true` (indicating the secret should be auto-created)
+    - `envVarKeys`: `true` (use EnvVar keys for Secret data)
 
-- **ConfigMapName**: If not specified, it will default to `name-config` (where `name` is the KeycloakClient resource name)
+- **ConfigMap**:
+  - `name`: If not specified, it will default to `name-config` (where `name` is the KeycloakClient resource name)
+  - `envVarKeys`: `true` (use EnvVar keys for ConfigMap data)
 
 #### Using an Existing Secret
 To reference an existing Kubernetes Secret for the client secret:
@@ -122,6 +126,12 @@ spec:
     key: "client-secret"
     # Set to false if you want to use an existing secret without creating it
     create: false
+    # Do not force EnvVar keys in Secret
+    envVarKeys: false
+  configMap:
+    name: my-client-config
+    # Use EnvVar keys in ConfigMap
+    envVarKeys: true
 
   # Other client properties
   name: "Example Client"
@@ -132,6 +142,10 @@ spec:
     - "https://example.com/callback"
   webOrigins:
     - "https://example.com"
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
 ```
 
 When referencing an existing secret, the operator uses the label `keycloak.osc.edu/keycloakclient` to identify which KeycloakClient owns the secret. This allows the operator to properly manage the relationship between Keycloak clients and their secrets.
@@ -173,6 +187,12 @@ spec:
     key: "client-secret"
     # Set to true (default) to create the secret automatically
     create: true
+    # Use EnvVar keys in Secret
+    envVarKeys: true
+  configMap:
+    name: my-client-config
+    # Use EnvVar keys in ConfigMap
+    envVarKeys: true
 
   # Other client properties
   name: "Example Client with Auto Secret"
@@ -183,6 +203,10 @@ spec:
     - "https://example.com/callback"
   webOrigins:
     - "https://example.com"
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
 ```
 
 #### Secret Creation
@@ -192,7 +216,7 @@ The operator creates Kubernetes Secrets containing client credentials with the f
 
 The `COOKIE_SECRET` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
 
-When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will not create the uppercase snake_case environment variable keys in the Secret.
+When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-secret` and `cookie-secret` keys.
 
 Example Secret structure:
 ```yaml
@@ -213,7 +237,7 @@ The operator creates Kubernetes ConfigMaps with Keycloak client configuration:
 - `KEYCLOAK_URL`: The Keycloak server URL
 - `ISSUER_URL`: The issuer URL for OpenID Connect
 
-When `envVarKeys` is set to `false` in the ConfigMap configuration, the operator will not create the uppercase snake_case environment variable keys in the ConfigMap.
+When `envVarKeys` is set to `false` in the ConfigMap configuration, the operator will use keys `client-id`, `keycloak-url` and `issuer-url`.
 
 Example ConfigMap structure:
 ```yaml
