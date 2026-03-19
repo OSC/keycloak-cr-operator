@@ -63,9 +63,9 @@ func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.Con
 	url := config.KeycloakURL.String()
 	issuerUrl := config.KeycloakURL.JoinPath("realms", realm).String()
 	data := make(map[string]string)
-	if configMap.EnvVarKeys == nil || *configMap.EnvVarKeys == true {
+	if configMap.EnvVarKeys == nil || *configMap.EnvVarKeys {
 		data["CLIENT_ID"] = clientID
-		data["KEYCLOAK_URL"] = config.KeycloakURL.String()
+		data["KEYCLOAK_URL"] = url
 		data["ISSUER_URL"] = issuerUrl
 	} else {
 		data["client-id"] = clientID

@@ -187,12 +187,12 @@ spec:
 
 #### Secret Creation
 The operator creates Kubernetes Secrets containing client credentials with the following structure:
-- `client-secret`: The raw client secret value
-- `CLIENT_SECRET`: The client secret value in uppercase snake_case format
-- `cookie-secret`: A randomly generated secret used for OAuth2 Proxy cookie encryption
-- `COOKIE_SECRET`: The cookie secret value in uppercase snake_case format
+- `CLIENT_SECRET`: The client secret value
+- `COOKIE_SECRET`: A randomly generated secret used for OAuth2 Proxy cookie encryption
 
-The `cookie-secret` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
+The `COOKIE_SECRET` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
+
+When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will not create the uppercase snake_case environment variable keys in the Secret.
 
 Example Secret structure:
 ```yaml
@@ -203,20 +203,17 @@ metadata:
   namespace: default
 type: Opaque
 data:
-  client-secret: <base64-encoded-secret>
   CLIENT_SECRET: <base64-encoded-secret>
-  cookie-secret: <base64-encoded-cookie-secret>
   COOKIE_SECRET: <base64-encoded-cookie-secret>
 ```
 
 #### ConfigMap Creation
 The operator creates Kubernetes ConfigMaps with Keycloak client configuration:
-- `client-id`: The client ID
-- `CLIENT_ID`: The client ID in uppercase snake_case format
-- `keycloak-url`: The Keycloak server URL
-- `KEYCLOAK_URL`: The Keycloak server URL in uppercase snake_case format
-- `issuer-url`: The issuer URL for OpenID Connect
-- `ISSUER_URL`: The issuer URL in uppercase snake_case format
+- `CLIENT_ID`: The client ID
+- `KEYCLOAK_URL`: The Keycloak server URL
+- `ISSUER_URL`: The issuer URL for OpenID Connect
+
+When `envVarKeys` is set to `false` in the ConfigMap configuration, the operator will not create the uppercase snake_case environment variable keys in the ConfigMap.
 
 Example ConfigMap structure:
 ```yaml
@@ -226,11 +223,8 @@ metadata:
   name: example-client-config
   namespace: default
 data:
-  client-id: "example-client"
   CLIENT_ID: "example-client"
-  keycloak-url: "https://keycloak.example.com"
   KEYCLOAK_URL: "https://keycloak.example.com"
-  issuer-url: "https://keycloak.example.com/realms/my-realm"
   ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
 ```
 

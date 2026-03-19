@@ -138,8 +138,7 @@ func WebhookValidating() {
 			validator.keycloakConfig.AllowedRealms = []string{"test-realm"}
 
 			By("Setting empty Realm")
-			realm := "master"
-			obj.Spec.Realm = &realm
+			obj.Spec.Realm = stringPtr("master")
 
 			By("Validating creation should fail")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -152,13 +151,9 @@ func WebhookValidating() {
 			By("Setting valid ClientID and Realm")
 			obj.Spec.ClientID = &clientIDWithPrefix
 			obj.Spec.Realm = &testRealm
-			configMapName := "test-keycloak-client-config"
 			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
-				Name: &configMapName,
-				EnvVarKeys: func() *bool {
-					envVarKeys := true
-					return &envVarKeys
-				}(),
+				Name:       stringPtr("test-keycloak-client-config"),
+				EnvVarKeys: boolPtr(true),
 			}
 
 			By("Validating creation should succeed")
