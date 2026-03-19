@@ -37,9 +37,15 @@ jobs:
           username: ${{ secrets.QUAY_USERNAME }}
           password: ${{ secrets.QUAY_ACCESS_TOKEN }}
       - name: Build and push
-        run: |
-          make docker-build docker-push IMG=ohiosupercomputer/keycloak-cr-operator:${{ env.VERSION }}
-          make docker-build docker-push IMG=quay.io/ohiosupercomputercenter/keycloak-cr-operator:${{ env.VERSION }}
+        id: docker_build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ohiosupercomputer/keycloak-cr-operator:${{ env.VERSION }},quay.io/ohiosupercomputercenter/keycloak-cr-operator:${{ env.VERSION }}
+      - name: Image digest
+        run: echo ${{ steps.docker_build.outputs.digest }}
   release:
     runs-on: ubuntu-latest
     name: Create Release
