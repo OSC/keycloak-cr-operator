@@ -9,8 +9,10 @@ manager:
   replicas: 1
 
   image:
+    # -- Image registry
+    registry: quay.io
     # -- Manager image repository
-    repository: quay.io/ohiosupercomputercenter/keycloak-cr-operator
+    repository: ohiosupercomputercenter/keycloak-cr-operator
     # -- Manager image tag
     # @default -- The chart's app version
     tag: ""
@@ -57,8 +59,8 @@ manager:
   # -- Environment variables to add to manager pods
   env: []
 
-  # -- Image pull secrets
-  imagePullSecrets: []
+  # -- Use the imagePullSecret resource
+  imagePullSecret: false
 
   # -- Pod-level security settings
   # @default -- unprivileged
@@ -165,3 +167,54 @@ prometheus:
   # -- Enable Prometheus ServiceMonitor.
   # Requires prometheus-operator to be installed in the cluster
   enable: false
+
+imagePullSecret:
+  # -- Create the image pull secret
+  create: false
+  # -- imagePullSecret registry
+  registry: ""
+  # -- imagePullSecret username
+  username: ""
+  # -- imagePullSecret password
+  password: ""
+
+hooks:
+  # -- Enable post-install hooks
+  enable: true
+  image:
+    # -- hook image registry
+    registry: docker.io
+    # -- hook image repository
+    repository: rancher/kubectl
+    # -- hook image tag
+    tag: 'v1.35.2'
+    # -- hook image pull policy
+    pullPolicy: IfNotPresent
+  # -- Use the imagePullSecret resource
+  imagePullSecret: false
+  # -- Job labels to add to the hook job
+  jobLabels: {}
+  # -- Pod labels to add to the hook pod
+  podLabels: {}
+  # -- Pod annotations to add to the hook pod
+  podAnnotations: {}
+  # -- Pod-level security settings
+  # @default -- unprivileged
+  podSecurityContext:
+    runAsNonRoot: true
+    seccompProfile:
+      type: RuntimeDefault
+  # -- Security context for the hook pod
+  # @default -- unprivileged
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+      - ALL
+    seccompProfile:
+      type: RuntimeDefault
+    privileged: false
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534

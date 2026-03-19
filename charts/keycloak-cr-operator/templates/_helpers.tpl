@@ -82,3 +82,12 @@ Dynamically calculates safe truncation to ensure total name length <= 63 chars.
 {{- printf "%s-%s" $fullname $suffix | trunc 63 | trimSuffix "-" }}
 {{- end }}
 {{- end }}
+
+{{- define "keycloak-cr-operator.imagePullSecret" }}
+{{- with .Values.imagePullSecret }}
+{{- $registry := (required "imagePullSecret registry is required" .registry) }}
+{{- $username := (required "imagePullSecret username is required" .username) }}
+{{- $password := (required "imagePullSecret password is required" .password) }}
+{{- printf "{\"auths\":{\"%s\":{\"auth\":\"%s\"}}}" $registry (printf "%s:%s" $username $password | b64enc) | b64enc }}
+{{- end }}
+{{- end }}
