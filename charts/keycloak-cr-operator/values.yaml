@@ -185,9 +185,9 @@ hooks:
     # -- hook image registry
     registry: docker.io
     # -- hook image repository
-    repository: rancher/kubectl
+    repository: portainer/kubectl-shell
     # -- hook image tag
-    tag: 'v1.35.2'
+    tag: '2.39.0'
     # -- hook image pull policy
     pullPolicy: IfNotPresent
   # -- Use the imagePullSecret resource

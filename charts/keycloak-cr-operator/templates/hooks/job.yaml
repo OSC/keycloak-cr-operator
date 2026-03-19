@@ -3,9 +3,9 @@ apiVersion: batch/v1
 kind: Job
 metadata:
   annotations:
-    "helm.sh/hook": post-install
+    "helm.sh/hook": post-install,post-upgrade
     "helm.sh/hook-weight": "3"
-    "helm.sh/hook-delete-policy": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": hook-succeeded
   labels:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
     {{- with .Values.hooks.jobLabels }}
@@ -42,7 +42,7 @@ spec:
         image: "{{ .Values.hooks.image.registry }}/{{ .Values.hooks.image.repository }}:{{ .Values.hooks.image.tag }}"
         imagePullPolicy: {{ .Values.hooks.image.pullPolicy }}
         command:
-        - /bin/sh
+        - /bin/bash
         - -c
         - |
           set -ex
