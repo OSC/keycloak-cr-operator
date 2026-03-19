@@ -39,7 +39,7 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | manager.podAnnotations | object | `{"kubectl.kubernetes.io/default-container":"manager"}` | Pod annotations to add to manager pods |
 | manager.healthPort | int | `8081` | Health check port |
 | manager.env | list | `[]` | Environment variables to add to manager pods |
-| manager.imagePullSecrets | list | `[]` | Image pull secrets |
+| manager.imagePullSecret | bool | `false` | Use the imagePullSecret resource |
 | manager.podSecurityContext | object | unprivileged | Pod-level security settings |
 | manager.securityContext | object | unprivileged | Container-level security settings |
 | manager.resources.limits.cpu | int | `1` | CPU limit |
@@ -68,15 +68,19 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | networkPolicy.apiServerNamespace | string | `"kube-system"` | The API server namespace name |
 | networkPolicy.apiServerPodLabels | object | `{"tier":"control-plane"}` | The API server pod labels to allow |
 | prometheus.enable | bool | `false` | Enable Prometheus ServiceMonitor. Requires prometheus-operator to be installed in the cluster |
+| imagePullSecret.create | bool | `false` | Create the image pull secret |
+| imagePullSecret.registry | string | `""` | imagePullSecret registry |
+| imagePullSecret.username | string | `""` | imagePullSecret username |
+| imagePullSecret.password | string | `""` | imagePullSecret password |
 | hooks.enable | bool | `true` | Enable post-install hooks |
-| hooks.image.registry | string | `"dp.apps.rancher.io"` | hook image registry |
-| hooks.image.repository | string | `"containers/kubectl"` | hook image repository |
-| hooks.image.tag | string | `"1.35.3"` | hook image tag |
+| hooks.image.registry | string | `"docker.io"` | hook image registry |
+| hooks.image.repository | string | `"portainer/kubectl-shell"` | hook image repository |
+| hooks.image.tag | string | `"2.39.0"` | hook image tag |
 | hooks.image.pullPolicy | string | `"IfNotPresent"` | hook image pull policy |
+| hooks.imagePullSecret | bool | `false` | Use the imagePullSecret resource |
 | hooks.jobLabels | object | `{}` | Job labels to add to the hook job |
 | hooks.podLabels | object | `{}` | Pod labels to add to the hook pod |
 | hooks.podAnnotations | object | `{}` | Pod annotations to add to the hook pod |
-| hooks.imagePullSecrets | list | `[]` | Image pull secrets |
 | hooks.podSecurityContext | object | unprivileged | Pod-level security settings |
 | hooks.securityContext | object | unprivileged | Security context for the hook pod |
 
