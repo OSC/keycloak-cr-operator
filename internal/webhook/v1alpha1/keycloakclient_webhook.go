@@ -36,6 +36,7 @@ import (
 var (
 	keycloakclientlog = logf.Log.WithName("keycloakclient-resource")
 	clientSecretType  = "client-secret"
+	defaultEnvVarKeys = true
 )
 
 // SetupKeycloakClientWebhookWithManager registers the webhook for KeycloakClient in the manager.
@@ -105,7 +106,7 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		obj.Spec.Realm = &defaultRealm
 	}
 
-	if obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == "client-secret" &&
+	if obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == clientSecretType &&
 		obj.Spec.PublicClient != nil && !*obj.Spec.PublicClient {
 		if obj.Spec.ClientSecretRef == nil {
 			obj.Spec.ClientSecretRef = &keycloakv1alpha1.KeycloakClientSecret{}
@@ -114,17 +115,35 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 			obj.Spec.ClientSecretRef.Name = fmt.Sprintf("%s-secret", obj.Name)
 		}
 		if obj.Spec.ClientSecretRef.Key == "" {
-			obj.Spec.ClientSecretRef.Key = "client-secret"
+			obj.Spec.ClientSecretRef.Key = "CLIENT_SECRET"
 		}
 		if obj.Spec.ClientSecretRef.Create == nil {
 			create := true
 			obj.Spec.ClientSecretRef.Create = &create
 		}
+		// Set default EnvVarKeys to true if not set
+		if obj.Spec.ClientSecretRef.EnvVarKeys == nil {
+			obj.Spec.ClientSecretRef.EnvVarKeys = &defaultEnvVarKeys
+		}
 	}
 
-	if obj.Spec.ConfigMapName == nil || *obj.Spec.ConfigMapName == "" {
-		configMapName := fmt.Sprintf("%s-config", obj.Name)
-		obj.Spec.ConfigMapName = &configMapName
+	// Handle ConfigMap structure
+	defaultConfigMapName := fmt.Sprintf("%s-config", obj.Name)
+	if obj.Spec.ConfigMap != nil {
+		// Set default ConfigMap.Name if not set
+		if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
+			obj.Spec.ConfigMap.Name = &defaultConfigMapName
+		}
+		// Set default EnvVarKeys to true if not set
+		if obj.Spec.ConfigMap.EnvVarKeys == nil {
+			obj.Spec.ConfigMap.EnvVarKeys = &defaultEnvVarKeys
+		}
+	} else {
+		// If ConfigMap is nil, create a new one with defaults
+		obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
+			Name:       &defaultConfigMapName,
+			EnvVarKeys: &defaultEnvVarKeys,
+		}
 	}
 
 	return nil
@@ -208,12 +227,24 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 				if obj.Spec.ClientSecretRef.Create == nil {
 					allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "create"), fmt.Sprintf("clientSecretRef create must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
 				}
+				// Validate EnvVarKeys is set for ClientSecretRef
+				if obj.Spec.ClientSecretRef.EnvVarKeys == nil {
+					allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "envVarKeys"), fmt.Sprintf("clientSecretRef envVarKeys must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+				}
 			}
 		}
 	}
 
-	if obj.Spec.ConfigMapName == nil || *obj.Spec.ConfigMapName == "" {
-		allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMapName"), "configMapName must be set"))
+	// Validate ConfigMap structure
+	if obj.Spec.ConfigMap != nil {
+		if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "name"), "configMap.name must be set"))
+		}
+		if obj.Spec.ConfigMap.EnvVarKeys == nil {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "envVarKeys"), "configMap.envVarKeys must be set"))
+		}
+	} else {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap"), "configMap data must be provided"))
 	}
 
 	if len(allErrs) > 0 {

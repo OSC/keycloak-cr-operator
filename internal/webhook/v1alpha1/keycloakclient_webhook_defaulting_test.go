@@ -91,28 +91,37 @@ func WebhookDefaulting() {
 			Expect(*obj.Spec.Realm).To(Equal("custom-realm"))
 		})
 
-		It("Should apply default ConfigMapName when not set", func() {
+		It("Should apply default ConfigMap when not set", func() {
 			By("Calling the Default method to apply defaults")
 			err := defaulter.Default(ctx, obj)
 			Expect(err).ToNot(HaveOccurred())
 
-			By("Checking that the default ConfigMapName is set")
-			Expect(obj.Spec.ConfigMapName).NotTo(BeNil())
-			Expect(*obj.Spec.ConfigMapName).To(Equal("test-keycloak-client-config"))
+			By("Checking that the default ConfigMap is set")
+			Expect(obj.Spec.ConfigMap).NotTo(BeNil())
+			Expect(obj.Spec.ConfigMap.Name).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.Name).To(Equal("test-keycloak-client-config"))
+			Expect(obj.Spec.ConfigMap.EnvVarKeys).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.EnvVarKeys).To(BeTrue())
 		})
 
-		It("Should not override existing ConfigMapName", func() {
-			By("Setting an explicit ConfigMapName")
+		It("Should not override existing ConfigMap", func() {
+			By("Setting an explicit ConfigMap")
 			configMapName := "existing-configmap"
-			obj.Spec.ConfigMapName = &configMapName
+			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
+				Name:       &configMapName,
+				EnvVarKeys: boolPtr(false),
+			}
 
 			By("Calling the Default method to apply defaults")
 			err := defaulter.Default(ctx, obj)
 			Expect(err).ToNot(HaveOccurred())
 
-			By("Checking that the existing ConfigMapName is preserved")
-			Expect(obj.Spec.ConfigMapName).NotTo(BeNil())
-			Expect(*obj.Spec.ConfigMapName).To(Equal("existing-configmap"))
+			By("Checking that the existing ConfigMap is preserved")
+			Expect(obj.Spec.ConfigMap).NotTo(BeNil())
+			Expect(obj.Spec.ConfigMap.Name).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.Name).To(Equal("existing-configmap"))
+			Expect(obj.Spec.ConfigMap.EnvVarKeys).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.EnvVarKeys).To(BeFalse())
 		})
 
 		It("Should handle empty ClientIDPrefix", func() {
@@ -144,7 +153,7 @@ func WebhookDefaulting() {
 				By("Checking that ClientSecretRef is set")
 				Expect(obj.Spec.ClientSecretRef).NotTo(BeNil())
 				Expect(obj.Spec.ClientSecretRef.Name).To(Equal("test-keycloak-client-secret"))
-				Expect(obj.Spec.ClientSecretRef.Key).To(Equal("client-secret"))
+				Expect(obj.Spec.ClientSecretRef.Key).To(Equal("CLIENT_SECRET"))
 			})
 
 			It("Should not set default ClientSecretRef when ClientAuthenticatorType is not client-secret", func() {
@@ -264,7 +273,7 @@ func WebhookDefaulting() {
 
 				By("Checking that default key is set")
 				Expect(obj.Spec.ClientSecretRef).NotTo(BeNil())
-				Expect(obj.Spec.ClientSecretRef.Key).To(Equal("client-secret"))
+				Expect(obj.Spec.ClientSecretRef.Key).To(Equal("CLIENT_SECRET"))
 				Expect(*obj.Spec.ClientSecretRef.Create).To(BeTrue())
 			})
 		})

@@ -27,18 +27,24 @@ import (
 // GetSecret creates a corev1.Secret object using data from ClientSecretRef for name and key
 // and KeycloakClient for namespace. It sets data based on the secret argument to StringData.
 func (k *KeycloakClient) GetSecret(clientSecret string) *corev1.Secret {
-	var key, name string
+	var defKey, key, name string
+	var envVarKeys bool
 	if k.Spec.ClientSecretRef != nil {
 		name = k.Spec.ClientSecretRef.Name
-		key = k.Spec.ClientSecretRef.Key
+		defKey = k.Spec.ClientSecretRef.Key
+		envVarKeys = *k.Spec.ClientSecretRef.EnvVarKeys
 	} else {
 		name = fmt.Sprintf("%s-secret", k.Name)
-		key = "client-secret"
+		envVarKeys = true
+		defKey = "CLIENT_SECRET"
 	}
-	envKey := strcase.UpperSnakeCase(key)
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(defKey)
+	} else {
+		key = defKey
+	}
 	data := make(map[string]string)
 	data[key] = clientSecret
-	data[envKey] = clientSecret
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

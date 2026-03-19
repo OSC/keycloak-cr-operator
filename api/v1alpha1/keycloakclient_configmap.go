@@ -29,10 +29,21 @@ import (
 // and KeycloakConfig.
 func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.ConfigMap {
 	var name, clientID string
-	if k.Spec.ConfigMapName == nil || *k.Spec.ConfigMapName == "" {
-		name = fmt.Sprintf("%s-config", k.Name)
+	var configMap *KeycloakClientConfigMap
+	defaultName := fmt.Sprintf("%s-config", k.Name)
+	if k.Spec.ConfigMap == nil {
+		envVarKeys := true
+		configMap = &KeycloakClientConfigMap{
+			Name:       &defaultName,
+			EnvVarKeys: &envVarKeys,
+		}
 	} else {
-		name = *k.Spec.ConfigMapName
+		configMap = k.Spec.ConfigMap
+	}
+	if configMap.Name == nil || *configMap.Name == "" {
+		name = defaultName
+	} else {
+		name = *configMap.Name
 	}
 	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
 		if config.ClientIDPrefix != "" {
@@ -49,14 +60,18 @@ func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.Con
 	}
 
 	// Create data map for ConfigMap
-	data := make(map[string]string)
-	data["client-id"] = clientID
-	data["CLIENT_ID"] = clientID
-	data["keycloak-url"] = config.KeycloakURL.String()
-	data["KEYCLOAK_URL"] = config.KeycloakURL.String()
+	url := config.KeycloakURL.String()
 	issuerUrl := config.KeycloakURL.JoinPath("realms", realm).String()
-	data["issuer-url"] = issuerUrl
-	data["ISSUER_URL"] = issuerUrl
+	data := make(map[string]string)
+	if configMap.EnvVarKeys == nil || *configMap.EnvVarKeys == true {
+		data["CLIENT_ID"] = clientID
+		data["KEYCLOAK_URL"] = config.KeycloakURL.String()
+		data["ISSUER_URL"] = issuerUrl
+	} else {
+		data["client-id"] = clientID
+		data["keycloak-url"] = url
+		data["issuer-url"] = issuerUrl
+	}
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{

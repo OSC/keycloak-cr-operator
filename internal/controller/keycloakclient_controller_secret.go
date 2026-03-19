@@ -152,8 +152,11 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 			return err
 		}
-		secret.StringData[cookieSecretKey] = cookieSecret
-		secret.StringData[cookieSecretEnvKey] = cookieSecret
+		if keycloakClient.Spec.ClientSecretRef.EnvVarKeys == nil || (keycloakClient.Spec.ClientSecretRef.EnvVarKeys != nil && *keycloakClient.Spec.ClientSecretRef.EnvVarKeys) {
+			secret.StringData[cookieSecretEnvKey] = cookieSecret
+		} else {
+			secret.StringData[cookieSecretKey] = cookieSecret
+		}
 
 		err = ctrl.SetControllerReference(keycloakClient, secret, r.Scheme)
 		if err != nil {
@@ -197,14 +200,15 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 				log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 				return err
 			}
-			// Add cookie-secret back if it was removed.
-			if _, ok := found.Data[cookieSecretEnvKey]; !ok {
-				found.StringData[cookieSecretKey] = cookieSecret
-				found.StringData[cookieSecretEnvKey] = cookieSecret
+			var cookieKey string
+			if keycloakClient.Spec.ClientSecretRef.EnvVarKeys == nil || (keycloakClient.Spec.ClientSecretRef.EnvVarKeys != nil && *keycloakClient.Spec.ClientSecretRef.EnvVarKeys) {
+				cookieKey = cookieSecretEnvKey
+			} else {
+				cookieKey = cookieSecretKey
 			}
-			if _, ok := found.Data[cookieSecretEnvKey]; !ok {
-				found.StringData[cookieSecretKey] = cookieSecret
-				found.StringData[cookieSecretEnvKey] = cookieSecret
+			// Add cookie-secret back if it was removed.
+			if _, ok := found.Data[cookieKey]; !ok {
+				found.StringData[cookieKey] = cookieSecret
 			}
 
 			// Update the secret with merged data
