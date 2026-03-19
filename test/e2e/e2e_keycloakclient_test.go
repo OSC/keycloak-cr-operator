@@ -146,7 +146,7 @@ func KeycloakClientSpec() {
 				client := getKeycloakClient("kubernetes-foo", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
 				g.Expect(*client.ClientID).To(Equal("kubernetes-foo"))
-				clientID, err := getConfigMap("keycloak-config", "client-id")
+				clientID, err := getConfigMap("keycloak-config", "CLIENT_ID")
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve configmap")
 				g.Expect(clientID).To(Equal("kubernetes-foo"))
 			}
