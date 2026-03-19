@@ -8,7 +8,7 @@ metadata:
   namespace: keycloak-cr-operator
 spec:
   ports:
-    - port: 443
+    - port: 9443
       protocol: TCP
       targetPort: 9443
   selector:
