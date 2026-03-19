@@ -70,6 +70,10 @@ spec:
                   create:
                     default: true
                     type: boolean
+                  envVarKeys:
+                    default: true
+                    description: Whether to use envVar keys
+                    type: boolean
                   key:
                     description: The key of the secret to select from.  Must be a
                       valid secret key.
@@ -90,9 +94,17 @@ spec:
                 - key
                 type: object
                 x-kubernetes-map-type: atomic
-              configMapName:
-                description: The ConfigMap name, will default to "<name>-config"
-                type: string
+              configMap:
+                description: The ConfigMap configuration
+                properties:
+                  envVarKeys:
+                    default: true
+                    description: Whether to use envVar keys
+                    type: boolean
+                  name:
+                    description: The ConfigMap name, will default to "<name>-config"
+                    type: string
+                type: object
               consentRequired:
                 description: ConsentRequired indicates if consent is required
                 type: boolean

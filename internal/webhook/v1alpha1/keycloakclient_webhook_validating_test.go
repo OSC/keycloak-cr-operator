@@ -29,9 +29,10 @@ import (
 
 func WebhookValidating() {
 	var (
-		obj       *keycloakv1alpha1.KeycloakClient
-		oldObj    *keycloakv1alpha1.KeycloakClient
-		validator KeycloakClientCustomValidator
+		obj              *keycloakv1alpha1.KeycloakClient
+		oldObj           *keycloakv1alpha1.KeycloakClient
+		validator        KeycloakClientCustomValidator
+		defaultConfigMap *keycloakv1alpha1.KeycloakClientConfigMap
 	)
 
 	BeforeEach(func() {
@@ -54,10 +55,15 @@ func WebhookValidating() {
 				AllowedRealms:  []string{},
 			},
 		}
+		defaultConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
+			Name:       &configMapName,
+			EnvVarKeys: boolPtr(true),
+		}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
 		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
 		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
 	})
+
 	Context("When creating or updating KeycloakClient under Validating Webhook", func() {
 		It("Should deny creation if ClientID is not set", func() {
 			By("Setting empty ClientID")
@@ -92,7 +98,7 @@ func WebhookValidating() {
 			clientID := "test-namespace-test-keycloak-client-master"
 			obj.Spec.ClientID = &clientID
 			obj.Spec.Realm = &testRealm
-			obj.Spec.ConfigMapName = &configMapName
+			obj.Spec.ConfigMap = defaultConfigMap
 
 			By("Validating creation should succeed")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -133,8 +139,7 @@ func WebhookValidating() {
 			validator.keycloakConfig.AllowedRealms = []string{"test-realm"}
 
 			By("Setting empty Realm")
-			realm := "master"
-			obj.Spec.Realm = &realm
+			obj.Spec.Realm = stringPtr("master")
 
 			By("Validating creation should fail")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -147,7 +152,10 @@ func WebhookValidating() {
 			By("Setting valid ClientID and Realm")
 			obj.Spec.ClientID = &clientIDWithPrefix
 			obj.Spec.Realm = &testRealm
-			obj.Spec.ConfigMapName = &configMapName
+			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
+				Name:       stringPtr("test-keycloak-client-config"),
+				EnvVarKeys: boolPtr(true),
+			}
 
 			By("Validating creation should succeed")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -163,7 +171,7 @@ func WebhookValidating() {
 			clientID := "test-client"
 			obj.Spec.ClientID = &clientID
 			obj.Spec.Realm = &testRealm
-			obj.Spec.ConfigMapName = &configMapName
+			obj.Spec.ConfigMap = defaultConfigMap
 
 			By("Validating creation should succeed")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -194,7 +202,7 @@ func WebhookValidating() {
 			public := false
 			obj.Spec.PublicClient = &public
 			create := true
-			obj.Spec.ConfigMapName = &configMapName
+			obj.Spec.ConfigMap = defaultConfigMap
 
 			// Create a fake secret reference
 			secretRef := keycloakv1alpha1.KeycloakClientSecret{
@@ -202,9 +210,10 @@ func WebhookValidating() {
 					LocalObjectReference: corev1.LocalObjectReference{
 						Name: "test-secret",
 					},
-					Key: "test-key",
+					Key: "TEST_KEY",
 				},
-				Create: &create,
+				Create:     &create,
+				EnvVarKeys: boolPtr(true),
 			}
 			obj.Spec.ClientSecretRef = &secretRef
 
@@ -221,7 +230,7 @@ func WebhookValidating() {
 			obj.Spec.ClientAuthenticatorType = &clientSecretType
 			public := true
 			obj.Spec.PublicClient = &public
-			obj.Spec.ConfigMapName = &configMapName
+			obj.Spec.ConfigMap = defaultConfigMap
 
 			By("Validating creation should succeed even without ClientSecretRef")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -229,22 +238,55 @@ func WebhookValidating() {
 			Expect(err).ToNot(HaveOccurred())
 		})
 
-		It("Should deny creation if ConfigMapName is not set", func() {
-			By("Setting empty ConfigMapName")
-			obj.Spec.ConfigMapName = nil
+		It("Should validate ConfigMap structure properly", func() {
+			By("Setting up a client with ConfigMap structure")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should deny creation if ConfigMap.Name is not set", func() {
+			By("Setting up a client with empty ConfigMap.Name")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
+				Name:       nil,
+				EnvVarKeys: boolPtr(true),
+			}
 
 			By("Validating creation should fail")
 			warnings, err := validator.ValidateCreate(ctx, obj)
 			Expect(warnings).To(BeNil())
 			Expect(err).To(HaveOccurred())
-			Expect(err.Error()).To(ContainSubstring("configMapName must be set"))
+			Expect(err.Error()).To(ContainSubstring("configMap.name must be set"))
+		})
+
+		It("Should deny creation if ConfigMap.EnvVarKeys is not set", func() {
+			By("Setting up a client with empty ConfigMap.EnvVarKeys")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
+				Name:       &configMapName,
+				EnvVarKeys: nil,
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("configMap.envVarKeys must be set"))
 		})
 
 		It("Should validate updates correctly", func() {
 			By("Setting up a valid client")
 			obj.Spec.ClientID = &clientIDWithPrefix
 			obj.Spec.Realm = &testRealm
-			obj.Spec.ConfigMapName = &configMapName
+			obj.Spec.ConfigMap = defaultConfigMap
 
 			By("Validating update should succeed")
 			warnings, err := validator.ValidateUpdate(ctx, oldObj, obj)
@@ -272,17 +314,18 @@ func WebhookValidating() {
 				public := false
 				obj.Spec.PublicClient = &public
 				create := true
-				obj.Spec.ConfigMapName = &configMapName
+				obj.Spec.ConfigMap = defaultConfigMap
 
-				// Set a ClientSecretRef with key
+				// Set a ClientSecretRef with key that is valid (upper snake case)
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
 							Name: "test-secret",
 						},
-						Key: "test-key",
+						Key: "TEST_KEY",
 					},
-					Create: &create,
+					Create:     &create,
+					EnvVarKeys: boolPtr(true),
 				}
 				obj.Spec.ClientSecretRef = &secretRef
 
@@ -317,6 +360,7 @@ func WebhookValidating() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("clientSecretRef name must be set when clientAuthenticatorType is client-secret and public is false"))
 				Expect(err.Error()).To(ContainSubstring("clientSecretRef create must be set when clientAuthenticatorType is client-secret and public is false"))
+				Expect(err.Error()).To(ContainSubstring("clientSecretRef envVarKeys must be set when clientAuthenticatorType is client-secret and public is false"))
 			})
 
 			It("Should deny creation if ClientSecretRef key is empty", func() {
@@ -344,7 +388,97 @@ func WebhookValidating() {
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("clientSecretRef key must be set when clientAuthenticatorType is client-secret and public is false"))
 				Expect(err.Error()).To(ContainSubstring("clientSecretRef create must be set when clientAuthenticatorType is client-secret and public is false"))
+				Expect(err.Error()).To(ContainSubstring("clientSecretRef envVarKeys must be set when clientAuthenticatorType is client-secret and public is false"))
 			})
+
+			It("Should deny creation if ClientSecretRef key is not upper snake case when EnvVarKeys is true", func() {
+				By("Setting up client with client-secret auth type, public=false, and ClientSecretRef with non-upper-snake-case key")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+				create := true
+				obj.Spec.ConfigMap = defaultConfigMap
+
+				// Set a ClientSecretRef with key that is not upper snake case
+				secretRef := keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-secret",
+						},
+						Key: "testKey", // Not upper snake case
+					},
+					Create:     &create,
+					EnvVarKeys: boolPtr(true), // EnvVarKeys is true
+				}
+				obj.Spec.ClientSecretRef = &secretRef
+
+				By("Validating creation should fail due to non-upper-snake-case key")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("clientSecretRef key must be upper snake case when envVarKeys is true"))
+			})
+
+			It("Should allow creation if ClientSecretRef key is upper snake case when EnvVarKeys is true", func() {
+				By("Setting up client with client-secret auth type, public=false, and ClientSecretRef with upper snake case key")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+				create := true
+				obj.Spec.ConfigMap = defaultConfigMap
+
+				// Set a ClientSecretRef with key that is upper snake case
+				secretRef := keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-secret",
+						},
+						Key: "TEST_KEY", // Upper snake case
+					},
+					Create:     &create,
+					EnvVarKeys: boolPtr(true), // EnvVarKeys is true
+				}
+				obj.Spec.ClientSecretRef = &secretRef
+
+				By("Validating creation should succeed")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should allow creation if ClientSecretRef key is not upper snake case when EnvVarKeys is false", func() {
+				By("Setting up client with client-secret auth type, public=false, and ClientSecretRef with non-upper-snake-case key")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.ClientAuthenticatorType = &clientSecretType
+				public := false
+				obj.Spec.PublicClient = &public
+				create := true
+				obj.Spec.ConfigMap = defaultConfigMap
+
+				// Set a ClientSecretRef with key that is not upper snake case but EnvVarKeys is false
+				secretRef := keycloakv1alpha1.KeycloakClientSecret{
+					SecretKeySelector: corev1.SecretKeySelector{
+						LocalObjectReference: corev1.LocalObjectReference{
+							Name: "test-secret",
+						},
+						Key: "testKey", // Not upper snake case
+					},
+					Create:     &create,
+					EnvVarKeys: boolPtr(false), // EnvVarKeys is false
+				}
+				obj.Spec.ClientSecretRef = &secretRef
+
+				By("Validating creation should succeed")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
 		})
 	})
 }

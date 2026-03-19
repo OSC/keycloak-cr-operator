@@ -139,10 +139,10 @@ spec defines the desired state of KeycloakClient
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b>configMapName</b></td>
-        <td>string</td>
+        <td><b><a href="#keycloakclientspecconfigmap">configMap</a></b></td>
+        <td>object</td>
         <td>
-          The ConfigMap name, will default to "<name>-config"<br/>
+          The ConfigMap configuration<br/>
         </td>
         <td>false</td>
       </tr><tr>
@@ -386,6 +386,15 @@ Reference to the secret holding the ClientSecret
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>envVarKeys</b></td>
+        <td>boolean</td>
+        <td>
+          Whether to use envVar keys<br/>
+          <br/>
+            <i>Default</i>: true<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
@@ -403,6 +412,42 @@ More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/nam
         <td>boolean</td>
         <td>
           Specify whether the Secret or its key must be defined<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+### KeycloakClient.spec.configMap
+<sup><sup>[↩ Parent](#keycloakclientspec)</sup></sup>
+
+
+
+The ConfigMap configuration
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>envVarKeys</b></td>
+        <td>boolean</td>
+        <td>
+          Whether to use envVar keys<br/>
+          <br/>
+            <i>Default</i>: true<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          The ConfigMap name, will default to "<name>-config"<br/>
         </td>
         <td>false</td>
       </tr></tbody>

@@ -201,9 +201,9 @@ type KeycloakClientSpec struct {
 	// +optional
 	ClientSecretRef *KeycloakClientSecret `json:"clientSecretRef,omitempty"`
 
-	// The ConfigMap name, will default to "<name>-config"
+	// The ConfigMap configuration
 	// +optional
-	ConfigMapName *string `json:"configMapName,omitempty"`
+	ConfigMap *KeycloakClientConfigMap `json:"configMap,omitempty"`
 }
 
 // Defines the structure for the Keycloak Client Secret
@@ -214,6 +214,22 @@ type KeycloakClientSecret struct {
 	// +kubebuilder:default=true
 	// +optional
 	Create *bool `json:"create,omitempty"`
+	// Whether to use envVar keys
+	// +kubebuilder:default=true
+	// +optional
+	EnvVarKeys *bool `json:"envVarKeys,omitempty"`
+}
+
+// Defines the structure for ConfigMap configuration
+type KeycloakClientConfigMap struct {
+	// The ConfigMap name, will default to "<name>-config"
+	// +optional
+	Name *string `json:"name,omitempty"`
+
+	// Whether to use envVar keys
+	// +kubebuilder:default=true
+	// +optional
+	EnvVarKeys *bool `json:"envVarKeys,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.

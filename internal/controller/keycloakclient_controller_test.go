@@ -174,7 +174,8 @@ var _ = Describe("KeycloakClient Controller", func() {
 							},
 							Key: "client-secret",
 						},
-						Create: boolPtr(true),
+						Create:     boolPtr(true),
+						EnvVarKeys: boolPtr(true),
 					},
 				},
 			}
@@ -240,14 +241,11 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Namespace: "default",
 			}, secret)
 			Expect(err).NotTo(HaveOccurred())
-			Expect(secret.Data).To(HaveKey("client-secret"))
+			Expect(secret.Data).NotTo(HaveKey("client-secret"))
 			Expect(secret.Data).To(HaveKey("CLIENT_SECRET"))
-			Expect(secret.Data).To(HaveKey("cookie-secret"))
+			Expect(secret.Data).NotTo(HaveKey("cookie-secret"))
 			Expect(secret.Data).To(HaveKey("COOKIE_SECRET"))
-			cookieSecret, ok := secret.Data["cookie-secret"]
-			Expect(ok).To(BeTrue())
-			Expect(string(cookieSecret)).To(Not(BeEmpty()))
-			cookieSecret, ok = secret.Data["COOKIE_SECRET"]
+			cookieSecret, ok := secret.Data["COOKIE_SECRET"]
 			Expect(ok).To(BeTrue())
 			Expect(string(cookieSecret)).To(Not(BeEmpty()))
 
@@ -255,6 +253,113 @@ var _ = Describe("KeycloakClient Controller", func() {
 			controllerRefs := secret.GetOwnerReferences()
 			Expect(controllerRefs).To(HaveLen(1))
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret"))
+			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
+
+			// Verify that all expectations were met
+			mockServer.AssertExpectations(GinkgoT())
+		})
+
+		It("should handle secret creation when ClientSecretRef is configured with EnvVarKeys=false", func() {
+			By("Creating a KeycloakClient with ClientSecretRef")
+
+			// Create a KeycloakClient with ClientSecretRef configuration
+			clientID := "test-client-with-secret"
+			keycloakClientWithSecret := &keycloakv1alpha1.KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-keycloak-client-with-secret-no-envvars",
+					Namespace: "default",
+				},
+				Spec: keycloakv1alpha1.KeycloakClientSpec{
+					ClientID:                &clientID,
+					Realm:                   stringPtr("master"),
+					ClientAuthenticatorType: stringPtr("client-secret"),
+					PublicClient:            boolPtr(false),
+					ClientSecretRef: &keycloakv1alpha1.KeycloakClientSecret{
+						SecretKeySelector: corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "test-client-secret-no-envvars",
+							},
+							Key: "client-secret",
+						},
+						Create:     boolPtr(true),
+						EnvVarKeys: boolPtr(false),
+					},
+				},
+			}
+
+			// Create the resource in the test cluster
+			Expect(k8sClient.Create(ctx, keycloakClientWithSecret)).To(Succeed())
+
+			// Clean up after test
+			DeferCleanup(func() {
+				Expect(k8sClient.Delete(ctx, keycloakClientWithSecret)).To(Succeed())
+			})
+
+			// Create a mock GoCloak client that returns a secret
+			mockServer := new(MockGoCloak)
+			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
+				AccessToken: "test-token",
+			}, nil)
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
+				{
+					ID:       stringPtr("test"),
+					ClientID: stringPtr("test"),
+				},
+			}, nil).Once()
+
+			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
+
+			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
+				Value: stringPtr("secret"),
+			}, nil)
+
+			controllerReconciler := &KeycloakClientReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+				Server: mockServer,
+				Config: &models.KeycloakConfig{
+					KeycloakURL: &url.URL{
+						Scheme: "http",
+						Host:   "keycloak.keycloak.svc",
+					},
+					AdminUsername:  "admin",
+					AdminPassword:  "password",
+					AdminRealm:     "master",
+					ClientIDPrefix: "kubernetes",
+				},
+			}
+
+			// Reconcile the resource
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-keycloak-client-with-secret-no-envvars",
+					Namespace: "default",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify that the secret was created
+			secret := &corev1.Secret{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-client-secret-no-envvars",
+				Namespace: "default",
+			}, secret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Data).To(HaveKey("client-secret"))
+			Expect(secret.Data).NotTo(HaveKey("CLIENT_SECRET"))
+			Expect(secret.Data).To(HaveKey("cookie-secret"))
+			Expect(secret.Data).NotTo(HaveKey("COOKIE_SECRET"))
+			cookieSecret, ok := secret.Data["cookie-secret"]
+			Expect(ok).To(BeTrue())
+			Expect(string(cookieSecret)).To(Not(BeEmpty()))
+
+			// Verify the secret has the correct owner reference
+			controllerRefs := secret.GetOwnerReferences()
+			Expect(controllerRefs).To(HaveLen(1))
+			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret-no-envvars"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
 			// Verify that all expectations were met
@@ -273,9 +378,12 @@ var _ = Describe("KeycloakClient Controller", func() {
 					Namespace: "default",
 				},
 				Spec: keycloakv1alpha1.KeycloakClientSpec{
-					ClientID:      &clientID,
-					Realm:         stringPtr("master"),
-					ConfigMapName: &configMapName,
+					ClientID: &clientID,
+					Realm:    stringPtr("master"),
+					ConfigMap: &keycloakv1alpha1.KeycloakClientConfigMap{
+						Name:       &configMapName,
+						EnvVarKeys: boolPtr(true),
+					},
 				},
 			}
 
@@ -332,19 +440,16 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			// Verify ConfigMap data
-			Expect(configMap.Data).To(HaveKey("client-id"))
+			Expect(configMap.Data).NotTo(HaveKey("client-id"))
 			Expect(configMap.Data).To(HaveKey("CLIENT_ID"))
-			Expect(configMap.Data).To(HaveKey("keycloak-url"))
+			Expect(configMap.Data).NotTo(HaveKey("keycloak-url"))
 			Expect(configMap.Data).To(HaveKey("KEYCLOAK_URL"))
-			Expect(configMap.Data).To(HaveKey("issuer-url"))
+			Expect(configMap.Data).NotTo(HaveKey("issuer-url"))
 			Expect(configMap.Data).To(HaveKey("ISSUER_URL"))
 
 			// Verify the values are correct
-			Expect(configMap.Data["client-id"]).To(Equal("test-client-with-configmap"))
 			Expect(configMap.Data["CLIENT_ID"]).To(Equal("test-client-with-configmap"))
-			Expect(configMap.Data["keycloak-url"]).To(Equal("http://keycloak.keycloak.svc"))
 			Expect(configMap.Data["KEYCLOAK_URL"]).To(Equal("http://keycloak.keycloak.svc"))
-			Expect(configMap.Data["issuer-url"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
 			Expect(configMap.Data["ISSUER_URL"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
 
 			// Verify the ConfigMap has the correct owner reference
@@ -358,7 +463,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 		})
 
 		It("should handle config map creation with default name", func() {
-			By("Creating a KeycloakClient without ConfigMapName specified")
+			By("Creating a KeycloakClient without ConfigMapName specified and EnvVarKeys=false")
 
 			// Create a KeycloakClient without specifying ConfigMapName
 			clientID := "test-client-default-configmap"
@@ -370,6 +475,9 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Spec: keycloakv1alpha1.KeycloakClientSpec{
 					ClientID: &clientID,
 					Realm:    stringPtr("master"),
+					ConfigMap: &keycloakv1alpha1.KeycloakClientConfigMap{
+						EnvVarKeys: boolPtr(false),
+					},
 				},
 			}
 
@@ -429,6 +537,9 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(configMap.Data).To(HaveKey("client-id"))
 			Expect(configMap.Data).To(HaveKey("keycloak-url"))
 			Expect(configMap.Data).To(HaveKey("issuer-url"))
+			Expect(configMap.Data).NotTo(HaveKey("CLIENT_ID"))
+			Expect(configMap.Data).NotTo(HaveKey("KEYCLOAK_URL"))
+			Expect(configMap.Data).NotTo(HaveKey("ISSUER_URL"))
 
 			// Verify the values are correct
 			Expect(configMap.Data["client-id"]).To(Equal("test-client-default-configmap"))

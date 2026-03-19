@@ -11,7 +11,7 @@ spec:
   realm: master
   clientSecretRef:
     name: keycloak-test
-    key: client-secret
+    key: CLIENT_SECRET
     create: true
   redirectUris:
     - https://example.com/*
@@ -20,4 +20,5 @@ spec:
     - web-origins
     - profile
     - email
-  configMapName: keycloak-config
+  configMap:
+    name: keycloak-config

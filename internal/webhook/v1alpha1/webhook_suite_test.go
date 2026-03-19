@@ -169,3 +169,12 @@ func getFirstFoundEnvTestBinaryDir() string {
 	}
 	return ""
 }
+
+// Helper functions for test data
+func stringPtr(s string) *string {
+	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
+}
