@@ -12,7 +12,7 @@ metadata:
   namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
 spec:
   ports:
-  - port: 443
+  - port: {{ .Values.webhook.port }}
     protocol: TCP
     targetPort: {{ .Values.webhook.port }}
   selector:

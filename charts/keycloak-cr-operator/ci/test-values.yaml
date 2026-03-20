@@ -17,3 +17,8 @@ manager:
       value: bar
 networkPolicy:
   allowMetricsFromPods: true
+imagePullSecret:
+  create: true
+  registry: example.com
+  username: username
+  password: secret

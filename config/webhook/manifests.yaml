@@ -11,6 +11,7 @@ webhooks:
       name: webhook-service
       namespace: system
       path: /mutate-keycloak-osc-edu-v1alpha1-keycloakclient
+      port: 9443
   failurePolicy: Fail
   name: mkeycloakclient-v1alpha1.kb.io
   rules:
@@ -38,6 +39,7 @@ webhooks:
       name: webhook-service
       namespace: system
       path: /validate-keycloak-osc-edu-v1alpha1-keycloakclient
+      port: 9443
   failurePolicy: Fail
   name: vkeycloakclient-v1alpha1.kb.io
   rules:

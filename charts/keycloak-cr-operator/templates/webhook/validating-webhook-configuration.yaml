@@ -15,6 +15,7 @@ webhooks:
       name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
       namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
       path: /validate-keycloak-osc-edu-v1alpha1-keycloakclient
+      port: {{ .Values.webhook.port }}
   failurePolicy: Fail
   name: vkeycloakclient-v1alpha1.kb.io
   rules:

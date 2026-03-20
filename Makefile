@@ -326,6 +326,12 @@ HELM_RELEASE ?= keycloak-cr-operator
 HELM_CHART_DIR ?= charts/keycloak-cr-operator
 ## Additional arguments to pass to helm commands
 HELM_EXTRA_ARGS ?=
+## Helm image registry
+IMG_REGISTRY ?= $(shell echo $(IMG) | cut -d/ -f1)
+## Helm image repository
+IMG_REPOSITORY ?= $(shell echo $(IMG) | cut -d/ -f2- | cut -d: -f1)
+## Helm image tag
+IMG_TAG ?= $(shell echo $(IMG) | cut -d: -f2)
 
 .PHONY: install-helm
 install-helm: ## Install the latest version of Helm.
@@ -339,8 +345,9 @@ helm-deploy: install-helm ## Deploy manager to the K8s cluster via Helm. Specify
 	$(HELM) upgrade --install $(HELM_RELEASE) $(HELM_CHART_DIR) \
 		--namespace $(HELM_NAMESPACE) \
 		--create-namespace \
-		--set manager.image.repository=$${IMG%:*} \
-		--set manager.image.tag=$${IMG##*:} \
+		--set manager.image.registry=$(IMG_REGISTRY) \
+		--set manager.image.repository=$(IMG_REPOSITORY) \
+		--set manager.image.tag=$(IMG_TAG) \
 		--wait \
 		--timeout 5m \
 		$(HELM_EXTRA_ARGS)

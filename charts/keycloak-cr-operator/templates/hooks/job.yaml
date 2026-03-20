@@ -1,0 +1,62 @@
+{{- if and .Values.hooks.enable .Values.webhook.enable }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-weight": "3"
+    "helm.sh/hook-delete-policy": hook-succeeded
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+    {{- with .Values.hooks.jobLabels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "hooks-webhook-wait" "context" $) }}
+  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+spec:
+  template:
+    metadata:
+      {{- with .Values.hooks.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+      {{- with .Values.hooks.podLabels }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+        {{- include "keycloak-cr-operator.selectorLabels" . | nindent 8 }}
+      name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "hooks-webhook-wait" "context" $) }}
+    spec:
+      {{- if .Values.hooks.imagePullSecrets }}
+      {{- with .Values.hooks.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else if and .Values.hooks.useImagePullSecret .Values.imagePullSecret.create }}
+      imagePullSecrets:
+        - name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "imagepullsecret" "context" $) }}
+      {{- end }}
+      restartPolicy: Never
+      serviceAccountName: {{ printf "%s-hooks" (include "keycloak-cr-operator.serviceAccountName" .) }}
+      {{- with .Values.hooks.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+      - name: wait-for-webhooks
+        image: "{{ .Values.hooks.image.registry }}/{{ .Values.hooks.image.repository }}:{{ .Values.hooks.image.tag }}"
+        imagePullPolicy: {{ .Values.hooks.image.pullPolicy }}
+        command:
+        - /bin/bash
+        - -c
+        - |
+          set -ex
+          kubectl wait --for=jsonpath='{.subsets[0].addresses[0].ip}' endpoints/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }} -n {{ include "keycloak-cr-operator.namespaceName" . }} --timeout=1m
+          kubectl wait --for=jsonpath='{.endpoints[0].addresses[0]}' endpointslices -l kubernetes.io/service-name={{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }} -n {{ include "keycloak-cr-operator.namespaceName" . }} --timeout=1m
+          kubectl wait --for=jsonpath='{.webhooks[0].clientConfig.caBundle}' mutatingwebhookconfigurations {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "mutating-webhook-configuration" "context" $) }}
+          kubectl wait --for=jsonpath='{.webhooks[0].clientConfig.caBundle}' validatingwebhookconfigurations {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "validating-webhook-configuration" "context" $) }}
+        {{- with .Values.hooks.securityContext }}
+        securityContext:
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
+{{- end }}

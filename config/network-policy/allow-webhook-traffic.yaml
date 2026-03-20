@@ -22,5 +22,5 @@ spec:
           matchLabels:
             tier: control-plane
       ports:
-        - port: 443
+        - port: 9443
           protocol: TCP

@@ -20,6 +20,7 @@ import (
 	"crypto/tls"
 	"flag"
 	"fmt"
+	"net/http"
 	"net/url"
 	"os"
 	"slices"
@@ -286,6 +287,10 @@ func main() {
 		setupLog.Error(err, "Failed to set up ready check")
 		os.Exit(1)
 	}
+	hookServer := mgr.GetWebhookServer()
+	hookServer.Register("/healthz", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))
 
 	setupLog.Info("Starting manager")
 	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {

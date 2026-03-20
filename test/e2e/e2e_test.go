@@ -218,41 +218,43 @@ var _ = Describe("Manager", Ordered, func() {
 			}
 			Eventually(verifyMetricsServerStarted, 3*time.Minute, time.Second).Should(Succeed())
 
-			By("waiting for the webhook service endpoints to be ready")
-			verifyWebhookEndpointsReady := func(g Gomega) {
-				cmd := exec.Command("kubectl", "get", "endpointslices.discovery.k8s.io", "-n", namespace,
-					"-l", "kubernetes.io/service-name=keycloak-cr-operator-webhook-service",
-					"-o", "jsonpath={range .items[*]}{range .endpoints[*]}{.addresses[*]}{end}{end}")
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "Webhook endpoints should exist")
-				g.Expect(output).ShouldNot(BeEmpty(), "Webhook endpoints not yet ready")
-			}
-			Eventually(verifyWebhookEndpointsReady, 3*time.Minute, time.Second).Should(Succeed())
+			/*
+				By("waiting for the webhook service endpoints to be ready")
+				verifyWebhookEndpointsReady := func(g Gomega) {
+					cmd := exec.Command("kubectl", "get", "endpointslices.discovery.k8s.io", "-n", namespace,
+						"-l", "kubernetes.io/service-name=keycloak-cr-operator-webhook-service",
+						"-o", "jsonpath={range .items[*]}{range .endpoints[*]}{.addresses[*]}{end}{end}")
+					output, err := utils.Run(cmd)
+					g.Expect(err).NotTo(HaveOccurred(), "Webhook endpoints should exist")
+					g.Expect(output).ShouldNot(BeEmpty(), "Webhook endpoints not yet ready")
+				}
+				Eventually(verifyWebhookEndpointsReady, 3*time.Minute, time.Second).Should(Succeed())
 
-			By("verifying the mutating webhook server is ready")
-			verifyMutatingWebhookReady := func(g Gomega) {
-				cmd := exec.Command("kubectl", "get", "mutatingwebhookconfigurations.admissionregistration.k8s.io",
-					"keycloak-cr-operator-mutating-webhook-configuration",
-					"-o", "jsonpath={.webhooks[0].clientConfig.caBundle}")
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "MutatingWebhookConfiguration should exist")
-				g.Expect(output).ShouldNot(BeEmpty(), "Mutating webhook CA bundle not yet injected")
-			}
-			Eventually(verifyMutatingWebhookReady, 3*time.Minute, time.Second).Should(Succeed())
+				By("verifying the mutating webhook server is ready")
+				verifyMutatingWebhookReady := func(g Gomega) {
+					cmd := exec.Command("kubectl", "get", "mutatingwebhookconfigurations.admissionregistration.k8s.io",
+						"keycloak-cr-operator-mutating-webhook-configuration",
+						"-o", "jsonpath={.webhooks[0].clientConfig.caBundle}")
+					output, err := utils.Run(cmd)
+					g.Expect(err).NotTo(HaveOccurred(), "MutatingWebhookConfiguration should exist")
+					g.Expect(output).ShouldNot(BeEmpty(), "Mutating webhook CA bundle not yet injected")
+				}
+				Eventually(verifyMutatingWebhookReady, 3*time.Minute, time.Second).Should(Succeed())
 
-			By("verifying the validating webhook server is ready")
-			verifyValidatingWebhookReady := func(g Gomega) {
-				cmd := exec.Command("kubectl", "get", "validatingwebhookconfigurations.admissionregistration.k8s.io",
-					"keycloak-cr-operator-validating-webhook-configuration",
-					"-o", "jsonpath={.webhooks[0].clientConfig.caBundle}")
-				output, err := utils.Run(cmd)
-				g.Expect(err).NotTo(HaveOccurred(), "ValidatingWebhookConfiguration should exist")
-				g.Expect(output).ShouldNot(BeEmpty(), "Validating webhook CA bundle not yet injected")
-			}
-			Eventually(verifyValidatingWebhookReady, 3*time.Minute, time.Second).Should(Succeed())
+				By("verifying the validating webhook server is ready")
+				verifyValidatingWebhookReady := func(g Gomega) {
+					cmd := exec.Command("kubectl", "get", "validatingwebhookconfigurations.admissionregistration.k8s.io",
+						"keycloak-cr-operator-validating-webhook-configuration",
+						"-o", "jsonpath={.webhooks[0].clientConfig.caBundle}")
+					output, err := utils.Run(cmd)
+					g.Expect(err).NotTo(HaveOccurred(), "ValidatingWebhookConfiguration should exist")
+					g.Expect(output).ShouldNot(BeEmpty(), "Validating webhook CA bundle not yet injected")
+				}
+				Eventually(verifyValidatingWebhookReady, 3*time.Minute, time.Second).Should(Succeed())
 
-			By("waiting additional time for webhook server to stabilize")
-			time.Sleep(5 * time.Second)
+				By("waiting additional time for webhook server to stabilize")
+				time.Sleep(5 * time.Second)
+			*/
 
 			// +kubebuilder:scaffold:e2e-metrics-webhooks-readiness
 
