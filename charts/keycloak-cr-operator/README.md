@@ -40,6 +40,7 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | manager.healthPort | int | `8081` | Health check port |
 | manager.env | list | `[]` | Environment variables to add to manager pods |
 | manager.imagePullSecret | bool | `false` | Use the imagePullSecret resource |
+| manager.existingImagePullSecret | string | `""` | Use existing imagePullSecret |
 | manager.podSecurityContext | object | unprivileged | Pod-level security settings |
 | manager.securityContext | object | unprivileged | Container-level security settings |
 | manager.resources.limits.cpu | int | `1` | CPU limit |
@@ -78,6 +79,7 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | hooks.image.tag | string | `"2.39.0"` | hook image tag |
 | hooks.image.pullPolicy | string | `"IfNotPresent"` | hook image pull policy |
 | hooks.imagePullSecret | bool | `false` | Use the imagePullSecret resource |
+| hooks.existingImagePullSecret | string | `""` | Use existing imagePullSecret |
 | hooks.jobLabels | object | `{}` | Job labels to add to the hook job |
 | hooks.podLabels | object | `{}` | Pod labels to add to the hook pod |
 | hooks.podAnnotations | object | `{}` | Pod annotations to add to the hook pod |

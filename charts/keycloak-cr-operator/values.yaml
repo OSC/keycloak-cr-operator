@@ -61,6 +61,8 @@ manager:
 
   # -- Use the imagePullSecret resource
   imagePullSecret: false
+  # -- Use existing imagePullSecret
+  existingImagePullSecret: ""
 
   # -- Pod-level security settings
   # @default -- unprivileged
@@ -192,6 +194,8 @@ hooks:
     pullPolicy: IfNotPresent
   # -- Use the imagePullSecret resource
   imagePullSecret: false
+  # -- Use existing imagePullSecret
+  existingImagePullSecret: ""
   # -- Job labels to add to the hook job
   jobLabels: {}
   # -- Pod labels to add to the hook pod
