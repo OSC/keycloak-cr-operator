@@ -39,8 +39,8 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | manager.podAnnotations | object | `{"kubectl.kubernetes.io/default-container":"manager"}` | Pod annotations to add to manager pods |
 | manager.healthPort | int | `8081` | Health check port |
 | manager.env | list | `[]` | Environment variables to add to manager pods |
-| manager.imagePullSecret | bool | `false` | Use the imagePullSecret resource |
-| manager.existingImagePullSecret | string | `""` | Use existing imagePullSecret |
+| manager.useImagePullSecret | bool | `false` | Use the imagePullSecret resource created by this chart |
+| manager.imagePullSecrets | list | `[]` | imagePullSecrets to use for existing secrets |
 | manager.podSecurityContext | object | unprivileged | Pod-level security settings |
 | manager.securityContext | object | unprivileged | Container-level security settings |
 | manager.resources.limits.cpu | int | `1` | CPU limit |
@@ -78,8 +78,8 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | hooks.image.repository | string | `"portainer/kubectl-shell"` | hook image repository |
 | hooks.image.tag | string | `"2.39.0"` | hook image tag |
 | hooks.image.pullPolicy | string | `"IfNotPresent"` | hook image pull policy |
-| hooks.imagePullSecret | bool | `false` | Use the imagePullSecret resource |
-| hooks.existingImagePullSecret | string | `""` | Use existing imagePullSecret |
+| hooks.useImagePullSecret | bool | `false` | Use the imagePullSecret resource created by this chart |
+| hooks.imagePullSecrets | list | `[]` | imagePullSecrets to use for existing secrets |
 | hooks.jobLabels | object | `{}` | Job labels to add to the hook job |
 | hooks.podLabels | object | `{}` | Pod labels to add to the hook pod |
 | hooks.podAnnotations | object | `{}` | Pod annotations to add to the hook pod |

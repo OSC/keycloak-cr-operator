@@ -59,10 +59,10 @@ manager:
   # -- Environment variables to add to manager pods
   env: []
 
-  # -- Use the imagePullSecret resource
-  imagePullSecret: false
-  # -- Use existing imagePullSecret
-  existingImagePullSecret: ""
+  # -- Use the imagePullSecret resource created by this chart
+  useImagePullSecret: false
+  # -- imagePullSecrets to use for existing secrets
+  imagePullSecrets: []
 
   # -- Pod-level security settings
   # @default -- unprivileged
@@ -192,10 +192,10 @@ hooks:
     tag: '2.39.0'
     # -- hook image pull policy
     pullPolicy: IfNotPresent
-  # -- Use the imagePullSecret resource
-  imagePullSecret: false
-  # -- Use existing imagePullSecret
-  existingImagePullSecret: ""
+  # -- Use the imagePullSecret resource created by this chart
+  useImagePullSecret: false
+  # -- imagePullSecrets to use for existing secrets
+  imagePullSecrets: []
   # -- Job labels to add to the hook job
   jobLabels: {}
   # -- Pod labels to add to the hook pod

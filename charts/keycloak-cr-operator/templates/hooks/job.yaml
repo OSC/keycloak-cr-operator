@@ -27,10 +27,12 @@ spec:
         {{- include "keycloak-cr-operator.selectorLabels" . | nindent 8 }}
       name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "hooks-webhook-wait" "context" $) }}
     spec:
-      {{- if .Values.hooks.existingImagePullSecret }}
+      {{- if .Values.hooks.imagePullSecrets }}
+      {{- with .Values.hooks.imagePullSecrets }}
       imagePullSecrets:
-        - name {{ .Values.hooks.existingImagePullSecret }}
-      {{- else if .Values.hooks.imagePullSecret }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else if and .Values.hooks.useImagePullSecret .Values.imagePullSecret.create }}
       imagePullSecrets:
         - name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "imagepullsecret" "context" $) }}
       {{- end }}

@@ -35,10 +35,12 @@ spec:
       {{- with .Values.manager.nodeSelector }}
       nodeSelector: {{ toYaml . | nindent 10 }}
       {{- end }}
-      {{- if .Values.manager.existingImagePullSecret }}
+      {{- if .Values.manager.imagePullSecrets }}
+      {{- with .Values.manager.imagePullSecrets }}
       imagePullSecrets:
-        - name: {{ .Values.manager.existingImagePullSecret }}
-      {{- else if .Values.manager.imagePullSecret }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- else if and .Values.manager.useImagePullSecret .Values.imagePullSecret.create }}
       imagePullSecrets:
         - name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "imagepullsecret" "context" $) }}
       {{- end }}
