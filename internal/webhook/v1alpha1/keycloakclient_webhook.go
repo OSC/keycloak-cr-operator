@@ -48,7 +48,7 @@ func SetupKeycloakClientWebhookWithManager(mgr ctrl.Manager, keycloakConfig *mod
 		Complete()
 }
 
-// +kubebuilder:webhook:path=/mutate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=mkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/mutate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=mkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1,servicePort=9443
 
 // KeycloakClientCustomDefaulter struct is responsible for setting default values on the custom resource of the
 // Kind KeycloakClient when those are created or updated.
@@ -150,7 +150,7 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 	return nil
 }
 
-// +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=vkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1
+// +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=vkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1,servicePort=9443
 
 // KeycloakClientCustomValidator struct is responsible for validating the KeycloakClient resource
 // when it is created, updated, or deleted.
