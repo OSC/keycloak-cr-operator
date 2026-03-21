@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/Nerzal/gocloak/v13"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -288,17 +289,29 @@ type KeycloakClientList struct {
 	Items           []KeycloakClient `json:"items"`
 }
 
+// +kubebuilder:object:generate=false
+type KeycloakClientData struct {
+	Obj    KeycloakClient
+	Config models.KeycloakConfig
+}
+
 func init() {
 	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
 }
 
-func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
+func (k *KeycloakClient) GetClient(config *models.KeycloakConfig) (*gocloak.Client, error) {
 	client := &gocloak.Client{}
 
-	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
+	if config.ClientIDRequired != nil && (k.Spec.ClientID == nil || *k.Spec.ClientID == "") {
+		requiredClientID, err := RequiredClientID(config, k)
+		if err != nil {
+			return nil, err
+		}
+		client.ClientID = &requiredClientID
+	} else if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
 		var clientID string
-		if prefix != "" {
-			clientID = fmt.Sprintf("%s-%s-%s", prefix, k.Namespace, k.Name)
+		if config.ClientIDPrefix != "" {
+			clientID = fmt.Sprintf("%s-%s-%s", config.ClientIDPrefix, k.Namespace, k.Name)
 		} else {
 			clientID = fmt.Sprintf("%s-%s", k.Namespace, k.Name)
 		}
@@ -344,5 +357,5 @@ func (k *KeycloakClient) GetClient(prefix string) *gocloak.Client {
 	client.SurrogateAuthRequired = k.Spec.SurrogateAuthRequired
 	client.WebOrigins = k.Spec.WebOrigins
 
-	return client
+	return client, nil
 }

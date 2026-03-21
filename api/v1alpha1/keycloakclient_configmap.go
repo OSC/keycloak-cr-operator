@@ -28,7 +28,7 @@ import (
 // and the provided KeycloakConfig for host information. It sets data based on the client information
 // and KeycloakConfig.
 func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.ConfigMap {
-	var name, clientID string
+	var name string
 	var configMap *KeycloakClientConfigMap
 	defaultName := fmt.Sprintf("%s-config", k.Name)
 	if k.Spec.ConfigMap == nil {
@@ -45,15 +45,6 @@ func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.Con
 	} else {
 		name = *configMap.Name
 	}
-	if k.Spec.ClientID == nil || *k.Spec.ClientID == "" {
-		if config.ClientIDPrefix != "" {
-			clientID = fmt.Sprintf("%s-%s-%s", config.ClientIDPrefix, k.Namespace, k.Name)
-		} else {
-			clientID = fmt.Sprintf("%s-%s", k.Namespace, k.Name)
-		}
-	} else {
-		clientID = *k.Spec.ClientID
-	}
 	realm := config.DefaultRealm
 	if k.Spec.Realm != nil && *k.Spec.Realm != "" {
 		realm = *k.Spec.Realm
@@ -65,12 +56,10 @@ func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.Con
 	issuerUrl := config.KeycloakURL.JoinPath("realms", realm).String()
 	data := make(map[string]string)
 	if configMap.EnvVarKeys == nil || *configMap.EnvVarKeys {
-		data["CLIENT_ID"] = clientID
 		data["KEYCLOAK_URL"] = url
 		data["KEYCLOAK_HOST"] = host
 		data["ISSUER_URL"] = issuerUrl
 	} else {
-		data["client-id"] = clientID
 		data["keycloak-url"] = url
 		data["keycloak-host"] = host
 		data["issuer-url"] = issuerUrl

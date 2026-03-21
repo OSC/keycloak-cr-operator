@@ -17,7 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"slices"
@@ -59,11 +58,6 @@ type KeycloakClientCustomDefaulter struct {
 	keycloakConfig *models.KeycloakConfig
 }
 
-type KeycloakClientData struct {
-	Obj    keycloakv1alpha1.KeycloakClient
-	Config models.KeycloakConfig
-}
-
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the Kind KeycloakClient.
 func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) error {
 	keycloakclientlog.Info("Defaulting for KeycloakClient", "name", obj.GetName(), "namespace", obj.GetNamespace())
@@ -82,22 +76,14 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		}
 	}
 
-	// Apply ClientIDRequired template if set
 	if d.keycloakConfig.ClientIDRequired != nil {
-		data := KeycloakClientData{
-			Obj:    *obj,
-			Config: *d.keycloakConfig,
-		}
-
-		var buf bytes.Buffer
-		err := d.keycloakConfig.ClientIDRequired.Execute(&buf, data)
+		requiredClientID, err := keycloakv1alpha1.RequiredClientID(d.keycloakConfig, obj)
 		if err != nil {
-			// Log error but don't fail - fall back to default behavior
-			keycloakclientlog.Error(err, "Failed to execute ClientIDRequired template")
-		} else {
-			// Override the ClientID with the templated value
-			clientID := buf.String()
-			obj.Spec.ClientID = &clientID
+			keycloakclientlog.Error(err, "Failed to get required ClientID")
+			return err
+		}
+		if requiredClientID != "" {
+			obj.Spec.ClientID = &requiredClientID
 		}
 	}
 
@@ -193,22 +179,13 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 
 	// If ClientIDRequired is set, the ClientID must match the required template
 	if v.keycloakConfig.ClientIDRequired != nil && obj.Spec.ClientID != nil && *obj.Spec.ClientID != "" {
-		// Create a template data structure to evaluate the template
-		data := KeycloakClientData{
-			Obj:    *obj,
-			Config: *v.keycloakConfig,
-		}
-
-		// Execute the template to get the expected client ID
-		var buf bytes.Buffer
-		err := v.keycloakConfig.ClientIDRequired.Execute(&buf, data)
+		requiredClientID, err := keycloakv1alpha1.RequiredClientID(v.keycloakConfig, obj)
 		if err != nil {
 			keycloakclientlog.Error(err, "Failed to execute ClientIDRequired template during validation")
 			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientID"), *obj.Spec.ClientID, fmt.Sprintf("failed to apply ClientIDRequired template: %s", err)))
 		} else {
-			expectedClientID := buf.String()
-			if *obj.Spec.ClientID != expectedClientID {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientID"), *obj.Spec.ClientID, fmt.Sprintf("clientID must match the required template: %s", expectedClientID)))
+			if *obj.Spec.ClientID != requiredClientID {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientID"), *obj.Spec.ClientID, fmt.Sprintf("clientID must match the required template: %s", requiredClientID)))
 			}
 		}
 	}
