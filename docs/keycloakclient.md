@@ -141,12 +141,13 @@ spec:
 
 ## Secret Creation
 The operator creates Kubernetes Secrets containing client credentials with the following structure:
+- `CLIENT_ID`: The client ID
 - `CLIENT_SECRET`: The client secret value
 - `COOKIE_SECRET`: A randomly generated secret used for OAuth2 Proxy cookie encryption
 
 The `COOKIE_SECRET` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
 
-When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-secret` and `cookie-secret` keys.
+When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-id`, `client-secret` and `cookie-secret` keys.
 
 Example Secret structure:
 ```yaml
@@ -157,18 +158,18 @@ metadata:
   namespace: default
 type: Opaque
 data:
+  CLIENT_ID: "example-client"
   CLIENT_SECRET: <base64-encoded-secret>
   COOKIE_SECRET: <base64-encoded-cookie-secret>
 ```
 
 ## ConfigMap Creation
 The operator creates Kubernetes ConfigMaps with Keycloak client configuration:
-- `CLIENT_ID`: The client ID
 - `KEYCLOAK_URL`: The Keycloak server URL
 - `KEYCLOAK_HOST`: The Keycloak host
 - `ISSUER_URL`: The issuer URL for OpenID Connect
 
-When `envVarKeys` is set to `false` in the ConfigMap configuration, the operator will use keys `client-id`, `keycloak-url`, `keycloak-host`, and `issuer-url`.
+When `envVarKeys` is set to `false` in the ConfigMap configuration, the operator will use keys `keycloak-url`, `keycloak-host`, and `issuer-url`.
 
 Example ConfigMap structure:
 ```yaml
@@ -178,7 +179,6 @@ metadata:
   name: example-client-config
   namespace: default
 data:
-  CLIENT_ID: "example-client"
   KEYCLOAK_URL: "https://keycloak.example.com"
   KEYCLOAK_HOST: "keycloak.example.com"
   ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
