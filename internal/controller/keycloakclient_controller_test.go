@@ -444,12 +444,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(configMap.Data).To(HaveKey("CLIENT_ID"))
 			Expect(configMap.Data).NotTo(HaveKey("keycloak-url"))
 			Expect(configMap.Data).To(HaveKey("KEYCLOAK_URL"))
+			Expect(configMap.Data).NotTo(HaveKey("keycloak-host"))
+			Expect(configMap.Data).To(HaveKey("KEYCLOAK_HOST"))
 			Expect(configMap.Data).NotTo(HaveKey("issuer-url"))
 			Expect(configMap.Data).To(HaveKey("ISSUER_URL"))
 
 			// Verify the values are correct
 			Expect(configMap.Data["CLIENT_ID"]).To(Equal("test-client-with-configmap"))
 			Expect(configMap.Data["KEYCLOAK_URL"]).To(Equal("http://keycloak.keycloak.svc"))
+			Expect(configMap.Data["KEYCLOAK_HOST"]).To(Equal("keycloak.keycloak.svc"))
 			Expect(configMap.Data["ISSUER_URL"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
 
 			// Verify the ConfigMap has the correct owner reference
@@ -539,6 +542,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(configMap.Data).To(HaveKey("issuer-url"))
 			Expect(configMap.Data).NotTo(HaveKey("CLIENT_ID"))
 			Expect(configMap.Data).NotTo(HaveKey("KEYCLOAK_URL"))
+			Expect(configMap.Data).NotTo(HaveKey("KEYCLOAK_HOST"))
 			Expect(configMap.Data).NotTo(HaveKey("ISSUER_URL"))
 
 			// Verify the values are correct
