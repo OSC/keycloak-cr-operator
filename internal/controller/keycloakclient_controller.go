@@ -144,7 +144,17 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 
 	// Get the gocloak Client struct based on KeycloakClient spec
 	log.V(1).Info("Get gocloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
-	gocloakClient := keycloakClient.GetClient(r.Config.ClientIDPrefix)
+	gocloakClient, err := keycloakClient.GetClient(r.Config)
+	if err != nil {
+		log.Error(err, "Failed to get gocloak client")
+		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
+			Type:    typeAvailableKeycloakClient,
+			Status:  metav1.ConditionFalse,
+			Reason:  "Failed",
+			Message: fmt.Sprintf("Failed to gocloak client: %s", err),
+		})
+		return ctrl.Result{}, err
+	}
 
 	// Get the ClientSecret from clientSecretRef, if set
 	if keycloakClient.Spec.ClientSecretRef == nil {

@@ -89,6 +89,9 @@ func KeycloakClientSpec() {
 			By("Keycloak client secrets handled")
 			verifyClientSecrets := func(g Gomega) {
 				client := getKeycloakClient("kubernetes-default-keycloakclient-test", "master")
+				clientID, err := getSecret("keycloak-test", "CLIENT_ID")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(*client.ClientID).To(Equal(clientID))
 				secret, err := getSecret("keycloak-test", "CLIENT_SECRET")
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
 				g.Expect(*client.Secret).To(Equal(secret))
@@ -99,10 +102,6 @@ func KeycloakClientSpec() {
 			Eventually(verifyClientSecrets, 2*time.Minute).Should(Succeed())
 			By("Keycloak client configmap handled")
 			verifyClientConfigMap := func(g Gomega) {
-				client := getKeycloakClient("kubernetes-default-keycloakclient-test", "master")
-				clientID, err := getConfigMap("keycloak-config", "CLIENT_ID")
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve configmap")
-				g.Expect(*client.ClientID).To(Equal(clientID))
 				issuerUrl, err := getConfigMap("keycloak-config", "ISSUER_URL")
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve issuer-url")
 				g.Expect(issuerUrl).To(Equal("http://keycloak.keycloak.svc.cluster.local/realms/master"))
@@ -146,8 +145,8 @@ func KeycloakClientSpec() {
 				client := getKeycloakClient("kubernetes-foo", "master")
 				g.Expect(client).To(Not(BeNil()), "expected client not found")
 				g.Expect(*client.ClientID).To(Equal("kubernetes-foo"))
-				clientID, err := getConfigMap("keycloak-config", "CLIENT_ID")
-				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve configmap")
+				clientID, err := getSecret("keycloak-test", "CLIENT_ID")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
 				g.Expect(clientID).To(Equal("kubernetes-foo"))
 			}
 			Eventually(verifyClientUpdatesConfigMap, 2*time.Minute).Should(Succeed())

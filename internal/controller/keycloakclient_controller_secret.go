@@ -137,7 +137,11 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 	gocloakClient.Secret = client.Secret
 
 	// Get the secret using the GetSecret method from the KeycloakClient
-	secret := keycloakClient.GetSecret(*gocloakClient.Secret)
+	secret, err := keycloakClient.GetSecret(r.Config, *gocloakClient.Secret)
+	if err != nil {
+		log.Error(err, "Failed to generate Secret")
+		return err
+	}
 
 	// Check if the secret already exists
 	found := &corev1.Secret{}
