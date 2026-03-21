@@ -19,7 +19,7 @@ package controller
 import (
 	"context"
 	"crypto/rand"
-	"encoding/hex"
+	"encoding/base64"
 	"fmt"
 	"time"
 
@@ -68,14 +68,14 @@ func shouldCreateSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	}
 }
 
-// generateRandomString generates a random 32-byte string encoded in hex
+// generateRandomString generates a random 32-byte string that is base64 encoded
 func generateRandomString() (string, error) {
 	bytes := make([]byte, 32)
 	_, err := rand.Read(bytes)
 	if err != nil {
 		return "", err
 	}
-	return hex.EncodeToString(bytes), nil
+	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
 func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (string, error) {
