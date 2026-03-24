@@ -1,0 +1,11 @@
+---
+config:
+  existingSecret: oauth2-proxy-test-secret
+  cookieName: _oauth2-proxy-test
+envFrom:
+  - configMapRef:
+      name: oauth2-proxy-test-config
+extraArgs:
+  provider: oidc
+  oidc-issuer-url: $(ISSUER_URL)
+  whitelist-domain: $(KEYCLOAK_HOST)
