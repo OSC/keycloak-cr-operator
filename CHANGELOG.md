@@ -1,3 +1,8 @@
+## v0.0.4 - 2026-03-24
+
+* Include PROVIDER_URL in the KeycloakClient ConfigMap (#32)
+* Doc improvements (#31)
+
 ## v0.0.3 - 2026-03-21
 
 * Fix cookie secret to be 32-bytes base64 encoded , add KEYCLOAK_HOST to configmap (#28)
