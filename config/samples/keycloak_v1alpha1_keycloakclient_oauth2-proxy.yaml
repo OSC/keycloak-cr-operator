@@ -1,0 +1,22 @@
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-cr-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: oauth2-proxy-test
+spec:
+  clientSecretRef:
+    name: oauth2-proxy-test-secret
+    key: client-secret
+    create: true
+    envVarKeys: false
+  redirectUris:
+    - https://example.com/*
+    - https://example.test.com/*
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
+  configMap:
+    name: oauth2-proxy-test-config

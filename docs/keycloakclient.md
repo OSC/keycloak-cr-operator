@@ -7,6 +7,7 @@
 - [Creating a Secret Automatically](#creating-a-secret-automatically)
 - [Secret Creation](#secret-creation)
 - [ConfigMap Creation](#configmap-creation)
+- [ClientID Template Enforcement](#clientid-template-enforcement)
 
 ## CRD Overview
 The operator manages Keycloak clients through the `KeycloakClient` Custom Resource Definition (CRD). This CRD supports various Keycloak client properties and configurations.
@@ -17,7 +18,7 @@ For detailed information about all available fields and their usage, please refe
 When creating or updating a KeycloakClient, the webhook automatically applies the following defaults:
 
 - **ClientID**: If not specified, it will be auto-generated using the pattern:
-  - If `--keycloak-client-id-required` template is used, that template is the value used for `clientID`
+  - If `--keycloak-client-id-required` template is used, that template is the value used for `clientID`. See [ClientID Template Enforcement](#clientid-template-enforcement) for details.
   - If `--keycloak-client-id-prefix` is set in the operator configuration: `prefix-namespace-name`
   - If no prefix: `namespace-name`
 
@@ -182,4 +183,41 @@ data:
   KEYCLOAK_URL: "https://keycloak.example.com"
   KEYCLOAK_HOST: "keycloak.example.com"
   ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
+```
+
+## ClientID Template Enforcement
+The operator supports enforcing client ID format using Go templates via the `--keycloak-client-id-required` flag. When this flag is set, all KeycloakClient resources must have a client ID that matches the provided template.
+
+### How It Works:
+1. When `--keycloak-client-id-required` is specified with a Go template, the operator will validate that all client IDs conform to the template.
+2. During defaulting, if a client ID is not provided, the operator will evaluate the template to generate the required client ID.
+3. During validation, if a client ID is explicitly provided, it must match the expected template output.
+
+### Template Variables:
+The template has access to the following data:
+- `Obj` - The full KeycloakClient resource object
+- `Config` - The operator configuration including:
+  - `ClientIDPrefix` - The prefix used for client ID generation
+  - `DefaultRealm` - The default realm used for clients
+
+### Example Usage:
+```bash
+# Using a template that enforces a specific prefix
+./keycloak-cr-operator --keycloak-client-id-prefix=kubernetes --keycloak-client-id-required='{{.Config.ClientIDPrefix}}-{{.Obj.Namespace}}-{{.Obj.Name}}'
+```
+
+This would enforce that all client IDs must follow the pattern: `prefix-namespace-name`.
+
+### Example Template:
+```yaml
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: example-client
+  namespace: default
+spec:
+  # This will be validated against the template
+  clientID: "kubernetes-default-example-client"
+  realm: "my-realm"
+  # Other properties...
 ```
