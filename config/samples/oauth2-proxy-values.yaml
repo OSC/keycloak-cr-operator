@@ -1,66 +1,11 @@
 ---
-global:
-  auth:
-    skipAuthRoutes:
-      - /api
-      - /foo
-    allowGroups:
-      - test1
-      - test2
 config:
   existingSecret: oauth2-proxy-test-secret
   cookieName: _oauth2-proxy-test
-  configFile: |-
-    {{- if .Values.global.auth.skipAuthRoutes }}
-    skip_auth_routes = {{ .Values.global.auth.skipAuthRoutes | toToml }}
-    {{- end }}
-    {{- if .Values.global.auth.allowGroups }}
-    allowed_groups = {{ .Values.global.auth.allowGroups | toToml }}
-    {{- end }}
-customLabels:
-  osc.edu/service-account: k8swebservices
 envFrom:
   - configMapRef:
       name: oauth2-proxy-test-config
 extraArgs:
   provider: oidc
-  reverse-proxy: true
   oidc-issuer-url: $(ISSUER_URL)
-  cookie-httponly: false
-  cookie-secure: true
-  cookie-samesite: none
-  cookie-refresh: 180s
-  email-domain: '*'
-  insecure-oidc-allow-unverified-email: true
-  skip-provider-button: true
-  silence-ping-logging: true
   whitelist-domain: $(KEYCLOAK_HOST)
-  upstream: http://{{ .Release.Name }}.{{ .Release.Namespace }}.svc.cluster.local:80
-
-podSecurityContext:
-  runAsNonRoot: true
-resources:
-  limits:
-    cpu: 200m
-    memory: 128Mi
-  requests:
-    cpu: 100m
-    memory: 64Mi
-
-service:
-  annotations:
-    prometheus.io/probe_module: http-healthz
-    prometheus.io/probe_path: /ping
-    prometheus.io/scrape: 'true'
-    prometheus.io/match_metrics: 'true'
-    prometheus.io/path: /metrics
-networkPolicy:
-  create: true
-  ingress:
-    - from:
-      - namespaceSelector:
-          matchLabels:
-            app.kubernetes.io/name: ingress-nginx
-      - namespaceSelector:
-          matchLabels:
-            app.kubernetes.io/name: prometheus

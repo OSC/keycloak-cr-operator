@@ -221,3 +221,25 @@ spec:
   realm: "my-realm"
   # Other properties...
 ```
+
+## OAuth2 Proxy Integration
+The KeycloakClient operator integrates well with OAuth2 Proxy for secure authentication. When using OAuth2 Proxy, the operator generates the necessary `COOKIE_SECRET` in the client secret that OAuth2 Proxy can use for cookie encryption.
+
+### Sample Configuration
+For an example of how to configure a KeycloakClient for use with OAuth2 Proxy, see the sample configuration file:
+- [`config/samples/keycloak_v1alpha1_keycloakclient_oauth2-proxy.yaml`](../config/samples/keycloak_v1alpha1_keycloakclient_oauth2-proxy.yaml)
+
+### OAuth2 Proxy Configuration Values
+The OAuth2 Proxy Helm configuration can be found in:
+- [`config/samples/oauth2-proxy-values.yaml`](../config/samples/oauth2-proxy-values.yaml)
+
+The minimal Helm configuration demonstrates how to reference the resources created by this operator.
+
+These samples demonstrate how to:
+1. Configure the KeycloakClient to work with OAuth2 Proxy
+2. Set up the necessary secret references
+3. Configure OAuth2 Proxy with proper environment variables and settings
+
+The operator automatically creates the required secrets with `CLIENT_ID`, `CLIENT_SECRET`, and `COOKIE_SECRET` values that OAuth2 Proxy can consume.
+
+The operator also automatically creates the ConfigMap used for things like `ISSUER_URL`, for exmaple.
