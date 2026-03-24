@@ -8,6 +8,7 @@
 - [Secret Creation](#secret-creation)
 - [ConfigMap Creation](#configmap-creation)
 - [ClientID Template Enforcement](#clientid-template-enforcement)
+- [OAuth2 Proxy Integration](#oauth2-proxy-integration)
 
 ## CRD Overview
 The operator manages Keycloak clients through the `KeycloakClient` Custom Resource Definition (CRD). This CRD supports various Keycloak client properties and configurations.
