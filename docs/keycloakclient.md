@@ -168,8 +168,9 @@ The operator creates Kubernetes ConfigMaps with Keycloak client configuration:
 - `KEYCLOAK_URL`: The Keycloak server URL
 - `KEYCLOAK_HOST`: The Keycloak host
 - `ISSUER_URL`: The issuer URL for OpenID Connect
+- `PROVIDER_URL`: The URL to OpenID Connect configuration, eg: `<realm-url>/.well-known/openid-configuration`
 
-When `envVarKeys` is set to `false` in the ConfigMap configuration, the operator will use keys `keycloak-url`, `keycloak-host`, and `issuer-url`.
+When `envVarKeys` is set to `false` in the ConfigMap configuration, the operator will use keys `keycloak-url`, `keycloak-host`, `issuer-url`, and `provider-url`.
 
 Example ConfigMap structure:
 ```yaml
@@ -182,4 +183,5 @@ data:
   KEYCLOAK_URL: "https://keycloak.example.com"
   KEYCLOAK_HOST: "keycloak.example.com"
   ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
+  PROVIDER_URL: "https://keycloak.example.com/realms/my-realm/.well-known/openid-configuration"
 ```
