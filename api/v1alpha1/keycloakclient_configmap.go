@@ -53,16 +53,19 @@ func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.Con
 	// Create data map for ConfigMap
 	url := config.KeycloakURL.String()
 	host := config.KeycloakURL.Host
-	issuerUrl := config.KeycloakURL.JoinPath("realms", realm).String()
+	issuerUrl := config.KeycloakURL.JoinPath("realms", realm)
+	providerUrl := issuerUrl.JoinPath(".well-known/openid-configuration")
 	data := make(map[string]string)
 	if configMap.EnvVarKeys == nil || *configMap.EnvVarKeys {
 		data["KEYCLOAK_URL"] = url
 		data["KEYCLOAK_HOST"] = host
-		data["ISSUER_URL"] = issuerUrl
+		data["ISSUER_URL"] = issuerUrl.String()
+		data["PROVIDER_URL"] = providerUrl.String()
 	} else {
 		data["keycloak-url"] = url
 		data["keycloak-host"] = host
-		data["issuer-url"] = issuerUrl
+		data["issuer-url"] = issuerUrl.String()
+		data["provider-url"] = providerUrl.String()
 	}
 
 	return &corev1.ConfigMap{

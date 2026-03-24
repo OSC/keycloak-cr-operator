@@ -456,11 +456,14 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(configMap.Data).To(HaveKey("KEYCLOAK_HOST"))
 			Expect(configMap.Data).NotTo(HaveKey("issuer-url"))
 			Expect(configMap.Data).To(HaveKey("ISSUER_URL"))
+			Expect(configMap.Data).NotTo(HaveKey("provider-url"))
+			Expect(configMap.Data).To(HaveKey("PROVIDER_URL"))
 
 			// Verify the values are correct
 			Expect(configMap.Data["KEYCLOAK_URL"]).To(Equal("http://keycloak.keycloak.svc"))
 			Expect(configMap.Data["KEYCLOAK_HOST"]).To(Equal("keycloak.keycloak.svc"))
 			Expect(configMap.Data["ISSUER_URL"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
+			Expect(configMap.Data["PROVIDER_URL"]).To(Equal("http://keycloak.keycloak.svc/realms/master/.well-known/openid-configuration"))
 
 			// Verify the ConfigMap has the correct owner reference
 			controllerRefs := configMap.GetOwnerReferences()
@@ -549,6 +552,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(configMap.Data).NotTo(HaveKey("KEYCLOAK_URL"))
 			Expect(configMap.Data).NotTo(HaveKey("KEYCLOAK_HOST"))
 			Expect(configMap.Data).NotTo(HaveKey("ISSUER_URL"))
+			Expect(configMap.Data).NotTo(HaveKey("PROVIDER_URL"))
 
 			// Verify the values are correct
 			Expect(configMap.Data["keycloak-url"]).To(Equal("http://keycloak.keycloak.svc"))
