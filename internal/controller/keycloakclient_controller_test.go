@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +34,13 @@ import (
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
+)
+
+var (
+	secretChecksum           string
+	secretChecksumUpdated    string
+	configmapChecksum        string
+	configmapChecksumUpdated string
 )
 
 // MockGoCloak is a mock implementation of the GoCloak interface for testing
@@ -177,6 +185,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Create:     boolPtr(true),
 						EnvVarKeys: boolPtr(true),
 					},
+					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
+						Kind: stringPtr("Deployment"),
+						Name: stringPtr(deploymentName),
+					},
 				},
 			}
 
@@ -260,6 +272,18 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			Expect(annotations).NotTo(BeNil())
+			secretChecksum, ok := annotations[secretChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(secretChecksum).NotTo(BeEmpty())
+
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
 		})
@@ -288,6 +312,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						},
 						Create:     boolPtr(true),
 						EnvVarKeys: boolPtr(false),
+					},
+					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
+						Kind: stringPtr("Deployment"),
+						Name: stringPtr(deploymentName),
 					},
 				},
 			}
@@ -372,6 +400,19 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret-no-envvars"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			Expect(annotations).NotTo(BeNil())
+			secretChecksumUpdated, ok := annotations[secretChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(secretChecksumUpdated).NotTo(BeEmpty())
+			Expect(secretChecksumUpdated).NotTo(Equal(secretChecksum))
+
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
 		})
@@ -393,6 +434,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 					ConfigMap: &keycloakv1alpha1.KeycloakClientConfigMap{
 						Name:       &configMapName,
 						EnvVarKeys: boolPtr(true),
+					},
+					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
+						Kind: stringPtr("Deployment"),
+						Name: stringPtr(deploymentName),
 					},
 				},
 			}
@@ -471,6 +516,18 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-configmap"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			Expect(annotations).NotTo(BeNil())
+			configmapChecksum, ok := annotations[configmapChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(configmapChecksum).NotTo(BeEmpty())
+
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
 		})
@@ -490,6 +547,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 					Realm:    stringPtr("master"),
 					ConfigMap: &keycloakv1alpha1.KeycloakClientConfigMap{
 						EnvVarKeys: boolPtr(false),
+					},
+					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
+						Kind: stringPtr("Deployment"),
+						Name: stringPtr(deploymentName),
 					},
 				},
 			}
@@ -564,6 +625,19 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs).To(HaveLen(1))
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-default-configmap"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
+
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			Expect(annotations).NotTo(BeNil())
+			configmapChecksumUpdated, ok := annotations[configmapChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(configmapChecksumUpdated).NotTo(BeEmpty())
+			Expect(configmapChecksumUpdated).NotTo(Equal(configmapChecksum))
 
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())

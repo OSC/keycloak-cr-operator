@@ -26,6 +26,9 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,11 +44,12 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	ctx       context.Context
-	cancel    context.CancelFunc
-	testEnv   *envtest.Environment
-	cfg       *rest.Config
-	k8sClient client.Client
+	ctx            context.Context
+	cancel         context.CancelFunc
+	testEnv        *envtest.Environment
+	cfg            *rest.Config
+	k8sClient      client.Client
+	deploymentName = "nginx-deployment"
 )
 
 func TestControllers(t *testing.T) {
@@ -84,6 +88,24 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	deployment := &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: "default"},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: int32Ptr(1),
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{"app": "nginx"},
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "nginx"}},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{{Name: "web", Image: "nginx:1.14.2"}},
+				},
+			},
+		},
+	}
+	err = k8sClient.Create(context.TODO(), deployment, &client.CreateOptions{})
+	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
@@ -125,3 +147,5 @@ func stringPtr(s string) *string {
 func boolPtr(b bool) *bool {
 	return &b
 }
+
+func int32Ptr(i int32) *int32 { return &i }

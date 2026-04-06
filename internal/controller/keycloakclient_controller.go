@@ -76,6 +76,8 @@ type KeycloakClientReconciler struct {
 // +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;update;patch
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -394,38 +396,38 @@ func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, key
 	return nil
 }
 
+func mapSecretToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+	log := logf.FromContext(ctx)
+	log.V(1).Info("Entered manager check for secret")
+	secret, ok := obj.(*corev1.Secret)
+	if !ok {
+		log.V(1).Info("Return manager secret check, not a secret")
+		return []reconcile.Request{}
+	}
+	labels := secret.GetLabels()
+	if labels == nil {
+		log.V(1).Info("Return manager secret check, no labels")
+		return []reconcile.Request{}
+	}
+	keycloakClientName, exists := labels[keycloakClientSecretLabel]
+	if !exists {
+		log.V(1).Info("Return manager secret check, keycloakclient secret label missing")
+		return []reconcile.Request{}
+	}
+	log.V(1).Info("Trigger KeycloakClient reconcile from secret",
+		"keycloakclient", keycloakClientName, "secret", secret.Name, "namespace", secret.Namespace)
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      keycloakClientName,
+				Namespace: secret.Namespace,
+			},
+		},
+	}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	mapSecretToKeycloakClient := func(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
-		log := logf.FromContext(ctx)
-		log.V(1).Info("Entered manager check for secret")
-		secret, ok := obj.(*corev1.Secret)
-		if !ok {
-			log.V(1).Info("Return manager secret check, not a secret")
-			return []reconcile.Request{}
-		}
-		labels := secret.GetLabels()
-		if labels == nil {
-			log.V(1).Info("Return manager secret check, no labels")
-			return []reconcile.Request{}
-		}
-		keycloakClientName, exists := labels[keycloakClientSecretLabel]
-		if !exists {
-			log.V(1).Info("Return manager secret check, keycloakclient secret label missing")
-			return []reconcile.Request{}
-		}
-		log.V(1).Info("Trigger KeycloakClient reconcile from secret",
-			"keycloakclient", keycloakClientName, "secret", secret.Name, "namespace", secret.Namespace)
-		return []reconcile.Request{
-			{
-				NamespacedName: types.NamespacedName{
-					Name:      keycloakClientName,
-					Namespace: secret.Namespace,
-				},
-			},
-		}
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keycloakv1alpha1.KeycloakClient{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&corev1.Secret{}).

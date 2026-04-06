@@ -116,6 +116,13 @@ spec defines the desired state of KeycloakClient
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#keycloakclientspecchecksumref">checksumRef</a></b></td>
+        <td>object</td>
+        <td>
+          The Checksum reference configuration<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>clientAuthenticatorType</b></td>
         <td>string</td>
         <td>
@@ -349,6 +356,43 @@ spec defines the desired state of KeycloakClient
             <i>Default</i>: []<br/>
         </td>
         <td>false</td>
+      </tr></tbody>
+</table>
+
+
+### KeycloakClient.spec.checksumRef
+<sup><sup>[↩ Parent](#keycloakclientspec)</sup></sup>
+
+
+
+The Checksum reference configuration
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>kind</b></td>
+        <td>enum</td>
+        <td>
+          The type of resource to restart<br/>
+          <br/>
+            <i>Enum</i>: Deployment, StatefulSet<br/>
+            <i>Default</i>: Deployment<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name of the resource to restart<br/>
+        </td>
+        <td>true</td>
       </tr></tbody>
 </table>
 

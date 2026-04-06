@@ -85,5 +85,14 @@ func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloak
 		log.Info("Updated existing ConfigMap", "configMap.Namespace", configMap.Namespace, "configMap.Name", configMap.Name)
 	}
 
+	err = r.updateChecksum(ctx, configMap, keycloakClient)
+	if err != nil {
+		log.Error(err, "Failed to update checksum resource", "namespace", configMap.Namespace, "name", keycloakClient.Spec.ChecksumRef.Name)
+		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateChecksumFailed", "Update",
+			"Failed to update checksum resource %s/%s for KeycloakClient %s in namespace %s: %s",
+			keycloakClient.Spec.ChecksumRef.Kind, keycloakClient.Spec.ChecksumRef.Name, keycloakClient.Name, keycloakClient.Namespace, err)
+		return err
+	}
+
 	return nil
 }
