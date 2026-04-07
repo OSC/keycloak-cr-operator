@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	runtimeclient "sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -423,61 +424,26 @@ func mapSecretToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []
 	}
 }
 
-func mapDeploymentToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+func mapAppsToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
 	log := logf.FromContext(ctx)
-	log.V(1).Info("Entered manager check for Deployments")
-	deployment, ok := obj.(*appsv1.Deployment)
-	if !ok {
-		log.V(1).Info("Return manager deployment check, not a deployment")
-		return []reconcile.Request{}
-	}
-	labels := deployment.GetLabels()
+	log.V(1).Info("Entered manager check for Deployments and StatefulSets")
+	labels := obj.GetLabels()
 	if labels == nil {
-		log.V(1).Info("Return manager deployment check, no labels")
+		log.V(1).Info("Return manager appsv1 check, no labels")
 		return []reconcile.Request{}
 	}
 	keycloakClientName, exists := labels[keycloakClientMatchLabel]
 	if !exists {
-		log.V(1).Info("Return manager deployment check, keycloakclient deployment label missing")
+		log.V(1).Info("Return manager appsv1 check, keycloakclient deployment label missing")
 		return []reconcile.Request{}
 	}
 	log.Info("Trigger KeycloakClient reconcile from deployment",
-		"keycloakclient", keycloakClientName, "deployment", deployment.Name, "namespace", deployment.Namespace)
+		"keycloakclient", keycloakClientName, "resource", obj.GetName(), "namespace", obj.GetNamespace())
 	return []reconcile.Request{
 		{
 			NamespacedName: types.NamespacedName{
 				Name:      keycloakClientName,
-				Namespace: deployment.Namespace,
-			},
-		},
-	}
-}
-
-func mapStatefulSetToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
-	log := logf.FromContext(ctx)
-	log.V(1).Info("Entered manager check for StatefulSet")
-	statefulset, ok := obj.(*appsv1.StatefulSet)
-	if !ok {
-		log.V(1).Info("Return manager statefulset check, not a statefulset")
-		return []reconcile.Request{}
-	}
-	labels := statefulset.GetLabels()
-	if labels == nil {
-		log.V(1).Info("Return manager statefulset check, no labels")
-		return []reconcile.Request{}
-	}
-	keycloakClientName, exists := labels[keycloakClientMatchLabel]
-	if !exists {
-		log.V(1).Info("Return manager statefulset check, keycloakclient statefulset label missing")
-		return []reconcile.Request{}
-	}
-	log.Info("Trigger KeycloakClient reconcile from statefulset",
-		"keycloakclient", keycloakClientName, "statefulset", statefulset.Name, "namespace", statefulset.Namespace)
-	return []reconcile.Request{
-		{
-			NamespacedName: types.NamespacedName{
-				Name:      keycloakClientName,
-				Namespace: statefulset.Namespace,
+				Namespace: obj.GetNamespace(),
 			},
 		},
 	}
@@ -485,6 +451,80 @@ func mapStatefulSetToKeycloakClient(ctx context.Context, obj runtimeclient.Objec
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	deploymentPred := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*appsv1.Deployment)
+			newObj := e.ObjectNew.(*appsv1.Deployment)
+			var oldConfigChecksum, newConfigChecksum string
+			var oldSecretChecksum, newSecretChecksum string
+
+			if oldObj.Spec.Template.Annotations != nil {
+				oldConfigChecksum = oldObj.Spec.Template.Annotations[configmapChecksumAnnotation]
+				oldSecretChecksum = oldObj.Spec.Template.Annotations[secretChecksumAnnotation]
+			}
+			if newObj.Spec.Template.Annotations != nil {
+				newConfigChecksum = newObj.Spec.Template.Annotations[configmapChecksumAnnotation]
+				newSecretChecksum = newObj.Spec.Template.Annotations[secretChecksumAnnotation]
+			}
+			// Do not trigger if checksum was changed to avoid reconcile loop
+			if oldConfigChecksum != newConfigChecksum || oldSecretChecksum != newSecretChecksum {
+				return false
+			}
+			return true
+		},
+
+		// Allow create events
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+
+		// Ignore delete events
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+
+		// Allow generic events (e.g., external triggers)
+		GenericFunc: func(e event.GenericEvent) bool {
+			return true
+		},
+	}
+	statefulsetPred := predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			oldObj := e.ObjectOld.(*appsv1.StatefulSet)
+			newObj := e.ObjectNew.(*appsv1.StatefulSet)
+			var oldConfigChecksum, newConfigChecksum string
+			var oldSecretChecksum, newSecretChecksum string
+
+			if oldObj.Spec.Template.Annotations != nil {
+				oldConfigChecksum = oldObj.Spec.Template.Annotations[configmapChecksumAnnotation]
+				oldSecretChecksum = oldObj.Spec.Template.Annotations[secretChecksumAnnotation]
+			}
+			if newObj.Spec.Template.Annotations != nil {
+				newConfigChecksum = newObj.Spec.Template.Annotations[configmapChecksumAnnotation]
+				newSecretChecksum = newObj.Spec.Template.Annotations[secretChecksumAnnotation]
+			}
+			// Do not trigger if checksum was changed to avoid reconcile loop
+			if oldConfigChecksum != newConfigChecksum || oldSecretChecksum != newSecretChecksum {
+				return false
+			}
+			return true
+		},
+
+		// Allow create events
+		CreateFunc: func(e event.CreateEvent) bool {
+			return true
+		},
+
+		// Ignore delete events
+		DeleteFunc: func(e event.DeleteEvent) bool {
+			return false
+		},
+
+		// Allow generic events (e.g., external triggers)
+		GenericFunc: func(e event.GenericEvent) bool {
+			return true
+		},
+	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&keycloakv1alpha1.KeycloakClient{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&corev1.Secret{}).
@@ -495,11 +535,13 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		).
 		Watches(
 			&appsv1.Deployment{},
-			handler.EnqueueRequestsFromMapFunc(mapDeploymentToKeycloakClient),
+			handler.EnqueueRequestsFromMapFunc(mapAppsToKeycloakClient),
+			builder.WithPredicates(deploymentPred),
 		).
 		Watches(
 			&appsv1.StatefulSet{},
-			handler.EnqueueRequestsFromMapFunc(mapStatefulSetToKeycloakClient),
+			handler.EnqueueRequestsFromMapFunc(mapAppsToKeycloakClient),
+			builder.WithPredicates(statefulsetPred),
 		).
 		// TODO: Re-enable once no longer watching secrets
 		// WithEventFilter(predicate.GenerationChangedPredicate{}).
