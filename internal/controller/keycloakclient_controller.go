@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -74,10 +75,6 @@ type KeycloakClientReconciler struct {
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=keycloak.osc.edu,resources=keycloakclients/finalizers,verbs=update
 // +kubebuilder:rbac:groups=events.k8s.io,resources=events,verbs=create;patch
-// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;update;patch
-// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;update;patch
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -414,13 +411,73 @@ func mapSecretToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []
 		log.V(1).Info("Return manager secret check, keycloakclient secret label missing")
 		return []reconcile.Request{}
 	}
-	log.V(1).Info("Trigger KeycloakClient reconcile from secret",
+	log.Info("Trigger KeycloakClient reconcile from secret",
 		"keycloakclient", keycloakClientName, "secret", secret.Name, "namespace", secret.Namespace)
 	return []reconcile.Request{
 		{
 			NamespacedName: types.NamespacedName{
 				Name:      keycloakClientName,
 				Namespace: secret.Namespace,
+			},
+		},
+	}
+}
+
+func mapDeploymentToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+	log := logf.FromContext(ctx)
+	log.V(1).Info("Entered manager check for Deployments")
+	deployment, ok := obj.(*appsv1.Deployment)
+	if !ok {
+		log.V(1).Info("Return manager deployment check, not a deployment")
+		return []reconcile.Request{}
+	}
+	labels := deployment.GetLabels()
+	if labels == nil {
+		log.V(1).Info("Return manager deployment check, no labels")
+		return []reconcile.Request{}
+	}
+	keycloakClientName, exists := labels[keycloakClientMatchLabel]
+	if !exists {
+		log.V(1).Info("Return manager deployment check, keycloakclient deployment label missing")
+		return []reconcile.Request{}
+	}
+	log.Info("Trigger KeycloakClient reconcile from deployment",
+		"keycloakclient", keycloakClientName, "deployment", deployment.Name, "namespace", deployment.Namespace)
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      keycloakClientName,
+				Namespace: deployment.Namespace,
+			},
+		},
+	}
+}
+
+func mapStatefulSetToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []reconcile.Request {
+	log := logf.FromContext(ctx)
+	log.V(1).Info("Entered manager check for StatefulSet")
+	statefulset, ok := obj.(*appsv1.StatefulSet)
+	if !ok {
+		log.V(1).Info("Return manager statefulset check, not a statefulset")
+		return []reconcile.Request{}
+	}
+	labels := statefulset.GetLabels()
+	if labels == nil {
+		log.V(1).Info("Return manager statefulset check, no labels")
+		return []reconcile.Request{}
+	}
+	keycloakClientName, exists := labels[keycloakClientMatchLabel]
+	if !exists {
+		log.V(1).Info("Return manager statefulset check, keycloakclient statefulset label missing")
+		return []reconcile.Request{}
+	}
+	log.Info("Trigger KeycloakClient reconcile from statefulset",
+		"keycloakclient", keycloakClientName, "statefulset", statefulset.Name, "namespace", statefulset.Namespace)
+	return []reconcile.Request{
+		{
+			NamespacedName: types.NamespacedName{
+				Name:      keycloakClientName,
+				Namespace: statefulset.Namespace,
 			},
 		},
 	}
@@ -436,5 +493,15 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(mapSecretToKeycloakClient),
 		).
+		Watches(
+			&appsv1.Deployment{},
+			handler.EnqueueRequestsFromMapFunc(mapDeploymentToKeycloakClient),
+		).
+		Watches(
+			&appsv1.StatefulSet{},
+			handler.EnqueueRequestsFromMapFunc(mapStatefulSetToKeycloakClient),
+		).
+		// TODO: Re-enable once no longer watching secrets
+		// WithEventFilter(predicate.GenerationChangedPredicate{}).
 		Complete(r)
 }

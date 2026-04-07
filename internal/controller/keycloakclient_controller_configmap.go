@@ -27,7 +27,8 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// handleConfigMap creates or updates the corev1.ConfigMap resource for the KeycloakClient
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+
 func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
 	log := logf.FromContext(ctx)
 	log.V(1).Info("Handle Keycloak Client ConfigMap", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)

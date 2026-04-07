@@ -39,6 +39,8 @@ const (
 	cookieSecretEnvKey = "COOKIE_SECRET"
 )
 
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
+
 func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == clientSecretVal &&
 		keycloakClient.Spec.PublicClient != nil && !*keycloakClient.Spec.PublicClient {

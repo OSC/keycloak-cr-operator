@@ -37,6 +37,9 @@ const (
 	secretChecksumAnnotation    = "keycloak.osc.edu/secret-checksum"
 )
 
+// +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update;patch
+
 func computeChecksum(obj client.Object) (string, error) {
 	dataMap := make(map[string]string)
 
