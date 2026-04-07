@@ -41,6 +41,7 @@ var (
 	secretChecksumUpdated    string
 	configmapChecksum        string
 	configmapChecksumUpdated string
+	ok                       bool
 )
 
 // MockGoCloak is a mock implementation of the GoCloak interface for testing
@@ -117,6 +118,25 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			By("Cleanup the specific resource instance KeycloakClient")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+
+			/*
+				By("Remove all KeycloakClient resources")
+				list := &keycloakv1alpha1.KeycloakClientList{}
+				err = k8sClient.List(ctx, list)
+				Expect(err).NotTo(HaveOccurred())
+				deletePolicy := metav1.DeletePropagationForeground
+				for _, resource := range list.Items {
+					resource.SetFinalizers(nil)
+					err := k8sClient.Update(ctx, &resource)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(k8sClient.Delete(ctx, &resource, &client.DeleteOptions{
+						PropagationPolicy: &deletePolicy,
+					})).To(Succeed())
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: resource.Name, Namespace: resource.Namespace}, &resource)
+						return errors.IsNotFound(err)
+					}, 10*time.Second, 1*time.Second).Should(BeTrue())
+				}*/
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -185,13 +205,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Create:     boolPtr(true),
 						EnvVarKeys: boolPtr(true),
 					},
-					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
-						Kind: stringPtr("Deployment"),
-						Name: stringPtr(deploymentName),
-					},
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-with-secret")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithSecret)).To(Succeed())
 
@@ -278,9 +295,9 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Namespace: "default",
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
-			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			annotations := deployment.Spec.Template.Annotations
 			Expect(annotations).NotTo(BeNil())
-			secretChecksum, ok := annotations[secretChecksumAnnotation]
+			secretChecksum, ok = annotations[secretChecksumAnnotation]
 			Expect(ok).To(BeTrue())
 			Expect(secretChecksum).NotTo(BeEmpty())
 
@@ -313,13 +330,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Create:     boolPtr(true),
 						EnvVarKeys: boolPtr(false),
 					},
-					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
-						Kind: stringPtr("Deployment"),
-						Name: stringPtr(deploymentName),
-					},
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-with-secret-no-envvars")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithSecret)).To(Succeed())
 
@@ -406,9 +420,9 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Namespace: "default",
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
-			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			annotations := deployment.Spec.Template.Annotations
 			Expect(annotations).NotTo(BeNil())
-			secretChecksumUpdated, ok := annotations[secretChecksumAnnotation]
+			secretChecksumUpdated, ok = annotations[secretChecksumAnnotation]
 			Expect(ok).To(BeTrue())
 			Expect(secretChecksumUpdated).NotTo(BeEmpty())
 			Expect(secretChecksumUpdated).NotTo(Equal(secretChecksum))
@@ -435,13 +449,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Name:       &configMapName,
 						EnvVarKeys: boolPtr(true),
 					},
-					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
-						Kind: stringPtr("Deployment"),
-						Name: stringPtr(deploymentName),
-					},
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-with-configmap")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithConfigMap)).To(Succeed())
 
@@ -522,9 +533,9 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Namespace: "default",
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
-			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			annotations := deployment.Spec.Template.Annotations
 			Expect(annotations).NotTo(BeNil())
-			configmapChecksum, ok := annotations[configmapChecksumAnnotation]
+			configmapChecksum, ok = annotations[configmapChecksumAnnotation]
 			Expect(ok).To(BeTrue())
 			Expect(configmapChecksum).NotTo(BeEmpty())
 
@@ -548,13 +559,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 					ConfigMap: &keycloakv1alpha1.KeycloakClientConfigMap{
 						EnvVarKeys: boolPtr(false),
 					},
-					ChecksumRef: &keycloakv1alpha1.KeycloakClientChecksum{
-						Kind: stringPtr("Deployment"),
-						Name: stringPtr(deploymentName),
-					},
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-default-configmap")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithoutConfigMap)).To(Succeed())
 
@@ -632,9 +640,9 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Namespace: "default",
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
-			annotations := deployment.Spec.Template.ObjectMeta.Annotations
+			annotations := deployment.Spec.Template.Annotations
 			Expect(annotations).NotTo(BeNil())
-			configmapChecksumUpdated, ok := annotations[configmapChecksumAnnotation]
+			configmapChecksumUpdated, ok = annotations[configmapChecksumAnnotation]
 			Expect(ok).To(BeTrue())
 			Expect(configmapChecksumUpdated).NotTo(BeEmpty())
 			Expect(configmapChecksumUpdated).NotTo(Equal(configmapChecksum))

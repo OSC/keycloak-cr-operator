@@ -20,15 +20,16 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"maps"
 	"sort"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
 const (
@@ -36,28 +37,17 @@ const (
 	secretChecksumAnnotation    = "keycloak.osc.edu/secret-checksum"
 )
 
-// computeChecksum computes a checksum of a map with sorted keys
-// The input is a Kubernetes object (either a Secret or ConfigMap)
-// For Secrets and ConfigMaps, it accesses the Data field to compute the checksum
-// Returns the computed checksum as a hex-encoded string
 func computeChecksum(obj client.Object) (string, error) {
-	// We need to handle different types of Kubernetes objects
-	// For now, we'll handle Secrets and ConfigMaps which have Data field
-
-	// Convert to map[string]string for processing
 	dataMap := make(map[string]string)
 
 	switch v := obj.(type) {
 	case *corev1.Secret:
-		for key, value := range v.StringData {
-			dataMap[key] = value
+		for key, value := range v.Data {
+			dataMap[key] = string(value)
 		}
 	case *corev1.ConfigMap:
-		for key, value := range v.Data {
-			dataMap[key] = value
-		}
+		maps.Copy(dataMap, v.Data)
 	default:
-		// If we don't recognize the object type, return error
 		return "", fmt.Errorf("unsupported object type for checksum: %T", obj)
 	}
 
@@ -76,30 +66,13 @@ func computeChecksum(obj client.Object) (string, error) {
 		hasher.Write([]byte(item))
 	}
 
-	// Return hex-encoded checksum
 	checksum := hasher.Sum(nil)
 	return hex.EncodeToString(checksum), nil
 }
 
 func (r *KeycloakClientReconciler) updateChecksum(ctx context.Context, obj client.Object, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
-	// Check if ChecksumRef is configured
-	if keycloakClient.Spec.ChecksumRef == nil {
-		return nil
-	}
+	// log := logf.FromContext(ctx)
 
-	// Get the resource type from ChecksumRef
-	resourceKind := keycloakClient.Spec.ChecksumRef.Kind
-	if resourceKind == nil {
-		return nil
-	}
-
-	// Get the resource name from ChecksumRef
-	resourceName := keycloakClient.Spec.ChecksumRef.Name
-	if resourceName == nil {
-		return nil
-	}
-
-	// Determine the annotation key based on object type (not resource type)
 	var annotationKey string
 	switch obj.(type) {
 	case *corev1.ConfigMap:
@@ -107,57 +80,95 @@ func (r *KeycloakClientReconciler) updateChecksum(ctx context.Context, obj clien
 	case *corev1.Secret:
 		annotationKey = secretChecksumAnnotation
 	default:
-		// For unsupported object types, return error
 		return fmt.Errorf("unsupported object type for checksum: %T", obj)
 	}
 
-	// Get the target object using a single variable approach
-	var targetObj client.Object
-	switch *resourceKind {
-	case "Deployment":
-		deployment := &appsv1.Deployment{}
-		targetObj = deployment
-	case "StatefulSet":
-		statefulSet := &appsv1.StatefulSet{}
-		targetObj = statefulSet
-	default:
-		return nil
-	}
-
-	err := r.Get(ctx, types.NamespacedName{Name: *resourceName, Namespace: keycloakClient.Namespace}, targetObj)
-	if err != nil {
-		if errors.IsNotFound(err) {
-			// Object doesn't exist, do nothing
-			return nil
-		}
-		return err
-	}
-
-	// Compute the checksum for the object
 	checksum, err := computeChecksum(obj)
 	if err != nil {
 		return err
 	}
 
-	// Prepare patch for the pod template annotations
-	patch := client.MergeFrom(targetObj.DeepCopyObject().(client.Object))
+	errs := r.updateChecksumDeployment(ctx, checksum, annotationKey, keycloakClient)
+	if errs != nil {
+		return fmt.Errorf("failures to update deployment checksum: %s", errors.Join(errs...))
+	}
 
-	// Update the annotations in the pod template
-	switch *resourceKind {
-	case "Deployment":
-		deployment := targetObj.(*appsv1.Deployment)
+	errs = r.updateChecksumStatefulSet(ctx, checksum, annotationKey, keycloakClient)
+	if errs != nil {
+		return fmt.Errorf("failures to update statefulset checksum: %s", errors.Join(errs...))
+	}
+
+	return nil
+}
+
+func (r *KeycloakClientReconciler) updateChecksumDeployment(ctx context.Context, checksum string, annotationKey string, keycloakClient *keycloakv1alpha1.KeycloakClient) []error {
+	log := logf.FromContext(ctx)
+
+	var errs []error
+	deploymentList := &appsv1.DeploymentList{}
+	err := r.List(ctx, deploymentList, client.InNamespace(keycloakClient.Namespace), client.MatchingLabels{keycloakClientMatchLabel: keycloakClient.Name})
+	if err != nil {
+		return []error{err}
+	}
+	if len(deploymentList.Items) == 0 {
+		log.V(1).Info("No deployment found for checksum update", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace)
+		return nil
+	}
+	for _, deployment := range deploymentList.Items {
+		patch := client.MergeFrom(deployment.DeepCopy())
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
 		}
-		deployment.Spec.Template.Annotations[annotationKey] = checksum
-	case "StatefulSet":
-		statefulSet := targetObj.(*appsv1.StatefulSet)
-		if statefulSet.Spec.Template.Annotations == nil {
-			statefulSet.Spec.Template.Annotations = make(map[string]string)
+		if currentChecksum, ok := deployment.Spec.Template.Annotations[annotationKey]; ok {
+			if currentChecksum == checksum {
+				log.V(1).Info("Checksum matches, skip", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
+					"resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
+				continue
+			}
 		}
-		statefulSet.Spec.Template.Annotations[annotationKey] = checksum
+		deployment.Spec.Template.Annotations[annotationKey] = checksum
+		log.V(1).Info("Patch Deployment with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
+			"resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
+		if err := r.Patch(ctx, &deployment, patch); err != nil {
+			log.Error(err, "Unable to patch Deployment", "resource", deployment.Name, "namespace", keycloakClient.Namespace)
+			errs = append(errs, err)
+		}
 	}
+	return errs
+}
 
-	// Apply the patch
-	return r.Patch(ctx, targetObj, patch)
+func (r *KeycloakClientReconciler) updateChecksumStatefulSet(ctx context.Context, checksum string, annotationKey string, keycloakClient *keycloakv1alpha1.KeycloakClient) []error {
+	log := logf.FromContext(ctx)
+
+	var errs []error
+	statefulsetList := &appsv1.StatefulSetList{}
+	err := r.List(ctx, statefulsetList, client.InNamespace(keycloakClient.Namespace), client.MatchingLabels{keycloakClientMatchLabel: keycloakClient.Name})
+	if err != nil {
+		return []error{err}
+	}
+	if len(statefulsetList.Items) == 0 {
+		log.V(1).Info("No deployment found for checksum update", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace)
+		return nil
+	}
+	for _, statefulset := range statefulsetList.Items {
+		patch := client.MergeFrom(statefulset.DeepCopy())
+		if statefulset.Spec.Template.Annotations == nil {
+			statefulset.Spec.Template.Annotations = make(map[string]string)
+		}
+		if currentChecksum, ok := statefulset.Spec.Template.Annotations[annotationKey]; ok {
+			if currentChecksum == checksum {
+				log.V(1).Info("Checksum matches, skip", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
+					"resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
+				continue
+			}
+		}
+		statefulset.Spec.Template.Annotations[annotationKey] = checksum
+		log.V(1).Info("Patch StatefulSet with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
+			"resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
+		if err := r.Patch(ctx, &statefulset, patch); err != nil {
+			log.Error(err, "Unable to patch StatefulSet", "resource", statefulset.Name, "namespace", keycloakClient.Namespace)
+			errs = append(errs, err)
+		}
+	}
+	return errs
 }

@@ -54,23 +54,6 @@ spec:
                 default: false
                 description: BearerOnly indicates if the client is bearer-only
                 type: boolean
-              checksumRef:
-                description: The Checksum reference configuration
-                properties:
-                  kind:
-                    default: Deployment
-                    description: The type of resource to restart
-                    enum:
-                    - Deployment
-                    - StatefulSet
-                    type: string
-                  name:
-                    description: Name of the resource to restart
-                    type: string
-                required:
-                - kind
-                - name
-                type: object
               clientAuthenticatorType:
                 default: client-secret
                 description: ClientAuthenticatorType is the client authenticator type

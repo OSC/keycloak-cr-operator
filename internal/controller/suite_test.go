@@ -28,7 +28,9 @@ import (
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -88,24 +90,6 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
-
-	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: "default"},
-		Spec: appsv1.DeploymentSpec{
-			Replicas: int32Ptr(1),
-			Selector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{"app": "nginx"},
-			},
-			Template: corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "nginx"}},
-				Spec: corev1.PodSpec{
-					Containers: []corev1.Container{{Name: "web", Image: "nginx:1.14.2"}},
-				},
-			},
-		},
-	}
-	err = k8sClient.Create(context.TODO(), deployment, &client.CreateOptions{})
-	Expect(err).NotTo(HaveOccurred())
 })
 
 var _ = AfterSuite(func() {
@@ -115,6 +99,36 @@ var _ = AfterSuite(func() {
 		return testEnv.Stop()
 	}, time.Minute, time.Second).Should(Succeed())
 })
+
+func bootstrapDeployment(keycloakClientName string) {
+	By("Create Deployment")
+	deployment := &appsv1.Deployment{}
+	err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: "default"}, deployment)
+	if errors.IsNotFound(err) {
+		deployment = &appsv1.Deployment{
+			ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: "default", Labels: map[string]string{keycloakClientMatchLabel: keycloakClientName}},
+			Spec: appsv1.DeploymentSpec{
+				Replicas: int32Ptr(1),
+				Selector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{"app": "nginx"},
+				},
+				Template: corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "nginx"}},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{{Name: "web", Image: "nginx:1.14.2"}},
+					},
+				},
+			},
+		}
+		err := k8sClient.Create(context.TODO(), deployment, &client.CreateOptions{})
+		Expect(err).NotTo(HaveOccurred())
+	} else {
+		patch := client.MergeFrom(deployment.DeepCopyObject().(client.Object))
+		deployment.Labels[keycloakClientMatchLabel] = keycloakClientName
+		err := k8sClient.Patch(ctx, deployment, patch)
+		Expect(err).NotTo(HaveOccurred())
+	}
+}
 
 // getFirstFoundEnvTestBinaryDir locates the first binary in the specified path.
 // ENVTEST-based tests depend on specific binaries, usually located in paths set by

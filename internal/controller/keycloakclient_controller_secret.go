@@ -230,10 +230,10 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 
 	err = r.updateChecksum(ctx, secret, keycloakClient)
 	if err != nil {
-		log.Error(err, "Failed to update checksum resource", "namespace", secret.Namespace, "name", keycloakClient.Spec.ChecksumRef.Name)
+		log.Error(err, "Failed to update checksum resource", "namespace", secret.Namespace, "name", keycloakClient.Name)
 		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateChecksumFailed", "Update",
-			"Failed to update checksum resource %s/%s for KeycloakClient %s in namespace %s: %s",
-			keycloakClient.Spec.ChecksumRef.Kind, keycloakClient.Spec.ChecksumRef.Name, keycloakClient.Name, keycloakClient.Namespace, err)
+			"Failed to update resource checksums for KeycloakClient %s in namespace %s: %s",
+			keycloakClient.Name, keycloakClient.Namespace, err)
 		return err
 	}
 	return nil

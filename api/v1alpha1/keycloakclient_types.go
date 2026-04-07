@@ -205,10 +205,6 @@ type KeycloakClientSpec struct {
 	// The ConfigMap configuration
 	// +optional
 	ConfigMap *KeycloakClientConfigMap `json:"configMap,omitempty"`
-
-	// The Checksum reference configuration
-	// +optional
-	ChecksumRef *KeycloakClientChecksum `json:"checksumRef,omitempty"`
 }
 
 // Defines the structure for the Keycloak Client Secret
@@ -235,18 +231,6 @@ type KeycloakClientConfigMap struct {
 	// +kubebuilder:default=true
 	// +optional
 	EnvVarKeys *bool `json:"envVarKeys,omitempty"`
-}
-
-// Define the structure for what to restart upon changes
-type KeycloakClientChecksum struct {
-	// The type of resource to restart
-	// +kubebuilder:validation:Enum=Deployment;StatefulSet
-	// +kubebuilder:default=Deployment
-	// +required
-	Kind *string `json:"kind,omitempty"`
-	// Name of the resource to restart
-	// +required
-	Name *string `json:"name,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.

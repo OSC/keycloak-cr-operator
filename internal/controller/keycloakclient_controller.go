@@ -47,7 +47,7 @@ import (
 const (
 	clientFinalizerName         = "client.keycloak.osc.edu/finalizer"
 	typeAvailableKeycloakClient = "Available"
-	keycloakClientSecretLabel   = "keycloak.osc.edu/keycloakclient"
+	keycloakClientMatchLabel    = "keycloak.osc.edu/keycloakclient"
 	clientSecretVal             = "client-secret"
 )
 
@@ -409,7 +409,7 @@ func mapSecretToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []
 		log.V(1).Info("Return manager secret check, no labels")
 		return []reconcile.Request{}
 	}
-	keycloakClientName, exists := labels[keycloakClientSecretLabel]
+	keycloakClientName, exists := labels[keycloakClientMatchLabel]
 	if !exists {
 		log.V(1).Info("Return manager secret check, keycloakclient secret label missing")
 		return []reconcile.Request{}
