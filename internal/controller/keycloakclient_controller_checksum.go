@@ -28,13 +28,10 @@ import (
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	appsv1ac "k8s.io/client-go/applyconfigurations/apps/v1"
+	corev1ac "k8s.io/client-go/applyconfigurations/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
-)
-
-const (
-	configmapChecksumAnnotation = "keycloak.osc.edu/configmap-checksum"
-	secretChecksumAnnotation    = "keycloak.osc.edu/secret-checksum"
 )
 
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
@@ -114,26 +111,34 @@ func (r *KeycloakClientReconciler) updateChecksumDeployment(ctx context.Context,
 		return []error{err}
 	}
 	if len(deploymentList.Items) == 0 {
-		log.V(1).Info("No deployment found for checksum update", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace)
+		log.V(1).Info("No deployment found for checksum update")
 		return nil
 	}
 	for _, deployment := range deploymentList.Items {
-		patch := client.MergeFrom(deployment.DeepCopy())
+		// Ensure template annotations exist
 		if deployment.Spec.Template.Annotations == nil {
 			deployment.Spec.Template.Annotations = make(map[string]string)
 		}
+
+		// Check if checksum already matches
 		if currentChecksum, ok := deployment.Spec.Template.Annotations[annotationKey]; ok {
 			if currentChecksum == checksum {
-				log.V(1).Info("Checksum matches, skip", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
-					"resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
+				log.V(1).Info("Checksum matches, skip", "resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
 				continue
 			}
 		}
+
 		deployment.Spec.Template.Annotations[annotationKey] = checksum
-		log.Info("Patch Deployment with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
-			"resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
-		if err := r.Patch(ctx, &deployment, patch); err != nil {
-			log.Error(err, "Unable to patch Deployment", "resource", deployment.Name, "namespace", keycloakClient.Namespace)
+		deploymentCopy := appsv1ac.Deployment(deployment.Name, deployment.Namespace).
+			WithSpec(appsv1ac.DeploymentSpec().
+				WithTemplate(corev1ac.PodTemplateSpec().
+					WithAnnotations(deployment.Spec.Template.Annotations)))
+
+		log.Info("Apply Deployment checksum with SSA", "resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
+
+		// Use Server Side Apply with SSA field manager
+		if err := r.Apply(ctx, deploymentCopy, client.FieldOwner(operatorName), client.ForceOwnership); err != nil {
+			log.Error(err, "Unable to apply Deployment checksum with SSA", "resource", deployment.Name, "namespace", keycloakClient.Namespace)
 			errs = append(errs, err)
 		}
 	}
@@ -150,26 +155,34 @@ func (r *KeycloakClientReconciler) updateChecksumStatefulSet(ctx context.Context
 		return []error{err}
 	}
 	if len(statefulsetList.Items) == 0 {
-		log.V(1).Info("No StatefulSet found for checksum update", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace)
+		log.V(1).Info("No StatefulSet found for checksum update")
 		return nil
 	}
 	for _, statefulset := range statefulsetList.Items {
-		patch := client.MergeFrom(statefulset.DeepCopy())
+		// Ensure template annotations exist
 		if statefulset.Spec.Template.Annotations == nil {
 			statefulset.Spec.Template.Annotations = make(map[string]string)
 		}
+
+		// Check if checksum already matches
 		if currentChecksum, ok := statefulset.Spec.Template.Annotations[annotationKey]; ok {
 			if currentChecksum == checksum {
-				log.V(1).Info("Checksum matches, skip", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
-					"resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
+				log.V(1).Info("Checksum matches, skip", "resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
 				continue
 			}
 		}
+
 		statefulset.Spec.Template.Annotations[annotationKey] = checksum
-		log.Info("Patch StatefulSet with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
-			"resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
-		if err := r.Patch(ctx, &statefulset, patch); err != nil {
-			log.Error(err, "Unable to patch StatefulSet", "resource", statefulset.Name, "namespace", keycloakClient.Namespace)
+		statefulsetCopy := appsv1ac.StatefulSet(statefulset.Name, statefulset.Namespace).
+			WithSpec(appsv1ac.StatefulSetSpec().
+				WithTemplate(corev1ac.PodTemplateSpec().
+					WithAnnotations(statefulset.Spec.Template.Annotations)))
+
+		log.Info("Apply StatefulSet checksum with SSA", "resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
+
+		// Use Server Side Apply with SSA field manager
+		if err := r.Apply(ctx, statefulsetCopy, client.FieldOwner(operatorName), client.ForceOwnership); err != nil {
+			log.Error(err, "Unable to apply StatefulSet checksum with SSA", "resource", statefulset.Name, "namespace", keycloakClient.Namespace)
 			errs = append(errs, err)
 		}
 	}

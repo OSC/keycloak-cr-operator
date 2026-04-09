@@ -34,11 +34,6 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 )
 
-const (
-	cookieSecretKey    = "cookie-secret"
-	cookieSecretEnvKey = "COOKIE_SECRET"
-)
-
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {

@@ -147,3 +147,19 @@ func getConfigMap(name, key string) (string, error) {
 	Eventually(getSecretValue).Should(Succeed())
 	return value, err
 }
+
+func getDeploymentAnnotation(label, annotation string) (string, error) {
+	By("Getting annotation from Deployment")
+	var value string
+	var err error
+	getAnnotation := func(g Gomega) {
+		cmd := exec.Command("kubectl", "get", "pods", "-l", label,
+			"-o", fmt.Sprintf("jsonpath={.items[0].metadata.annotations.%s}", strings.ReplaceAll(annotation, ".", "\\.")))
+		value, err = utils.Run(cmd)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(value).NotTo(BeEmpty())
+		fmt.Printf("Annotation:\n %s\n", value)
+	}
+	Eventually(getAnnotation).Should(Succeed())
+	return value, err
+}

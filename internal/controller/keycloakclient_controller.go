@@ -46,13 +46,6 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 )
 
-const (
-	clientFinalizerName         = "client.keycloak.osc.edu/finalizer"
-	typeAvailableKeycloakClient = "Available"
-	keycloakClientMatchLabel    = "keycloak.osc.edu/keycloakclient"
-	clientSecretVal             = "client-secret"
-)
-
 type GoCloakServer interface {
 	LoginAdmin(ctx context.Context, realm, username, password string) (*gocloak.JWT, error)
 	GetClients(ctx context.Context, token, realm string, params gocloak.GetClientsParams) ([]*gocloak.Client, error)
