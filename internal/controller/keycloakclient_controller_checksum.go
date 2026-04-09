@@ -130,7 +130,7 @@ func (r *KeycloakClientReconciler) updateChecksumDeployment(ctx context.Context,
 			}
 		}
 		deployment.Spec.Template.Annotations[annotationKey] = checksum
-		log.V(1).Info("Patch Deployment with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
+		log.Info("Patch Deployment with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
 			"resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
 		if err := r.Patch(ctx, &deployment, patch); err != nil {
 			log.Error(err, "Unable to patch Deployment", "resource", deployment.Name, "namespace", keycloakClient.Namespace)
@@ -150,7 +150,7 @@ func (r *KeycloakClientReconciler) updateChecksumStatefulSet(ctx context.Context
 		return []error{err}
 	}
 	if len(statefulsetList.Items) == 0 {
-		log.V(1).Info("No deployment found for checksum update", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace)
+		log.V(1).Info("No StatefulSet found for checksum update", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace)
 		return nil
 	}
 	for _, statefulset := range statefulsetList.Items {
@@ -166,7 +166,7 @@ func (r *KeycloakClientReconciler) updateChecksumStatefulSet(ctx context.Context
 			}
 		}
 		statefulset.Spec.Template.Annotations[annotationKey] = checksum
-		log.V(1).Info("Patch StatefulSet with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
+		log.Info("Patch StatefulSet with checksum", "name", keycloakClient.Name, "namespace", keycloakClient.Namespace,
 			"resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
 		if err := r.Patch(ctx, &statefulset, patch); err != nil {
 			log.Error(err, "Unable to patch StatefulSet", "resource", statefulset.Name, "namespace", keycloakClient.Namespace)
