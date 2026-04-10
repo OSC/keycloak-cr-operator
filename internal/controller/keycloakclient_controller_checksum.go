@@ -44,7 +44,9 @@ func computeChecksum(ctx context.Context, obj client.Object) (string, error) {
 
 	switch v := obj.(type) {
 	case *corev1.Secret:
-		maps.Copy(dataMap, v.StringData)
+		for key, value := range v.Data {
+			dataMap[key] = string(value)
+		}
 	case *corev1.ConfigMap:
 		maps.Copy(dataMap, v.Data)
 	default:
