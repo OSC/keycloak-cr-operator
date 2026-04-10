@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"time"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
@@ -191,10 +192,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 		// if missing during update.
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			// Merge the data with existing secret data
-			//nolint:gocritic,modernize
-			for key, value := range secret.Data {
-				found.Data[key] = []byte(value)
-			}
+			maps.Copy(found.Data, secret.Data)
 			cookieSecret, err := generateRandomString()
 			if err != nil {
 				log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
