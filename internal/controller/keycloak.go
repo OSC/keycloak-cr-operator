@@ -70,12 +70,11 @@ func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient
 	getClientParams := gocloak.GetClientsParams{
 		ClientID: keycloakClient.Spec.ClientID,
 	}
-	log.V(1).Info("Check if client exists", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", keycloakClient.Spec.ClientID, "realm", keycloakClient.Spec.Realm)
+	log.V(1).Info("Check if client exists", "clientID", keycloakClient.Spec.ClientID, "realm", keycloakClient.Spec.Realm)
 	Token.lock.RLock()
 	defer Token.lock.RUnlock()
 	clients, err := server.GetClients(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, getClientParams)
-	log.V(1).Info(fmt.Sprintf("Number of clients returned: %d", len(clients)), "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
-		"clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
+	log.V(1).Info(fmt.Sprintf("Number of clients returned: %d", len(clients)), "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	if err != nil {
 		log.Error(err, "Failed to get Keycloak Clients", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 		return nil, err
@@ -85,7 +84,7 @@ func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient
 	}
 	client := clients[0]
 	if usesClientSecret(keycloakClient) {
-		log.V(1).Info("Get client secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", keycloakClient.Spec.ClientID, "realm", keycloakClient.Spec.Realm)
+		log.V(1).Info("Get client secret", "clientID", keycloakClient.Spec.ClientID, "realm", keycloakClient.Spec.Realm)
 		secret, err := server.GetClientSecret(ctx, Token.AccessToken, *keycloakClient.Spec.Realm, *client.ID)
 		if err != nil {
 			return nil, err

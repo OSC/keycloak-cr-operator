@@ -77,10 +77,9 @@ func generateRandomString() (string, error) {
 
 func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (string, error) {
 	log := logf.FromContext(ctx)
-	log.V(1).Info("Begin get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	log.V(1).Info("Begin get secret")
 	secret := &corev1.Secret{}
-	log.V(1).Info("Get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
-		"secret", keycloakClient.Spec.ClientSecretRef.Name, "key", keycloakClient.Spec.ClientSecretRef.Key)
+	log.V(1).Info("Get secret", "secret", keycloakClient.Spec.ClientSecretRef.Name, "key", keycloakClient.Spec.ClientSecretRef.Key)
 
 	// Set up retry logic with timeout
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, *r.SecretWaitTimeout)
@@ -227,7 +226,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 
 	err = r.updateChecksum(ctx, secret, keycloakClient)
 	if err != nil {
-		log.Error(err, "Failed to update checksum resource", "namespace", secret.Namespace, "name", keycloakClient.Name)
+		log.Error(err, "Failed to update checksum resource")
 		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateChecksumFailed", "Update",
 			"Failed to update resource checksums for KeycloakClient %s in namespace %s: %s",
 			keycloakClient.Name, keycloakClient.Namespace, err)
