@@ -441,8 +441,10 @@ func mapAppsToKeycloakClient(ctx context.Context, obj runtimeclient.Object) []re
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	predicateLog := logf.Log.WithName("keycloakclient-resource-predicate")
 	deploymentPred := predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
+			predicateLog.V(1).Info("Deployment update")
 			oldObj := e.ObjectOld.(*appsv1.Deployment)
 			newObj := e.ObjectNew.(*appsv1.Deployment)
 			var oldConfigChecksum, newConfigChecksum string
@@ -456,6 +458,9 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				newConfigChecksum = newObj.Spec.Template.Annotations[configmapChecksumAnnotation]
 				newSecretChecksum = newObj.Spec.Template.Annotations[secretChecksumAnnotation]
 			}
+			predicateLog.V(1).Info("Deployment update checksums", "old-config", oldConfigChecksum, "new-config", newConfigChecksum,
+				"old-secret", oldSecretChecksum, "new-secret", newSecretChecksum)
+
 			// Do not trigger if checksum was changed to avoid reconcile loop
 			if oldConfigChecksum == newConfigChecksum && oldSecretChecksum == newSecretChecksum {
 				return false
@@ -465,16 +470,19 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 		// Allow create events
 		CreateFunc: func(e event.CreateEvent) bool {
+			predicateLog.V(1).Info("Deployment create")
 			return true
 		},
 
 		// Ignore delete events
 		DeleteFunc: func(e event.DeleteEvent) bool {
+			predicateLog.V(1).Info("Deployment delete")
 			return false
 		},
 
 		// Allow generic events (e.g., external triggers)
 		GenericFunc: func(e event.GenericEvent) bool {
+			predicateLog.V(1).Info("Deployment generic")
 			return true
 		},
 	}
@@ -494,7 +502,7 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				newSecretChecksum = newObj.Spec.Template.Annotations[secretChecksumAnnotation]
 			}
 			// Do not trigger if checksum was changed to avoid reconcile loop
-			if oldConfigChecksum != newConfigChecksum || oldSecretChecksum != newSecretChecksum {
+			if oldConfigChecksum == newConfigChecksum && oldSecretChecksum == newSecretChecksum {
 				return false
 			}
 			return true

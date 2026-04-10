@@ -37,14 +37,14 @@ import (
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;update;patch
 // +kubebuilder:rbac:groups=apps,resources=statefulsets,verbs=get;list;watch;update;patch
 
-func computeChecksum(obj client.Object) (string, error) {
+func computeChecksum(ctx context.Context, obj client.Object) (string, error) {
+	log := logf.FromContext(ctx)
+	log.V(1).Info("Computing checksum", "kind", obj.GetObjectKind(), "name", obj.GetName())
 	dataMap := make(map[string]string)
 
 	switch v := obj.(type) {
 	case *corev1.Secret:
-		for key, value := range v.Data {
-			dataMap[key] = string(value)
-		}
+		maps.Copy(dataMap, v.StringData)
 	case *corev1.ConfigMap:
 		maps.Copy(dataMap, v.Data)
 	default:
@@ -63,11 +63,13 @@ func computeChecksum(obj client.Object) (string, error) {
 	for _, key := range keys {
 		// Format: key:value|
 		item := key + ":" + dataMap[key] + "|"
+		// log.V(1).Info("Checksum item", "item", item)
 		hasher.Write([]byte(item))
 	}
 
-	checksum := hasher.Sum(nil)
-	return hex.EncodeToString(checksum), nil
+	checksum := hex.EncodeToString(hasher.Sum(nil))
+	log.V(1).Info("Computed checksum", "checksum", checksum)
+	return checksum, nil
 }
 
 func (r *KeycloakClientReconciler) updateChecksum(ctx context.Context, obj client.Object, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
@@ -83,7 +85,7 @@ func (r *KeycloakClientReconciler) updateChecksum(ctx context.Context, obj clien
 		return fmt.Errorf("unsupported object type for checksum: %T", obj)
 	}
 
-	checksum, err := computeChecksum(obj)
+	checksum, err := computeChecksum(ctx, obj)
 	if err != nil {
 		return err
 	}
