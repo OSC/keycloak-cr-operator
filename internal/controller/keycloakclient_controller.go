@@ -457,7 +457,7 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				newSecretChecksum = newObj.Spec.Template.Annotations[secretChecksumAnnotation]
 			}
 			// Do not trigger if checksum was changed to avoid reconcile loop
-			if oldConfigChecksum != newConfigChecksum || oldSecretChecksum != newSecretChecksum {
+			if oldConfigChecksum == newConfigChecksum && oldSecretChecksum == newSecretChecksum {
 				return false
 			}
 			return true
