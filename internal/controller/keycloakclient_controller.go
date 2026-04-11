@@ -458,9 +458,16 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				newConfigChecksum = newObj.Spec.Template.Annotations[configmapChecksumAnnotation]
 				newSecretChecksum = newObj.Spec.Template.Annotations[secretChecksumAnnotation]
 			}
-			predicateLog.V(1).Info("Deployment update checksums", "old-config", oldConfigChecksum, "new-config", newConfigChecksum,
+			predicateLog.V(1).Info("Deployment checksums predicate check", "old-config", oldConfigChecksum, "new-config", newConfigChecksum,
 				"old-secret", oldSecretChecksum, "new-secret", newSecretChecksum)
 
+			// Trigger reconcile if checksums missing
+			if oldConfigChecksum == "" && newConfigChecksum == "" {
+				return true
+			}
+			if oldSecretChecksum == "" && newSecretChecksum == "" {
+				return true
+			}
 			// Do not trigger if checksum was changed to avoid reconcile loop
 			if oldConfigChecksum == newConfigChecksum && oldSecretChecksum == newSecretChecksum {
 				return false
@@ -500,6 +507,16 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			if newObj.Spec.Template.Annotations != nil {
 				newConfigChecksum = newObj.Spec.Template.Annotations[configmapChecksumAnnotation]
 				newSecretChecksum = newObj.Spec.Template.Annotations[secretChecksumAnnotation]
+			}
+			predicateLog.V(1).Info("StatefulSet checksums predicate check", "old-config", oldConfigChecksum, "new-config", newConfigChecksum,
+				"old-secret", oldSecretChecksum, "new-secret", newSecretChecksum)
+
+			// Trigger reconcile if checksums missing
+			if oldConfigChecksum == "" && newConfigChecksum == "" {
+				return true
+			}
+			if oldSecretChecksum == "" && newSecretChecksum == "" {
+				return true
 			}
 			// Do not trigger if checksum was changed to avoid reconcile loop
 			if oldConfigChecksum == newConfigChecksum && oldSecretChecksum == newSecretChecksum {
