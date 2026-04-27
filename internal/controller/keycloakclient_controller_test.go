@@ -24,6 +24,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/mock"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +34,14 @@ import (
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
+)
+
+var (
+	secretChecksum           string
+	secretChecksumUpdated    string
+	configmapChecksum        string
+	configmapChecksumUpdated string
+	ok                       bool
 )
 
 // MockGoCloak is a mock implementation of the GoCloak interface for testing
@@ -109,6 +118,25 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			By("Cleanup the specific resource instance KeycloakClient")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
+
+			/*
+				By("Remove all KeycloakClient resources")
+				list := &keycloakv1alpha1.KeycloakClientList{}
+				err = k8sClient.List(ctx, list)
+				Expect(err).NotTo(HaveOccurred())
+				deletePolicy := metav1.DeletePropagationForeground
+				for _, resource := range list.Items {
+					resource.SetFinalizers(nil)
+					err := k8sClient.Update(ctx, &resource)
+					Expect(err).NotTo(HaveOccurred())
+					Expect(k8sClient.Delete(ctx, &resource, &client.DeleteOptions{
+						PropagationPolicy: &deletePolicy,
+					})).To(Succeed())
+					Eventually(func() bool {
+						err := k8sClient.Get(ctx, types.NamespacedName{Name: resource.Name, Namespace: resource.Namespace}, &resource)
+						return errors.IsNotFound(err)
+					}, 10*time.Second, 1*time.Second).Should(BeTrue())
+				}*/
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -180,6 +208,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-with-secret")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithSecret)).To(Succeed())
 
@@ -260,6 +289,18 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.Annotations
+			Expect(annotations).NotTo(BeNil())
+			secretChecksum, ok = annotations[secretChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(secretChecksum).NotTo(BeEmpty())
+
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
 		})
@@ -292,6 +333,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-with-secret-no-envvars")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithSecret)).To(Succeed())
 
@@ -372,6 +414,19 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret-no-envvars"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.Annotations
+			Expect(annotations).NotTo(BeNil())
+			secretChecksumUpdated, ok = annotations[secretChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(secretChecksumUpdated).NotTo(BeEmpty())
+			Expect(secretChecksumUpdated).NotTo(Equal(secretChecksum))
+
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
 		})
@@ -397,6 +452,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-with-configmap")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithConfigMap)).To(Succeed())
 
@@ -471,6 +527,18 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-configmap"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.Annotations
+			Expect(annotations).NotTo(BeNil())
+			configmapChecksum, ok = annotations[configmapChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(configmapChecksum).NotTo(BeEmpty())
+
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
 		})
@@ -494,6 +562,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 			}
 
+			bootstrapDeployment("test-keycloak-client-default-configmap")
 			// Create the resource in the test cluster
 			Expect(k8sClient.Create(ctx, keycloakClientWithoutConfigMap)).To(Succeed())
 
@@ -564,6 +633,19 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(controllerRefs).To(HaveLen(1))
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-default-configmap"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
+
+			deployment := &appsv1.Deployment{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      deploymentName,
+				Namespace: "default",
+			}, deployment)
+			Expect(err).NotTo(HaveOccurred())
+			annotations := deployment.Spec.Template.Annotations
+			Expect(annotations).NotTo(BeNil())
+			configmapChecksumUpdated, ok = annotations[configmapChecksumAnnotation]
+			Expect(ok).To(BeTrue())
+			Expect(configmapChecksumUpdated).NotTo(BeEmpty())
+			Expect(configmapChecksumUpdated).NotTo(Equal(configmapChecksum))
 
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())

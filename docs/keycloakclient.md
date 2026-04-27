@@ -9,6 +9,7 @@
 - [ConfigMap Creation](#configmap-creation)
 - [ClientID Template Enforcement](#clientid-template-enforcement)
 - [OAuth2 Proxy Integration](#oauth2-proxy-integration)
+- [Checksum Updates for Deployments and StatefulSets](#checksum-updates-for-deployments-and-statefulsets)
 
 ## CRD Overview
 The operator manages Keycloak clients through the `KeycloakClient` Custom Resource Definition (CRD). This CRD supports various Keycloak client properties and configurations.
@@ -246,3 +247,27 @@ These samples demonstrate how to:
 The operator automatically creates the required secrets with `CLIENT_ID`, `CLIENT_SECRET`, and `COOKIE_SECRET` values that OAuth2 Proxy can consume.
 
 The operator also automatically creates the ConfigMap used for things like `ISSUER_URL`, for exmaple.
+
+## Checksum Updates for Deployments and StatefulSets
+
+The operator can automatically updates checksum annotations on Kubernetes Deployments and StatefulSets that reference the KeycloakClient's ConfigMap or Secret. This ensures that when the ConfigMap or Secret changes, the pods will be restarted to pick up the new configuration.
+
+### Resource Matching
+
+The operator finds matching Deployments and StatefulSets by:
+1. Looking for resources in the same namespace as the KeycloakClient
+2. Filtering resources that have the label `keycloak.osc.edu/keycloakclient` with a value matching the KeycloakClient name
+
+### How It Works
+
+When a KeycloakClient resource is reconciled, the operator:
+1. Computes a SHA256 checksum of the ConfigMap and Secret data
+2. Updates the pod template `keycloak.osc.edu/configmap-checksum` annotation on matching Deployments and StatefulSets
+3. Updates the pod template `keycloak.osc.edu/secret-checksum` annotation on matching Deployments and StatefulSets
+
+### Annotation Keys
+
+- For ConfigMap: `keycloak.osc.edu/configmap-checksum`
+- For Secret: `keycloak.osc.edu/secret-checksum`
+
+This mechanism ensures that when a KeycloakClient's configuration changes, any pods that depend on its ConfigMap or Secret will be restarted with the updated values.

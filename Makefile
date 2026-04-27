@@ -379,7 +379,7 @@ CERT_MANAGER_EXTRA_ARGS ?=
 ##@ Helm Cert-Manager Installation
 .PHONY: install-cert-manager
 install-cert-manager: ## Install cert-manager via Helm (wait for readiness)
-	$(HELM) repo add jetstack https://charts.jetstack.io
+	$(HELM) repo add jetstack https://charts.jetstack.io --force-update
 	$(HELM) repo update
 	$(HELM) upgrade $(CERT_MANAGER_RELEASE) jetstack/cert-manager \
 		--install \
@@ -418,7 +418,7 @@ KEYCLOAK_VALUES_FILE ?= test/e2e/keycloak-values.yaml
 KEYCLOAK_EXTRA_ARGS ?=
 .PHONY: install-keycloak
 install-keycloak: ## Install Keycloak via Helm (wait for readiness)
-	$(HELM) repo add bitnami https://charts.bitnami.com/bitnami
+	$(HELM) repo add bitnami https://charts.bitnami.com/bitnami --force-update
 	$(HELM) repo update
 	$(HELM) upgrade $(KEYCLOAK_RELEASE) bitnami/keycloak \
 		--install \

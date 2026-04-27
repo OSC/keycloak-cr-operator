@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"maps"
 	"time"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
@@ -34,10 +35,7 @@ import (
 	"github.com/Nerzal/gocloak/v13"
 )
 
-const (
-	cookieSecretKey    = "cookie-secret"
-	cookieSecretEnvKey = "COOKIE_SECRET"
-)
+// +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
 func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == clientSecretVal &&
@@ -80,10 +78,9 @@ func generateRandomString() (string, error) {
 
 func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (string, error) {
 	log := logf.FromContext(ctx)
-	log.V(1).Info("Begin get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	log.V(1).Info("Begin get secret")
 	secret := &corev1.Secret{}
-	log.V(1).Info("Get secret", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name,
-		"secret", keycloakClient.Spec.ClientSecretRef.Name, "key", keycloakClient.Spec.ClientSecretRef.Key)
+	log.V(1).Info("Get secret", "secret", keycloakClient.Spec.ClientSecretRef.Name, "key", keycloakClient.Spec.ClientSecretRef.Key)
 
 	// Set up retry logic with timeout
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, *r.SecretWaitTimeout)
@@ -157,9 +154,9 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			return err
 		}
 		if keycloakClient.Spec.ClientSecretRef.EnvVarKeys == nil || (keycloakClient.Spec.ClientSecretRef.EnvVarKeys != nil && *keycloakClient.Spec.ClientSecretRef.EnvVarKeys) {
-			secret.StringData[cookieSecretEnvKey] = cookieSecret
+			secret.Data[cookieSecretEnvKey] = []byte(cookieSecret)
 		} else {
-			secret.StringData[cookieSecretKey] = cookieSecret
+			secret.Data[cookieSecretKey] = []byte(cookieSecret)
 		}
 
 		err = ctrl.SetControllerReference(keycloakClient, secret, r.Scheme)
@@ -195,10 +192,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 		// if missing during update.
 		err = retry.RetryOnConflict(retry.DefaultRetry, func() error {
 			// Merge the data with existing secret data
-			//nolint:gocritic,modernize
-			for key, value := range secret.StringData {
-				found.Data[key] = []byte(value)
-			}
+			maps.Copy(found.Data, secret.Data)
 			cookieSecret, err := generateRandomString()
 			if err != nil {
 				log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
@@ -212,7 +206,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			}
 			// Add cookie-secret back if it was removed.
 			if _, ok := found.Data[cookieKey]; !ok {
-				found.StringData[cookieKey] = cookieSecret
+				found.Data[cookieKey] = []byte(cookieSecret)
 			}
 
 			// Update the secret with merged data
@@ -228,5 +222,13 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 		log.Info("Updated existing Secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 	}
 
+	err = r.updateChecksum(ctx, secret, keycloakClient)
+	if err != nil {
+		log.Error(err, "Failed to update checksum resource")
+		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateChecksumFailed", "Update",
+			"Failed to update resource checksums for KeycloakClient %s in namespace %s: %s",
+			keycloakClient.Name, keycloakClient.Namespace, err)
+		return err
+	}
 	return nil
 }

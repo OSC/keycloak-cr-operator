@@ -30,6 +30,13 @@ import (
 	. "github.com/onsi/gomega"
 )
 
+var (
+	secretChecksum           string
+	secretChecksumUpdated    string
+	configmapChecksum        string
+	configmapChecksumUpdated string
+)
+
 func KeycloakClientSpec() {
 	Context("KeycloakClient", func() {
 		It("should handle custom resources", func() {
@@ -107,6 +114,17 @@ func KeycloakClientSpec() {
 				g.Expect(issuerUrl).To(Equal("http://keycloak.keycloak.svc.cluster.local/realms/master"))
 			}
 			Eventually(verifyClientConfigMap, 2*time.Minute).Should(Succeed())
+			By("Deployment annotations handled")
+			verifyDeploymentAnnotations := func(g Gomega) {
+				var err error
+				secretChecksum, err = getDeploymentAnnotation("app=nginx", "keycloak.osc.edu/secret-checksum")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment annotation for the secret")
+				g.Expect(secretChecksum).NotTo(BeEmpty())
+				configmapChecksum, err = getDeploymentAnnotation("app=nginx", "keycloak.osc.edu/configmap-checksum")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment annotation for the configmap")
+				g.Expect(configmapChecksum).NotTo(BeEmpty())
+			}
+			Eventually(verifyDeploymentAnnotations, 2*time.Minute).Should(Succeed())
 			By("Client updated in Keycloak")
 			verifyClientUpdates := func(g Gomega) {
 				cmd := exec.Command("kubectl", "patch", "keycloakclient", "keycloakclient-sample",
@@ -150,6 +168,19 @@ func KeycloakClientSpec() {
 				g.Expect(clientID).To(Equal("kubernetes-foo"))
 			}
 			Eventually(verifyClientUpdatesConfigMap, 2*time.Minute).Should(Succeed())
+			By("Deployment annotations updated")
+			verifyDeploymentUpdatedAnnotations := func(g Gomega) {
+				var err error
+				secretChecksumUpdated, err = getDeploymentAnnotation("app=nginx", "keycloak.osc.edu/secret-checksum")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment annotation for the secret")
+				g.Expect(secretChecksumUpdated).NotTo(BeEmpty())
+				g.Expect(secretChecksumUpdated).NotTo(Equal(secretChecksum))
+				configmapChecksumUpdated, err = getDeploymentAnnotation("app=nginx", "keycloak.osc.edu/configmap-checksum")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment annotation for the configmap")
+				g.Expect(configmapChecksumUpdated).NotTo(BeEmpty())
+				g.Expect(configmapChecksumUpdated).To(Equal(configmapChecksum))
+			}
+			Eventually(verifyDeploymentUpdatedAnnotations, 2*time.Minute).Should(Succeed())
 
 			By("Testing webhook validation with invalid client creation")
 			// Test creating an invalid KeycloakClient resource (missing ClientID)

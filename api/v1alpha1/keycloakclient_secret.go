@@ -59,22 +59,22 @@ func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret s
 	} else {
 		clientID = *k.Spec.ClientID
 	}
-	data := make(map[string]string)
+	data := make(map[string][]byte)
 	if envVarKeys {
-		data["CLIENT_ID"] = clientID
+		data["CLIENT_ID"] = []byte(clientID)
 		key = strcase.UpperSnakeCase(defKey)
 	} else {
-		data["client-id"] = clientID
+		data["client-id"] = []byte(clientID)
 		key = defKey
 	}
-	data[key] = clientSecret
+	data[key] = []byte(clientSecret)
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: k.Namespace,
 			Name:      name,
 		},
-		StringData: data,
+		Data: data,
 	}, nil
 }
 

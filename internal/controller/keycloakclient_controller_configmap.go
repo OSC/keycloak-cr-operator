@@ -27,10 +27,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
 
-// handleConfigMap creates or updates the corev1.ConfigMap resource for the KeycloakClient
+// +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
+
 func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
 	log := logf.FromContext(ctx)
-	log.V(1).Info("Handle Keycloak Client ConfigMap", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name)
+	log.V(1).Info("Handle Keycloak Client ConfigMap")
 
 	// Get the config map using the GetConfigMap method from the KeycloakClient
 	configMap := keycloakClient.GetConfigMap(r.Config)
@@ -83,6 +84,15 @@ func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloak
 			return err
 		}
 		log.Info("Updated existing ConfigMap", "configMap.Namespace", configMap.Namespace, "configMap.Name", configMap.Name)
+	}
+
+	err = r.updateChecksum(ctx, configMap, keycloakClient)
+	if err != nil {
+		log.Error(err, "Failed to update checksum resource")
+		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateChecksumFailed", "Update",
+			"Failed to update resource checksums for KeycloakClient %s in namespace %s: %s",
+			keycloakClient.Name, keycloakClient.Namespace, err)
+		return err
 	}
 
 	return nil
