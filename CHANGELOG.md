@@ -1,3 +1,8 @@
+## v0.0.5 - 2026-05-28
+
+* Build arm64 images and setup cluster role aggregate labels (#36)
+* Ensure metric certs are getting used (#37)
+
 ## v0.0.4 - 2026-03-24
 
 * Include PROVIDER_URL in the KeycloakClient ConfigMap (#32)
