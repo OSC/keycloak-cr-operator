@@ -8,8 +8,8 @@ metadata:
   namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
 spec:
   dnsNames:
-  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "controller-manager-metrics-service" "context" $) }}.{{ include "keycloak-cr-operator.namespaceName" $ }}.svc
-  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "controller-manager-metrics-service" "context" $) }}.{{ include "keycloak-cr-operator.namespaceName" $ }}.svc.cluster.local
+  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ include "keycloak-cr-operator.namespaceName" $ }}.svc
+  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ include "keycloak-cr-operator.namespaceName" $ }}.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "selfsigned-issuer" "context" $) }}
