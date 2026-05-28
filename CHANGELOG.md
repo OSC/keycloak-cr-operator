@@ -1,3 +1,7 @@
+## v0.0.6 - 2026-05-28
+
+* Fix metrics cert dns names and release v0.0.6 (#39)
+
 ## v0.0.5 - 2026-05-28
 
 * Build arm64 images and setup cluster role aggregate labels (#36)
