@@ -1,3 +1,7 @@
+## v0.0.7 - 2026-06-04
+
+* Create Secret when using publicClient=true (#40)
+
 ## v0.0.6 - 2026-05-28
 
 * Fix metrics cert dns names and release v0.0.6 (#39)

@@ -47,6 +47,7 @@ const metricsRoleBindingName = "keycloak-cr-operator-metrics-binding"
 
 const keycloakClientManifest = "config/samples/keycloak_v1alpha1_keycloakclient.yaml"
 const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha1_keycloakclient_with_secret.yaml"
+const keycloakClientManifestPublic = "config/samples/keycloak_v1alpha1_keycloakclient_public.yaml"
 
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
