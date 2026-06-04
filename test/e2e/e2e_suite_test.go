@@ -123,7 +123,6 @@ func getSecret(name, key string) (string, error) {
 			fmt.Sprintf("--template={{ index .data \"%s\"}}", key))
 		output, err := utils.Run(cmd)
 		g.Expect(err).NotTo(HaveOccurred())
-		g.Expect(output).NotTo(BeEmpty())
 		fmt.Printf("Returned secret: %s", output)
 		decodedBytes, err := base64.StdEncoding.DecodeString(strings.TrimSpace(output))
 		g.Expect(err).NotTo(HaveOccurred())

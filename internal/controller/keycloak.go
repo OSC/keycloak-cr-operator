@@ -80,6 +80,9 @@ func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient
 			return nil, err
 		}
 		client.Secret = secret.Value
+	} else {
+		emptyStr := ""
+		client.Secret = &emptyStr
 	}
 	return client, nil
 }
