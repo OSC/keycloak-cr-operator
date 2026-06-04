@@ -39,19 +39,9 @@ const (
 	cookieSecretEnvKey = "COOKIE_SECRET"
 )
 
-func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
-	if keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == clientSecretVal &&
-		keycloakClient.Spec.PublicClient != nil && !*keycloakClient.Spec.PublicClient {
-		return true
-	} else {
-		return false
-	}
-}
-
 func shouldLookupSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
-		keycloakClient.Spec.ClientSecretRef.Create != nil && !*keycloakClient.Spec.ClientSecretRef.Create &&
-		usesClientSecret(keycloakClient) {
+		keycloakClient.Spec.ClientSecretRef.Create != nil && !*keycloakClient.Spec.ClientSecretRef.Create {
 		return true
 	} else {
 		return false
@@ -60,8 +50,7 @@ func shouldLookupSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 
 func shouldCreateSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
-		keycloakClient.Spec.ClientSecretRef.Create != nil && *keycloakClient.Spec.ClientSecretRef.Create &&
-		usesClientSecret(keycloakClient) {
+		keycloakClient.Spec.ClientSecretRef.Create != nil && *keycloakClient.Spec.ClientSecretRef.Create {
 		return true
 	} else {
 		return false
