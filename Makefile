@@ -24,6 +24,8 @@ CRDOC_IMAGE = ghcr.io/fybrik/crdoc:latest
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+SED := $(shell command -v gsed 2>/dev/null || echo sed)
+
 .PHONY: all
 all: build
 
@@ -50,6 +52,11 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(CONTAINER_TOOL) run --rm -v $(shell pwd):/workdir $(CRDOC_IMAGE) --resources /workdir/config/crd/bases --output /workdir/docs/crds.md
+	@echo Copy CRD to Helm chart
+	@cp -f config/crd/bases/keycloak.osc.edu_keycloakclients.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	@$(SED) -i '1i {{- if .Values.crd.enable }}' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	@$(SED) -i 's/annotations:/annotations: {{ toYaml .Values.crd.annotations | nindent 4 }}/g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	@echo "{{- end }}" >> charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -367,6 +374,12 @@ helm-history: ## Show Helm release history.
 .PHONY: helm-rollback
 helm-rollback: ## Rollback to previous Helm release.
 	$(HELM) rollback $(HELM_RELEASE) --namespace $(HELM_NAMESPACE)
+
+.PHONY: helm-bump-version
+helm-bump-version:
+	$(if $(VERSION),,$(error VERSION is not set!))
+	yq -i '.version = "$(VERSION)"' charts/keycloak-cr-operator/Chart.yaml
+	yq -i '.appVersion = "$(VERSION)"' charts/keycloak-cr-operator/Chart.yaml
 
 ## Namespace to deploy the cert-manager Helm release
 CERT_MANAGER_NAMESPACE ?= cert-manager

@@ -31,6 +31,7 @@ import (
 func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret string) (*corev1.Secret, error) {
 	var defKey, key, name, clientID string
 	var envVarKeys bool
+	var keyPrefix string
 	if k.Spec.ClientSecretRef != nil {
 		name = k.Spec.ClientSecretRef.Name
 		defKey = k.Spec.ClientSecretRef.Key
@@ -38,6 +39,9 @@ func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret s
 			envVarKeys = true
 		} else {
 			envVarKeys = *k.Spec.ClientSecretRef.EnvVarKeys
+		}
+		if k.Spec.ClientSecretRef.KeyPrefix != nil {
+			keyPrefix = *k.Spec.ClientSecretRef.KeyPrefix
 		}
 	} else {
 		name = fmt.Sprintf("%s-secret", k.Name)
@@ -59,15 +63,23 @@ func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret s
 	} else {
 		clientID = *k.Spec.ClientID
 	}
+	realm := config.DefaultRealm
+	if k.Spec.Realm != nil && *k.Spec.Realm != "" {
+		realm = *k.Spec.Realm
+	}
+	issuerUrl := config.KeycloakURL.JoinPath("realms", realm)
+
 	data := make(map[string]string)
 	if envVarKeys {
-		data["CLIENT_ID"] = clientID
+		data[fmt.Sprintf("%sCLIENT_ID", keyPrefix)] = clientID
 		key = strcase.UpperSnakeCase(defKey)
+		data[fmt.Sprintf("%sISSUER_URL", keyPrefix)] = issuerUrl.String()
 	} else {
-		data["client-id"] = clientID
+		data[fmt.Sprintf("%sclient-id", keyPrefix)] = clientID
 		key = defKey
+		data[fmt.Sprintf("%sissuer-url", keyPrefix)] = issuerUrl.String()
 	}
-	data[key] = clientSecret
+	data[fmt.Sprintf("%s%s", keyPrefix, key)] = clientSecret
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{

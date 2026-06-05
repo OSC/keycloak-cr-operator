@@ -75,6 +75,10 @@ spec:
                     description: The key of the secret to select from.  Must be a
                       valid secret key.
                     type: string
+                  keyPrefix:
+                    default: ""
+                    description: The prefix for secret keys
+                    type: string
                   name:
                     default: ""
                     description: |-

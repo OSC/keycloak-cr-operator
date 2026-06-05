@@ -38,7 +38,8 @@ func KeycloakClientSpec() {
 				cmd := exec.Command("kubectl", "apply",
 					"-f", keycloakClientManifest,
 					"-f", keycloakClientManifestWithSecret,
-					"-f", keycloakClientManifestPublic)
+					"-f", keycloakClientManifestPublic,
+					"-f", keycloakClientManifestHeadlamp)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("created")))
@@ -205,7 +206,8 @@ spec:
 				cmd := exec.Command("kubectl", "delete",
 					"-f", keycloakClientManifest,
 					"-f", keycloakClientManifestWithSecret,
-					"-f", keycloakClientManifestPublic)
+					"-f", keycloakClientManifestPublic,
+					"-f", keycloakClientManifestHeadlamp)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("deleted"), ContainSubstring("not found")))

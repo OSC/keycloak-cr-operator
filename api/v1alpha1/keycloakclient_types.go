@@ -219,6 +219,10 @@ type KeycloakClientSecret struct {
 	// +kubebuilder:default=true
 	// +optional
 	EnvVarKeys *bool `json:"envVarKeys,omitempty"`
+	// The prefix for secret keys
+	// +kubebuilder:default=""
+	// +optional
+	KeyPrefix *string `json:"keyPrefix,omitempty"`
 }
 
 // Defines the structure for ConfigMap configuration

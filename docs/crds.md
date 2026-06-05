@@ -395,6 +395,15 @@ Reference to the secret holding the ClientSecret
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>keyPrefix</b></td>
+        <td>string</td>
+        <td>
+          The prefix for secret keys<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
