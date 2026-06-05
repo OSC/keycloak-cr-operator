@@ -247,17 +247,140 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(secret.Data).To(HaveKey("CLIENT_SECRET"))
 			Expect(secret.Data).NotTo(HaveKey("cookie-secret"))
 			Expect(secret.Data).To(HaveKey("COOKIE_SECRET"))
+			Expect(secret.Data).NotTo(HaveKey("issuer-url"))
+			Expect(secret.Data).To(HaveKey("ISSUER_URL"))
 			clientId, ok := secret.Data["CLIENT_ID"]
 			Expect(ok).To(BeTrue())
 			Expect(string(clientId)).To(Equal("test-client-with-secret"))
 			cookieSecret, ok := secret.Data["COOKIE_SECRET"]
 			Expect(ok).To(BeTrue())
 			Expect(string(cookieSecret)).To(Not(BeEmpty()))
+			issuerUrl, ok := secret.Data["ISSUER_URL"]
+			Expect(ok).To(BeTrue())
+			Expect(string(issuerUrl)).To(Equal("http://keycloak.keycloak.svc/realms/master"))
 
 			// Verify the secret has the correct owner reference
 			controllerRefs := secret.GetOwnerReferences()
 			Expect(controllerRefs).To(HaveLen(1))
 			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-secret"))
+			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
+
+			// Verify that all expectations were met
+			mockServer.AssertExpectations(GinkgoT())
+		})
+
+		It("should handle secret creation when ClientSecretRef is configured and keyPrefix=OIDC_", func() {
+			By("Creating a KeycloakClient with ClientSecretRef")
+
+			// Create a KeycloakClient with ClientSecretRef configuration
+			clientID := "test-client-with-key-prefix"
+			keycloakClientWithSecret := &keycloakv1alpha1.KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-keycloak-client-with-key-prefix",
+					Namespace: "default",
+				},
+				Spec: keycloakv1alpha1.KeycloakClientSpec{
+					ClientID:                &clientID,
+					Realm:                   stringPtr("master"),
+					ClientAuthenticatorType: stringPtr("client-secret"),
+					PublicClient:            boolPtr(false),
+					ClientSecretRef: &keycloakv1alpha1.KeycloakClientSecret{
+						SecretKeySelector: corev1.SecretKeySelector{
+							LocalObjectReference: corev1.LocalObjectReference{
+								Name: "test-client-key-prefix",
+							},
+							Key: "client-secret",
+						},
+						Create:     boolPtr(true),
+						EnvVarKeys: boolPtr(true),
+						KeyPrefix:  stringPtr("OIDC_"),
+					},
+				},
+			}
+
+			// Create the resource in the test cluster
+			Expect(k8sClient.Create(ctx, keycloakClientWithSecret)).To(Succeed())
+
+			// Clean up after test
+			DeferCleanup(func() {
+				Expect(k8sClient.Delete(ctx, keycloakClientWithSecret)).To(Succeed())
+			})
+
+			// Create a mock GoCloak client that returns a secret
+			mockServer := new(MockGoCloak)
+			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
+				AccessToken: "test-token",
+			}, nil)
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
+
+			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
+				{
+					ID:       stringPtr("test"),
+					ClientID: stringPtr("test"),
+				},
+			}, nil).Once()
+
+			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
+
+			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
+				Value: stringPtr("secret"),
+			}, nil)
+
+			controllerReconciler := &KeycloakClientReconciler{
+				Client: k8sClient,
+				Scheme: k8sClient.Scheme(),
+				Server: mockServer,
+				Config: &models.KeycloakConfig{
+					KeycloakURL: &url.URL{
+						Scheme: "http",
+						Host:   "keycloak.keycloak.svc",
+					},
+					AdminUsername:  "admin",
+					AdminPassword:  "password",
+					AdminRealm:     "master",
+					ClientIDPrefix: "kubernetes",
+				},
+			}
+
+			// Reconcile the resource
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: types.NamespacedName{
+					Name:      "test-keycloak-client-with-key-prefix",
+					Namespace: "default",
+				},
+			})
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify that the secret was created
+			secret := &corev1.Secret{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-client-key-prefix",
+				Namespace: "default",
+			}, secret)
+			Expect(err).NotTo(HaveOccurred())
+			Expect(secret.Data).NotTo(HaveKey("client-id"))
+			Expect(secret.Data).To(HaveKey("OIDC_CLIENT_ID"))
+			Expect(secret.Data).NotTo(HaveKey("client-secret"))
+			Expect(secret.Data).To(HaveKey("OIDC_CLIENT_SECRET"))
+			Expect(secret.Data).NotTo(HaveKey("cookie-secret"))
+			Expect(secret.Data).To(HaveKey("OIDC_COOKIE_SECRET"))
+			Expect(secret.Data).NotTo(HaveKey("issuer-url"))
+			Expect(secret.Data).To(HaveKey("OIDC_ISSUER_URL"))
+			clientId, ok := secret.Data["OIDC_CLIENT_ID"]
+			Expect(ok).To(BeTrue())
+			Expect(string(clientId)).To(Equal("test-client-with-key-prefix"))
+			cookieSecret, ok := secret.Data["OIDC_COOKIE_SECRET"]
+			Expect(ok).To(BeTrue())
+			Expect(string(cookieSecret)).To(Not(BeEmpty()))
+			issuerUrl, ok := secret.Data["OIDC_ISSUER_URL"]
+			Expect(ok).To(BeTrue())
+			Expect(string(issuerUrl)).To(Equal("http://keycloak.keycloak.svc/realms/master"))
+
+			// Verify the secret has the correct owner reference
+			controllerRefs := secret.GetOwnerReferences()
+			Expect(controllerRefs).To(HaveLen(1))
+			Expect(controllerRefs[0].Name).To(Equal("test-keycloak-client-with-key-prefix"))
 			Expect(controllerRefs[0].Kind).To(Equal("KeycloakClient"))
 
 			// Verify that all expectations were met
@@ -359,12 +482,17 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(secret.Data).NotTo(HaveKey("CLIENT_SECRET"))
 			Expect(secret.Data).To(HaveKey("cookie-secret"))
 			Expect(secret.Data).NotTo(HaveKey("COOKIE_SECRET"))
+			Expect(secret.Data).To(HaveKey("issuer-url"))
+			Expect(secret.Data).NotTo(HaveKey("ISSUER_URL"))
 			clientId, ok := secret.Data["client-id"]
 			Expect(ok).To(BeTrue())
 			Expect(string(clientId)).To(Equal("test-client-with-secret"))
 			cookieSecret, ok := secret.Data["cookie-secret"]
 			Expect(ok).To(BeTrue())
 			Expect(string(cookieSecret)).To(Not(BeEmpty()))
+			issuerUrl, ok := secret.Data["issuer-url"]
+			Expect(ok).To(BeTrue())
+			Expect(string(issuerUrl)).To(Equal("http://keycloak.keycloak.svc/realms/master"))
 
 			// Verify the secret has the correct owner reference
 			controllerRefs := secret.GetOwnerReferences()

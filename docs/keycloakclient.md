@@ -121,6 +121,8 @@ spec:
     create: true
     # Use EnvVar keys in Secret
     envVarKeys: true
+    # Prefix for secret keys
+    keyPrefix: ""
   configMap:
     name: my-client-config
     # Use EnvVar keys in ConfigMap
@@ -146,10 +148,13 @@ The operator creates Kubernetes Secrets containing client credentials with the f
 - `CLIENT_ID`: The client ID
 - `CLIENT_SECRET`: The client secret value
 - `COOKIE_SECRET`: A randomly generated secret used for OAuth2 Proxy cookie encryption
+- `ISSUER_URL`: The issuer URL for OpenID Connect
 
 The `COOKIE_SECRET` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
 
-When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-id`, `client-secret` and `cookie-secret` keys.
+When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-id`, `client-secret`, `cookie-secret` and `issuer-url` keys.
+
+Set `keyPrefix` to give all Secret keys a prefix.
 
 Example Secret structure:
 ```yaml
@@ -163,6 +168,7 @@ data:
   CLIENT_ID: "example-client"
   CLIENT_SECRET: <base64-encoded-secret>
   COOKIE_SECRET: <base64-encoded-cookie-secret>
+  ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
 ```
 
 ## ConfigMap Creation
