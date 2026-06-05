@@ -1,3 +1,7 @@
+## v0.0.8 - 2026-06-05
+
+* Add keyPrefix to clientSecretRef for KeycloakClient (#41)
+
 ## v0.0.7 - 2026-06-04
 
 * Create Secret when using publicClient=true (#40)
