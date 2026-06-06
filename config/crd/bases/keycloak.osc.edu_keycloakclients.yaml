@@ -25,9 +25,9 @@ spec:
       name: Realm
       priority: 10
       type: string
-    - description: The readiness status of the resource
-      jsonPath: .status.conditions[?(@.type=="Ready")].status
-      name: Ready
+    - description: The availability status of the resource
+      jsonPath: .status.conditions[?(@.type=="Available")].status
+      name: Available
       type: string
     name: v1alpha1
     schema:

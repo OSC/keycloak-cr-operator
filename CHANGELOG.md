@@ -1,3 +1,7 @@
+## v0.0.11 - 2026-06-06
+
+* Fix printer columns for keycloakclient (#45)
+
 ## v0.0.10 - 2026-06-06
 
 * Set printer columns for keycloakclient (#44)
