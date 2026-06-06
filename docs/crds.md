@@ -279,6 +279,13 @@ spec defines the desired state of KeycloakClient
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#keycloakclientspecprotocolmappersindex">protocolMappers</a></b></td>
+        <td>[]object</td>
+        <td>
+          ProtocolMappers for the client<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>publicClient</b></td>
         <td>boolean</td>
         <td>
@@ -395,6 +402,15 @@ Reference to the secret holding the ClientSecret
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>keyPrefix</b></td>
+        <td>string</td>
+        <td>
+          The prefix for secret keys<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
@@ -448,6 +464,91 @@ The ConfigMap configuration
         <td>string</td>
         <td>
           The ConfigMap name, will default to "<name>-config"<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+### KeycloakClient.spec.protocolMappers[index]
+<sup><sup>[↩ Parent](#keycloakclientspec)</sup></sup>
+
+
+
+
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          Name of the protocol mapper<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>type</b></td>
+        <td>string</td>
+        <td>
+          The protocol mapper type<br/>
+        </td>
+        <td>true</td>
+      </tr><tr>
+        <td><b>accessTokenClaim</b></td>
+        <td>boolean</td>
+        <td>
+          Is this access claim token<br/>
+          <br/>
+            <i>Default</i>: true<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>config</b></td>
+        <td>map[string]string</td>
+        <td>
+          Additional configs<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>consentRequired</b></td>
+        <td>boolean</td>
+        <td>
+          Consent required<br/>
+          <br/>
+            <i>Default</i>: false<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>idTokenClaim</b></td>
+        <td>boolean</td>
+        <td>
+          Is this ID claim token<br/>
+          <br/>
+            <i>Default</i>: true<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>includedClientAudience</b></td>
+        <td>string</td>
+        <td>
+          Included client audience
+Required for type=oidc-audience-mapper<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>protocol</b></td>
+        <td>string</td>
+        <td>
+          The protocol mapper protocol<br/>
+          <br/>
+            <i>Default</i>: openid-connect<br/>
         </td>
         <td>false</td>
       </tr></tbody>

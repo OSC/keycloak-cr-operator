@@ -1,0 +1,25 @@
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-cr-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: keycloakclient-test-public
+  namespace: default
+spec:
+  clientID: kubernetes-default-keycloakclient-test-public
+  realm: master
+  clientSecretRef:
+    name: keycloak-test-public
+    key: CLIENT_SECRET
+    create: true
+  redirectUris:
+    - https://example.com/*
+    - https://example.test.com/*
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
+  configMap:
+    name: keycloak-config-public
+  publicClient: true

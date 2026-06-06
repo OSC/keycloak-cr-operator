@@ -76,6 +76,9 @@ spec:
         {{- if .Values.manager.config.clientIdRequired }}
         - --keycloak-client-id-required={{ .Values.manager.config.clientIdRequired }}
         {{- end }}
+        {{- if and .Values.certManager.enable .Values.metrics.enable }}
+        - --metrics-cert-path=/tmp/k8s-metrics-server/metrics-certs
+        {{- end }}
         {{- if .Values.certManager.enable }}
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
         {{- end }}
@@ -120,6 +123,11 @@ spec:
           {}
           {{- end }}
         volumeMounts:
+        {{- if and .Values.certManager.enable .Values.metrics.enable }}
+        - mountPath: /tmp/k8s-metrics-server/metrics-certs
+          name: metrics-certs
+          readOnly: true
+        {{- end }}
         {{- if .Values.certManager.enable }}
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-certs
@@ -134,6 +142,19 @@ spec:
       serviceAccountName: {{ include "keycloak-cr-operator.serviceAccountName" . }}
       terminationGracePeriodSeconds: 10
       volumes:
+      {{- if and .Values.certManager.enable .Values.metrics.enable }}
+      - name: metrics-certs
+        secret:
+          items:
+          - key: ca.crt
+            path: ca.crt
+          - key: tls.crt
+            path: tls.crt
+          - key: tls.key
+            path: tls.key
+          optional: false
+          secretName: metrics-server-cert
+      {{- end }}
       {{- if .Values.certManager.enable }}
       - name: webhook-certs
         secret:

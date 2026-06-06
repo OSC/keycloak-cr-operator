@@ -1,6 +1,6 @@
 # keycloak-cr-operator
 
-![Version: v0.0.4](https://img.shields.io/badge/Version-v0.0.4-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v0.0.4](https://img.shields.io/badge/AppVersion-v0.0.4-informational?style=flat-square)
+![Version: v0.0.9](https://img.shields.io/badge/Version-v0.0.9-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: v0.0.9](https://img.shields.io/badge/AppVersion-v0.0.9-informational?style=flat-square)
 
 A Helm chart to distribute keycloak-cr-operator
 
@@ -52,7 +52,7 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | manager.tolerations | list | `[]` | Manager pod's tolerations |
 | rbacHelpers.enable | bool | `false` | Install convenience admin/editor/viewer roles for CRDs |
 | crd.enable | bool | `true` | Install CRDs with the chart |
-| crd.keep | bool | `true` | Keep CRDs when uninstalling |
+| crd.annotations."helm.sh/resource-policy" | string | `"keep"` | Keep CRDs when uninstalling |
 | metrics.enable | bool | `true` | Enable to expose /metrics endpoint with RBAC protection |
 | metrics.protocol | string | `"https"` | Metrics protocol (http or https) |
 | metrics.ports | object | `{"http":8080,"https":8443}` | Metrics server ports.  Only supports http and https keys |

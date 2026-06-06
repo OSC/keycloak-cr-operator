@@ -1,3 +1,24 @@
+## v0.0.9 - 2026-06-06
+
+* Support protocolMappers on keycloakclient (#43)
+
+## v0.0.8 - 2026-06-05
+
+* Add keyPrefix to clientSecretRef for KeycloakClient (#41)
+
+## v0.0.7 - 2026-06-04
+
+* Create Secret when using publicClient=true (#40)
+
+## v0.0.6 - 2026-05-28
+
+* Fix metrics cert dns names and release v0.0.6 (#39)
+
+## v0.0.5 - 2026-05-28
+
+* Build arm64 images and setup cluster role aggregate labels (#36)
+* Ensure metric certs are getting used (#37)
+
 ## v0.0.4 - 2026-03-24
 
 * Include PROVIDER_URL in the KeycloakClient ConfigMap (#32)

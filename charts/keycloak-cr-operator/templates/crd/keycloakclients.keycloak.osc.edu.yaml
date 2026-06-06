@@ -1,11 +1,9 @@
 {{- if .Values.crd.enable }}
+---
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
-  annotations:
-    {{- if .Values.crd.keep }}
-    "helm.sh/resource-policy": keep
-    {{- end }}
+  annotations: {{ toYaml .Values.crd.annotations | nindent 4 }}
     controller-gen.kubebuilder.io/version: v0.20.1
   name: keycloakclients.keycloak.osc.edu
 spec:
@@ -77,6 +75,10 @@ spec:
                   key:
                     description: The key of the secret to select from.  Must be a
                       valid secret key.
+                    type: string
+                  keyPrefix:
+                    default: ""
+                    description: The prefix for secret keys
                     type: string
                   name:
                     default: ""
@@ -173,6 +175,47 @@ spec:
                 enum:
                 - openid-connect
                 type: string
+              protocolMappers:
+                description: ProtocolMappers for the client
+                items:
+                  properties:
+                    accessTokenClaim:
+                      default: true
+                      description: Is this access claim token
+                      type: boolean
+                    config:
+                      additionalProperties:
+                        type: string
+                      description: Additional configs
+                      type: object
+                    consentRequired:
+                      default: false
+                      description: Consent required
+                      type: boolean
+                    idTokenClaim:
+                      default: true
+                      description: Is this ID claim token
+                      type: boolean
+                    includedClientAudience:
+                      description: |-
+                        Included client audience
+                        Required for type=oidc-audience-mapper
+                      type: string
+                    name:
+                      description: Name of the protocol mapper
+                      type: string
+                    protocol:
+                      default: openid-connect
+                      description: The protocol mapper protocol
+                      type: string
+                    type:
+                      description: The protocol mapper type
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
               publicClient:
                 default: false
                 description: PublicClient indicates if the client is public

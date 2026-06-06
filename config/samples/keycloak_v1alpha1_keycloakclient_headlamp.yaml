@@ -1,0 +1,30 @@
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-cr-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: keycloakclient-headlamp
+  namespace: default
+spec:
+  clientID: kubernetes-default-keycloakclient-headlamp
+  realm: master
+  clientSecretRef:
+    name: keycloak-headlamp
+    key: CLIENT_SECRET
+    create: true
+    envVarKeys: true
+    keyPrefix: OIDC_
+  redirectUris:
+    - https://example.com/*
+    - https://example.test.com/*
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
+  configMap:
+    name: keycloak-headlamp
+  protocolMappers:
+    - name: kubernetes
+      type: oidc-audience-mapper
+      includedClientAudience: kubernetes

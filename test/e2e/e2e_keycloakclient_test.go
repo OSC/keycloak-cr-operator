@@ -44,7 +44,9 @@ func KeycloakClientSpec() {
 			verifyKeycloakClientResource := func(g Gomega) {
 				cmd := exec.Command("kubectl", "apply",
 					"-f", keycloakClientManifest,
-					"-f", keycloakClientManifestWithSecret)
+					"-f", keycloakClientManifestWithSecret,
+					"-f", keycloakClientManifestPublic,
+					"-f", keycloakClientManifestHeadlamp)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("created")))
@@ -91,6 +93,8 @@ func KeycloakClientSpec() {
 				g.Expect(*client.Secret).To(Equal("sample-secret"))
 				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
 				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
+				client = getKeycloakClient("kubernetes-default-keycloakclient-headlamp", "master")
+				g.Expect(*client.ProtocolMappers).To(HaveLen(1))
 			}
 			Eventually(verifyClientExists, 2*time.Minute).Should(Succeed())
 			By("Keycloak client secrets handled")
@@ -105,6 +109,26 @@ func KeycloakClientSpec() {
 				secret, err = getSecret("keycloak-test", "COOKIE_SECRET")
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve cookie-secret")
 				g.Expect(secret).NotTo(BeEmpty())
+
+				client = getKeycloakClient("kubernetes-default-keycloakclient-test-public", "master")
+				clientID, err = getSecret("keycloak-test-public", "CLIENT_ID")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(*client.ClientID).To(Equal(clientID))
+				secret, err = getSecret("keycloak-test-public", "CLIENT_SECRET")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(secret).To(BeEmpty())
+
+				client = getKeycloakClient("kubernetes-default-keycloakclient-headlamp", "master")
+				clientID, err = getSecret("keycloak-headlamp", "OIDC_CLIENT_ID")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(*client.ClientID).To(Equal(clientID))
+				secret, err = getSecret("keycloak-headlamp", "OIDC_CLIENT_SECRET")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(secret).NotTo(BeEmpty())
+				issuerUrl, err := getSecret("keycloak-headlamp", "OIDC_ISSUER_URL")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve issuer-url")
+				g.Expect(issuerUrl).To(Equal("http://keycloak.keycloak.svc.cluster.local/realms/master"))
+
 			}
 			Eventually(verifyClientSecrets, 2*time.Minute).Should(Succeed())
 			By("Keycloak client configmap handled")
@@ -226,7 +250,9 @@ spec:
 			deleteClients := func(g Gomega) {
 				cmd := exec.Command("kubectl", "delete",
 					"-f", keycloakClientManifest,
-					"-f", keycloakClientManifestWithSecret)
+					"-f", keycloakClientManifestWithSecret,
+					"-f", keycloakClientManifestPublic,
+					"-f", keycloakClientManifestHeadlamp)
 				output, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(output).To(Or(ContainSubstring("deleted"), ContainSubstring("not found")))

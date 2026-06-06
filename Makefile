@@ -24,6 +24,8 @@ CRDOC_IMAGE = ghcr.io/fybrik/crdoc:latest
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+SED := $(shell command -v gsed 2>/dev/null || echo sed)
+
 .PHONY: all
 all: build
 
@@ -50,6 +52,11 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(CONTAINER_TOOL) run --rm -v $(shell pwd):/workdir $(CRDOC_IMAGE) --resources /workdir/config/crd/bases --output /workdir/docs/crds.md
+	@echo Copy CRD to Helm chart
+	@cp -f config/crd/bases/keycloak.osc.edu_keycloakclients.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	@$(SED) -i '1i {{- if .Values.crd.enable }}' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	@$(SED) -i 's/annotations:/annotations: {{ toYaml .Values.crd.annotations | nindent 4 }}/g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	@echo "{{- end }}" >> charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -189,7 +196,7 @@ docker-push: ## Push docker image with the manager.
 # - have enabled BuildKit. More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 # - be able to push the image to your registry (i.e. if you do not set a valid value via IMG=<myregistry/image:<tag>> then the export will fail)
 # To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
-PLATFORMS ?= linux/arm64,linux/amd64,linux/s390x,linux/ppc64le
+PLATFORMS ?= linux/arm64,linux/amd64
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for the manager for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
@@ -367,6 +374,12 @@ helm-history: ## Show Helm release history.
 .PHONY: helm-rollback
 helm-rollback: ## Rollback to previous Helm release.
 	$(HELM) rollback $(HELM_RELEASE) --namespace $(HELM_NAMESPACE)
+
+.PHONY: helm-bump-version
+helm-bump-version:
+	$(if $(VERSION),,$(error VERSION is not set!))
+	yq -i '.version = "$(VERSION)"' charts/keycloak-cr-operator/Chart.yaml
+	yq -i '.appVersion = "$(VERSION)"' charts/keycloak-cr-operator/Chart.yaml
 
 ## Namespace to deploy the cert-manager Helm release
 CERT_MANAGER_NAMESPACE ?= cert-manager

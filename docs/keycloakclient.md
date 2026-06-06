@@ -7,6 +7,7 @@
 - [Creating a Secret Automatically](#creating-a-secret-automatically)
 - [Secret Creation](#secret-creation)
 - [ConfigMap Creation](#configmap-creation)
+- [Protocol Mappers](#protocol-mappers)
 - [ClientID Template Enforcement](#clientid-template-enforcement)
 - [OAuth2 Proxy Integration](#oauth2-proxy-integration)
 - [Checksum Updates for Deployments and StatefulSets](#checksum-updates-for-deployments-and-statefulsets)
@@ -122,6 +123,8 @@ spec:
     create: true
     # Use EnvVar keys in Secret
     envVarKeys: true
+    # Prefix for secret keys
+    keyPrefix: ""
   configMap:
     name: my-client-config
     # Use EnvVar keys in ConfigMap
@@ -147,10 +150,13 @@ The operator creates Kubernetes Secrets containing client credentials with the f
 - `CLIENT_ID`: The client ID
 - `CLIENT_SECRET`: The client secret value
 - `COOKIE_SECRET`: A randomly generated secret used for OAuth2 Proxy cookie encryption
+- `ISSUER_URL`: The issuer URL for OpenID Connect
 
 The `COOKIE_SECRET` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
 
-When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-id`, `client-secret` and `cookie-secret` keys.
+When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-id`, `client-secret`, `cookie-secret` and `issuer-url` keys.
+
+Set `keyPrefix` to give all Secret keys a prefix.
 
 Example Secret structure:
 ```yaml
@@ -164,6 +170,7 @@ data:
   CLIENT_ID: "example-client"
   CLIENT_SECRET: <base64-encoded-secret>
   COOKIE_SECRET: <base64-encoded-cookie-secret>
+  ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
 ```
 
 ## ConfigMap Creation
@@ -224,6 +231,42 @@ spec:
   clientID: "kubernetes-default-example-client"
   realm: "my-realm"
   # Other properties...
+```
+
+## Protocol Mappers
+The KeycloakClient operator now supports configuring protocol mappers for Keycloak clients. Protocol mappers allow you to map information from the authentication process to tokens or other parts of the Keycloak system.
+
+### Configuration
+Protocol mappers can be configured in the `protocolMappers` field of the KeycloakClient spec. Each protocol mapper is defined with the following properties:
+
+- `name` (string, optional): Name of the protocol mapper
+- `protocol` (string, optional): The protocol mapper protocol (defaults to "openid-connect")
+- `type` (string, required): The protocol mapper type
+- `idTokenClaim` (boolean, optional): Is this ID claim token (defaults to true)
+- `accessTokenClaim` (boolean, optional): Is this access claim token (defaults to true)
+- `includedClientAudience` (string, optional): Included client audience (required for type=oidc-audience-mapper)
+- `consentRequired` (boolean, optional): Consent required (defaults to false)
+- `config` (map[string]string, optional): Additional configuration properties
+
+### Example Usage
+```yaml
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: example-client
+  namespace: default
+spec:
+  # Other client properties...
+  
+  # Protocol Mappers configuration
+  protocolMappers:
+    - name: "email mapper"
+      type: "oidc-usermodel-property-mapper"
+      config:
+        user.attribute: "email"
+        claim.name: "email"
+        json.type.label: "String"
+        always.include.in.token: "true"
 ```
 
 ## OAuth2 Proxy Integration
