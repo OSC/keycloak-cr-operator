@@ -481,4 +481,297 @@ func WebhookValidating() {
 
 		})
 	})
+
+	Context("When creating or updating KeycloakClient under Validating Webhook - ProtocolMappers Validation", func() {
+		It("Should allow creation if ProtocolMappers is nil", func() {
+			By("Setting up a client with nil ProtocolMappers")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = nil
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should allow creation if ProtocolMappers is empty slice", func() {
+			By("Setting up a client with empty ProtocolMappers")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{}
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should deny creation if ProtocolMappers has a mapper with missing name", func() {
+			By("Setting up a client with ProtocolMappers that has a mapper with missing name")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     nil, // Missing name
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: stringPtr("openid-connect"),
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("name must be set"))
+		})
+
+		It("Should deny creation if ProtocolMappers has a mapper with empty name", func() {
+			By("Setting up a client with ProtocolMappers that has a mapper with empty name")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr(""), // Empty name
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: stringPtr("openid-connect"),
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("name must be set"))
+		})
+
+		It("Should deny creation if ProtocolMappers has a mapper with missing type", func() {
+			By("Setting up a client with ProtocolMappers that has a mapper with missing type")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("test-mapper"),
+					Type:     nil, // Missing type
+					Protocol: stringPtr("openid-connect"),
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("type must be set"))
+		})
+
+		It("Should deny creation if ProtocolMappers has a mapper with empty type", func() {
+			By("Setting up a client with ProtocolMappers that has a mapper with empty type")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("test-mapper"),
+					Type:     stringPtr(""), // Empty type
+					Protocol: stringPtr("openid-connect"),
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("type must be set"))
+		})
+
+		It("Should deny creation if ProtocolMappers has a mapper with missing protocol", func() {
+			By("Setting up a client with ProtocolMappers that has a mapper with missing protocol")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("test-mapper"),
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: nil, // Missing protocol
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("protocol must be set"))
+		})
+
+		It("Should deny creation if ProtocolMappers has a mapper with empty protocol", func() {
+			By("Setting up a client with ProtocolMappers that has a mapper with empty protocol")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("test-mapper"),
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: stringPtr(""), // Empty protocol
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("protocol must be set"))
+		})
+
+		It("Should allow creation if ProtocolMappers has valid mapper with all required fields", func() {
+			By("Setting up a client with valid ProtocolMappers")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("test-mapper"),
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: stringPtr("openid-connect"),
+				},
+			}
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should deny creation if ProtocolMappers has oidc-audience-mapper with missing includedClientAudience", func() {
+			By("Setting up a client with ProtocolMappers that has oidc-audience-mapper missing includedClientAudience")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("audience-mapper"),
+					Type:     stringPtr("oidc-audience-mapper"),
+					Protocol: stringPtr("openid-connect"),
+					// Missing includedClientAudience
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("includedClientAudience must be set when type is oidc-audience-mapper"))
+		})
+
+		It("Should deny creation if ProtocolMappers has oidc-audience-mapper with empty includedClientAudience", func() {
+			By("Setting up a client with ProtocolMappers that has oidc-audience-mapper with empty includedClientAudience")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:                   stringPtr("audience-mapper"),
+					Type:                   stringPtr("oidc-audience-mapper"),
+					Protocol:               stringPtr("openid-connect"),
+					IncludedClientAudience: stringPtr(""), // Empty includedClientAudience
+				},
+			}
+
+			By("Validating creation should fail")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("includedClientAudience must be set when type is oidc-audience-mapper"))
+		})
+
+		It("Should allow creation if ProtocolMappers has oidc-audience-mapper with valid includedClientAudience", func() {
+			By("Setting up a client with ProtocolMappers that has oidc-audience-mapper with valid includedClientAudience")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:                   stringPtr("audience-mapper"),
+					Type:                   stringPtr("oidc-audience-mapper"),
+					Protocol:               stringPtr("openid-connect"),
+					IncludedClientAudience: stringPtr("test-client"),
+				},
+			}
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should allow creation if ProtocolMappers has multiple valid mappers", func() {
+			By("Setting up a client with multiple valid ProtocolMappers")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("mapper1"),
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: stringPtr("openid-connect"),
+				},
+				{
+					Name:                   stringPtr("mapper2"),
+					Type:                   stringPtr("oidc-audience-mapper"),
+					Protocol:               stringPtr("openid-connect"),
+					IncludedClientAudience: stringPtr("test-client"),
+				},
+			}
+
+			By("Validating creation should succeed")
+			warnings, err := validator.ValidateCreate(ctx, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should validate updates correctly with ProtocolMappers", func() {
+			By("Setting up a valid client with ProtocolMappers")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     stringPtr("test-mapper"),
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: stringPtr("openid-connect"),
+				},
+			}
+
+			By("Validating update should succeed")
+			warnings, err := validator.ValidateUpdate(ctx, oldObj, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).ToNot(HaveOccurred())
+		})
+
+		It("Should deny update if ProtocolMappers has a mapper with missing name", func() {
+			By("Setting up a client with ProtocolMappers that has a mapper with missing name")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+			obj.Spec.ConfigMap = defaultConfigMap
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
+				{
+					Name:     nil, // Missing name
+					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Protocol: stringPtr("openid-connect"),
+				},
+			}
+
+			By("Validating update should fail")
+			warnings, err := validator.ValidateUpdate(ctx, oldObj, obj)
+			Expect(warnings).To(BeNil())
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("name must be set"))
+		})
+	})
 }

@@ -133,6 +133,36 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		}
 	}
 
+	// Apply defaulting to ProtocolMappers
+	if obj.Spec.ProtocolMappers != nil {
+		// Create a new slice with default values applied
+		for _, mapper := range obj.Spec.ProtocolMappers {
+			// Protocol defaults to "openid-connect"
+			if mapper.Protocol == nil {
+				protocol := "openid-connect"
+				mapper.Protocol = &protocol
+			}
+
+			// IDTokenClaim defaults to true
+			if mapper.IDTokenClaim == nil {
+				idTokenClaim := true
+				mapper.IDTokenClaim = &idTokenClaim
+			}
+
+			// AccessTokenClaim defaults to true
+			if mapper.AccessTokenClaim == nil {
+				accessTokenClaim := true
+				mapper.AccessTokenClaim = &accessTokenClaim
+			}
+
+			// ConsentRequired defaults to false
+			if mapper.ConsentRequired == nil {
+				consentRequired := false
+				mapper.ConsentRequired = &consentRequired
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -208,6 +238,11 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 		allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap"), "configMap data must be provided"))
 	}
 
+	protocolMapperErrs := v.validateProtocolMappers(obj)
+	if protocolMapperErrs != nil {
+		allErrs = append(allErrs, protocolMapperErrs...)
+	}
+
 	if len(allErrs) > 0 {
 		return errors.NewInvalid(keycloakv1alpha1.GroupVersion.WithKind("KeycloakClient").GroupKind(), obj.Name, allErrs)
 	}
@@ -245,6 +280,42 @@ func (v *KeycloakClientCustomValidator) validateClientSecretRef(obj *keycloakv1a
 			}
 		}
 	}
+	return allErrs
+}
+
+// validateProtocolMappers validates the ProtocolMappers field of KeycloakClient
+func (v *KeycloakClientCustomValidator) validateProtocolMappers(obj *keycloakv1alpha1.KeycloakClient) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// Validate ProtocolMappers if they exist
+	if obj.Spec.ProtocolMappers != nil {
+		for i, mapper := range obj.Spec.ProtocolMappers {
+			path := field.NewPath("spec", "protocolMappers").Index(i)
+
+			// Name is required
+			if mapper.Name == nil || *mapper.Name == "" {
+				allErrs = append(allErrs, field.Required(path.Child("name"), "name must be set"))
+			}
+
+			// Protocol is required
+			if mapper.Protocol == nil || *mapper.Protocol == "" {
+				allErrs = append(allErrs, field.Required(path.Child("protocol"), "protocol must be set"))
+			}
+
+			// Type is required
+			if mapper.Type == nil || *mapper.Type == "" {
+				allErrs = append(allErrs, field.Required(path.Child("type"), "type must be set"))
+			}
+
+			// If type is oidc-audience-mapper, IncludedClientAudience is required
+			if mapper.Type != nil && *mapper.Type == "oidc-audience-mapper" {
+				if mapper.IncludedClientAudience == nil || *mapper.IncludedClientAudience == "" {
+					allErrs = append(allErrs, field.Required(path.Child("includedClientAudience"), "includedClientAudience must be set when type is oidc-audience-mapper"))
+				}
+			}
+		}
+	}
+
 	return allErrs
 }
 

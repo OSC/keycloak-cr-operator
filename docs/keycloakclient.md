@@ -7,6 +7,7 @@
 - [Creating a Secret Automatically](#creating-a-secret-automatically)
 - [Secret Creation](#secret-creation)
 - [ConfigMap Creation](#configmap-creation)
+- [Protocol Mappers](#protocol-mappers)
 - [ClientID Template Enforcement](#clientid-template-enforcement)
 - [OAuth2 Proxy Integration](#oauth2-proxy-integration)
 
@@ -229,6 +230,42 @@ spec:
   clientID: "kubernetes-default-example-client"
   realm: "my-realm"
   # Other properties...
+```
+
+## Protocol Mappers
+The KeycloakClient operator now supports configuring protocol mappers for Keycloak clients. Protocol mappers allow you to map information from the authentication process to tokens or other parts of the Keycloak system.
+
+### Configuration
+Protocol mappers can be configured in the `protocolMappers` field of the KeycloakClient spec. Each protocol mapper is defined with the following properties:
+
+- `name` (string, optional): Name of the protocol mapper
+- `protocol` (string, optional): The protocol mapper protocol (defaults to "openid-connect")
+- `type` (string, required): The protocol mapper type
+- `idTokenClaim` (boolean, optional): Is this ID claim token (defaults to true)
+- `accessTokenClaim` (boolean, optional): Is this access claim token (defaults to true)
+- `includedClientAudience` (string, optional): Included client audience (required for type=oidc-audience-mapper)
+- `consentRequired` (boolean, optional): Consent required (defaults to false)
+- `config` (map[string]string, optional): Additional configuration properties
+
+### Example Usage
+```yaml
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  name: example-client
+  namespace: default
+spec:
+  # Other client properties...
+  
+  # Protocol Mappers configuration
+  protocolMappers:
+    - name: "email mapper"
+      type: "oidc-usermodel-property-mapper"
+      config:
+        user.attribute: "email"
+        claim.name: "email"
+        json.type.label: "String"
+        always.include.in.token: "true"
 ```
 
 ## OAuth2 Proxy Integration

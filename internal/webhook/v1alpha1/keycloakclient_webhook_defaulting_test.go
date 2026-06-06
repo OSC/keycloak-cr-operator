@@ -329,4 +329,119 @@ func WebhookDefaulting() {
 			})
 		})
 	})
+
+	Context("When creating KeycloakClient under Defaulting Webhook - ProtocolMappers Defaulting", func() {
+		It("Should set default values for ProtocolMappers when they are not set", func() {
+			By("Setting up client with ProtocolMappers that have nil values")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+
+			// Create a protocol mapper with nil values
+			protocolMapper := keycloakv1alpha1.KeycloakClientProtocolMapper{
+				Name: &[]string{"test-mapper"}[0],
+				Type: &[]string{"oidc-hardcoded-claim-mapper"}[0],
+				// Leave Protocol, IDTokenClaim, AccessTokenClaim, ConsentRequired as nil
+			}
+
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{&protocolMapper}
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that default values are applied")
+			Expect(obj.Spec.ProtocolMappers).NotTo(BeNil())
+			Expect(len(obj.Spec.ProtocolMappers)).To(Equal(1))
+
+			mapper := (obj.Spec.ProtocolMappers)[0]
+			Expect(mapper.Protocol).NotTo(BeNil())
+			Expect(*mapper.Protocol).To(Equal("openid-connect"))
+
+			Expect(mapper.IDTokenClaim).NotTo(BeNil())
+			Expect(*mapper.IDTokenClaim).To(BeTrue())
+
+			Expect(mapper.AccessTokenClaim).NotTo(BeNil())
+			Expect(*mapper.AccessTokenClaim).To(BeTrue())
+
+			Expect(mapper.ConsentRequired).NotTo(BeNil())
+			Expect(*mapper.ConsentRequired).To(BeFalse())
+		})
+
+		It("Should not override existing ProtocolMappers values", func() {
+			By("Setting up client with ProtocolMappers that have existing values")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+
+			// Create a protocol mapper with existing values
+			protocol := "saml"
+			idTokenClaim := false
+			accessTokenClaim := false
+			consentRequired := true
+
+			protocolMapper := keycloakv1alpha1.KeycloakClientProtocolMapper{
+				Name:             &[]string{"test-mapper"}[0],
+				Type:             &[]string{"saml-role-list-mapper"}[0],
+				Protocol:         &protocol,
+				IDTokenClaim:     &idTokenClaim,
+				AccessTokenClaim: &accessTokenClaim,
+				ConsentRequired:  &consentRequired,
+			}
+
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{&protocolMapper}
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that existing values are preserved")
+			Expect(obj.Spec.ProtocolMappers).NotTo(BeNil())
+			Expect(len(obj.Spec.ProtocolMappers)).To(Equal(1))
+
+			mapper := (obj.Spec.ProtocolMappers)[0]
+			Expect(mapper.Protocol).NotTo(BeNil())
+			Expect(*mapper.Protocol).To(Equal("saml")) // Should preserve existing value
+
+			Expect(mapper.IDTokenClaim).NotTo(BeNil())
+			Expect(*mapper.IDTokenClaim).To(BeFalse()) // Should preserve existing value
+
+			Expect(mapper.AccessTokenClaim).NotTo(BeNil())
+			Expect(*mapper.AccessTokenClaim).To(BeFalse()) // Should preserve existing value
+
+			Expect(mapper.ConsentRequired).NotTo(BeNil())
+			Expect(*mapper.ConsentRequired).To(BeTrue()) // Should preserve existing value
+		})
+
+		It("Should handle empty ProtocolMappers array", func() {
+			By("Setting up client with empty ProtocolMappers")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+
+			// Create empty protocol mappers array
+			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{}
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that empty array is preserved")
+			Expect(obj.Spec.ProtocolMappers).NotTo(BeNil())
+			Expect(len(obj.Spec.ProtocolMappers)).To(Equal(0))
+		})
+
+		It("Should handle nil ProtocolMappers", func() {
+			By("Setting up client with nil ProtocolMappers")
+			obj.Spec.ClientID = &clientIDWithPrefix
+			obj.Spec.Realm = &testRealm
+
+			// Explicitly set to nil
+			obj.Spec.ProtocolMappers = nil
+
+			By("Calling the Default method to apply defaults")
+			err := defaulter.Default(ctx, obj)
+			Expect(err).ToNot(HaveOccurred())
+
+			By("Checking that nil array is preserved")
+			Expect(obj.Spec.ProtocolMappers).To(BeNil())
+		})
+	})
 }

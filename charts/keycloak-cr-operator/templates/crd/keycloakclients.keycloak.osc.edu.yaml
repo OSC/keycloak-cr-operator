@@ -175,6 +175,47 @@ spec:
                 enum:
                 - openid-connect
                 type: string
+              protocolMappers:
+                description: ProtocolMappers for the client
+                items:
+                  properties:
+                    accessTokenClaim:
+                      default: true
+                      description: Is this access claim token
+                      type: boolean
+                    config:
+                      additionalProperties:
+                        type: string
+                      description: Additional configs
+                      type: object
+                    consentRequired:
+                      default: false
+                      description: Consent required
+                      type: boolean
+                    idTokenClaim:
+                      default: true
+                      description: Is this ID claim token
+                      type: boolean
+                    includedClientAudience:
+                      description: |-
+                        Included client audience
+                        Required for type=oidc-audience-mapper
+                      type: string
+                    name:
+                      description: Name of the protocol mapper
+                      type: string
+                    protocol:
+                      default: openid-connect
+                      description: The protocol mapper protocol
+                      type: string
+                    type:
+                      description: The protocol mapper type
+                      type: string
+                  required:
+                  - name
+                  - type
+                  type: object
+                type: array
               publicClient:
                 default: false
                 description: PublicClient indicates if the client is public

@@ -24,3 +24,7 @@ spec:
     - email
   configMap:
     name: keycloak-headlamp
+  protocolMappers:
+    - name: kubernetes
+      type: oidc-audience-mapper
+      includedClientAudience: kubernetes
