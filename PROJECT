@@ -34,4 +34,9 @@ resources:
   kind: KeycloakClient
   path: github.com/OSC/keycloak-cr-operator/api/v1alpha2
   version: v1alpha2
+  webhooks:
+    conversion: true
+    spoke:
+    - v1alpha1
+    webhookVersion: v1
 version: "3"

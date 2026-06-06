@@ -22,9 +22,10 @@ import (
 	"strconv"
 
 	"github.com/Nerzal/gocloak/v13"
-	"github.com/OSC/keycloak-cr-operator/internal/models"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

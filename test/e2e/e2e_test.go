@@ -373,6 +373,20 @@ var _ = Describe("Manager", Ordered, func() {
 			Eventually(verifyCAInjection).Should(Succeed())
 		})
 
+		It("should have CA injection for KeycloakClient conversion webhook", func() {
+			By("checking CA injection for KeycloakClient conversion webhook")
+			verifyCAInjection := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get",
+					"customresourcedefinitions.apiextensions.k8s.io",
+					"keycloakclients.keycloak.osc.edu",
+					"-o", "go-template={{ .spec.conversion.webhook.clientConfig.caBundle }}")
+				vwhOutput, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(len(vwhOutput)).To(BeNumerically(">", 10))
+			}
+			Eventually(verifyCAInjection).Should(Succeed())
+		})
+
 		// +kubebuilder:scaffold:e2e-webhooks-checks
 	})
 

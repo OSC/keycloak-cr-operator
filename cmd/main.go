@@ -50,6 +50,7 @@ import (
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	webhookv1alpha1 "github.com/OSC/keycloak-cr-operator/internal/webhook/v1alpha1"
+	webhookv1alpha2 "github.com/OSC/keycloak-cr-operator/internal/webhook/v1alpha2"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -278,6 +279,13 @@ func main() {
 	if err := webhookv1alpha1.SetupKeycloakClientWebhookWithManager(mgr, keycloakConfig); err != nil {
 		setupLog.Error(err, "Failed to create webhook", "webhook", "KeycloakClient")
 		os.Exit(1)
+	}
+	// nolint:goconst
+	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
+		if err := webhookv1alpha2.SetupKeycloakClientWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "Failed to create webhook", "webhook", "KeycloakClient")
+			os.Exit(1)
+		}
 	}
 	// +kubebuilder:scaffold:builder
 
