@@ -351,7 +351,7 @@ func WebhookDefaulting() {
 
 			By("Checking that default values are applied")
 			Expect(obj.Spec.ProtocolMappers).NotTo(BeNil())
-			Expect(len(obj.Spec.ProtocolMappers)).To(Equal(1))
+			Expect(obj.Spec.ProtocolMappers).To(HaveLen(1))
 
 			mapper := (obj.Spec.ProtocolMappers)[0]
 			Expect(mapper.Protocol).NotTo(BeNil())
@@ -395,7 +395,7 @@ func WebhookDefaulting() {
 
 			By("Checking that existing values are preserved")
 			Expect(obj.Spec.ProtocolMappers).NotTo(BeNil())
-			Expect(len(obj.Spec.ProtocolMappers)).To(Equal(1))
+			Expect(obj.Spec.ProtocolMappers).To(HaveLen(1))
 
 			mapper := (obj.Spec.ProtocolMappers)[0]
 			Expect(mapper.Protocol).NotTo(BeNil())
@@ -425,7 +425,7 @@ func WebhookDefaulting() {
 
 			By("Checking that empty array is preserved")
 			Expect(obj.Spec.ProtocolMappers).NotTo(BeNil())
-			Expect(len(obj.Spec.ProtocolMappers)).To(Equal(0))
+			Expect(obj.Spec.ProtocolMappers).To(BeEmpty())
 		})
 
 		It("Should handle nil ProtocolMappers", func() {
