@@ -4,6 +4,24 @@ entries:
   - annotations:
       kubebuilder.io/generated-by: kubebuilder
     apiVersion: v2
+    appVersion: v0.0.10
+    created: "2026-06-06T23:02:29.160096163Z"
+    description: A Helm chart to distribute keycloak-cr-operator
+    digest: 75509c8e3e93b30f6b6023c57a1f7956b2b69c121f6ae81e35c80c3a75172963
+    keywords:
+    - keycloak
+    - kubernetes
+    - operator
+    maintainers:
+    - name: treydock
+    name: keycloak-cr-operator
+    type: application
+    urls:
+    - https://OSC.github.io/keycloak-cr-operator/keycloak-cr-operator-v0.0.10.tgz
+    version: v0.0.10
+  - annotations:
+      kubebuilder.io/generated-by: kubebuilder
+    apiVersion: v2
     appVersion: v0.0.9
     created: "2026-06-06T19:37:12.59133093Z"
     description: A Helm chart to distribute keycloak-cr-operator
@@ -163,4 +181,4 @@ entries:
     urls:
     - https://OSC.github.io/keycloak-cr-operator/keycloak-cr-operator-v0.0.1.tgz
     version: v0.0.1
-generated: "2026-06-06T19:37:12.589905361Z"
+generated: "2026-06-06T23:02:29.158152083Z"
