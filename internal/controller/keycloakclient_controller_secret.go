@@ -157,9 +157,9 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			return err
 		}
 		if keycloakClient.Spec.ClientSecretRef.EnvVarKeys == nil || (keycloakClient.Spec.ClientSecretRef.EnvVarKeys != nil && *keycloakClient.Spec.ClientSecretRef.EnvVarKeys) {
-			secret.StringData[fmt.Sprintf("%s%s", keyPrefix, cookieSecretEnvKey)] = []byte(cookieSecret)
+			secret.Data[fmt.Sprintf("%s%s", keyPrefix, cookieSecretEnvKey)] = []byte(cookieSecret)
 		} else {
-			secret.StringData[fmt.Sprintf("%s%s", keyPrefix, cookieSecretKey)] = []byte(cookieSecret)
+			secret.Data[fmt.Sprintf("%s%s", keyPrefix, cookieSecretKey)] = []byte(cookieSecret)
 		}
 
 		err = ctrl.SetControllerReference(keycloakClient, secret, r.Scheme)
@@ -209,7 +209,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			}
 			// Add cookie-secret back if it was removed.
 			if _, ok := found.Data[fmt.Sprintf("%s%s", keyPrefix, cookieKey)]; !ok {
-				found.StringData[fmt.Sprintf("%s%s", keyPrefix, cookieKey)] = []byte(cookieSecret)
+				found.Data[fmt.Sprintf("%s%s", keyPrefix, cookieKey)] = []byte(cookieSecret)
 			}
 
 			// Update the secret with merged data

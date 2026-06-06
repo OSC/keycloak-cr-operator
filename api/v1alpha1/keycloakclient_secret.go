@@ -72,9 +72,9 @@ func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret s
 
 	data := make(map[string][]byte)
 	if envVarKeys {
-    data[fmt.Sprintf("%sCLIENT_ID", keyPrefix)] = []byte(clientID)
+		data[fmt.Sprintf("%sCLIENT_ID", keyPrefix)] = []byte(clientID)
 		key = strcase.UpperSnakeCase(defKey)
-    data[fmt.Sprintf("%sISSUER_URL", keyPrefix)] = []byte(issuerUrl.String())
+		data[fmt.Sprintf("%sISSUER_URL", keyPrefix)] = []byte(issuerUrl.String())
 	} else {
 		data[fmt.Sprintf("%sclient-id", keyPrefix)] = []byte(clientID)
 		key = defKey
