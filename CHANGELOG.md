@@ -1,6 +1,6 @@
 ## v0.0.9 - 2026-06-06
 
-* Support protocolMappers on keycloakclient (#42)
+* Support protocolMappers on keycloakclient (#43)
 
 ## v0.0.8 - 2026-06-05
 
