@@ -46,6 +46,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	webhookv1alpha1 "github.com/OSC/keycloak-cr-operator/internal/webhook/v1alpha1"
@@ -61,6 +62,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(keycloakv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(keycloakv1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
