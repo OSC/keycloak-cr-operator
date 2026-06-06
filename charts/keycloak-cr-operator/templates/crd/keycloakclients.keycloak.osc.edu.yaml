@@ -15,7 +15,22 @@ spec:
     singular: keycloakclient
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: The Keycloak Client ClientID
+      jsonPath: .spec.clientID
+      name: ClientID
+      priority: 10
+      type: string
+    - description: The Keycloak Client Realm
+      jsonPath: .spec.realm
+      name: Realm
+      priority: 10
+      type: string
+    - description: The readiness status of the resource
+      jsonPath: .status.conditions[?(@.type=="Ready")].status
+      name: Ready
+      type: string
+    name: v1alpha1
     schema:
       openAPIV3Schema:
         description: KeycloakClient is the Schema for the keycloakclients API
