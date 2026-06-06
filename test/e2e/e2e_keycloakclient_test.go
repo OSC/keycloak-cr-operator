@@ -86,6 +86,8 @@ func KeycloakClientSpec() {
 				g.Expect(*client.Secret).To(Equal("sample-secret"))
 				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
 				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
+				client = getKeycloakClient("kubernetes-default-keycloakclient-headlamp", "master")
+				g.Expect(*client.ProtocolMappers).To(HaveLen(1))
 			}
 			Eventually(verifyClientExists, 2*time.Minute).Should(Succeed())
 			By("Keycloak client secrets handled")
@@ -108,6 +110,18 @@ func KeycloakClientSpec() {
 				secret, err = getSecret("keycloak-test-public", "CLIENT_SECRET")
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
 				g.Expect(secret).To(BeEmpty())
+
+				client = getKeycloakClient("kubernetes-default-keycloakclient-headlamp", "master")
+				clientID, err = getSecret("keycloak-headlamp", "OIDC_CLIENT_ID")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(*client.ClientID).To(Equal(clientID))
+				secret, err = getSecret("keycloak-headlamp", "OIDC_CLIENT_SECRET")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve secret")
+				g.Expect(secret).NotTo(BeEmpty())
+				issuerUrl, err := getSecret("keycloak-headlamp", "OIDC_ISSUER_URL")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve issuer-url")
+				g.Expect(issuerUrl).To(Equal("http://keycloak.keycloak.svc.cluster.local/realms/master"))
+
 			}
 			Eventually(verifyClientSecrets, 2*time.Minute).Should(Succeed())
 			By("Keycloak client configmap handled")

@@ -18,6 +18,8 @@ package v1alpha1
 
 import (
 	"fmt"
+	"maps"
+	"strconv"
 
 	"github.com/Nerzal/gocloak/v13"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
@@ -142,9 +144,9 @@ type KeycloakClientSpec struct {
 	// +optional
 	Protocol *string `json:"protocol,omitempty"`
 
-	// ProtocolMappers TODO: Add ProtocolMappers property later
+	// ProtocolMappers for the client
 	// +optional
-	// ProtocolMappers interface{} `json:"protocolMappers,omitempty"`
+	ProtocolMappers []*KeycloakClientProtocolMapper `json:"protocolMappers,omitempty"`
 
 	// PublicClient indicates if the client is public
 	// +kubebuilder:default=false
@@ -205,6 +207,40 @@ type KeycloakClientSpec struct {
 	// The ConfigMap configuration
 	// +optional
 	ConfigMap *KeycloakClientConfigMap `json:"configMap,omitempty"`
+}
+
+// Defines a protocol mapper
+
+type KeycloakClientProtocolMapper struct {
+	// Name of the protocol mapper
+	// +required
+	Name *string `json:"name,omitempty"`
+	// The protocol mapper protocol
+	// +kubebuilder:default="openid-connect"
+	// +optional
+	Protocol *string `json:"protocol,omitempty"`
+	// The protocol mapper type
+	// +required
+	Type *string `json:"type,omitempty"`
+	// Is this ID claim token
+	// +kubebuilder:default=true
+	// +optional
+	IDTokenClaim *bool `json:"idTokenClaim,omitempty"`
+	// Is this access claim token
+	// +kubebuilder:default=true
+	// +optional
+	AccessTokenClaim *bool `json:"accessTokenClaim,omitempty"`
+	// Included client audience
+	// Required for type=oidc-audience-mapper
+	// +optional
+	IncludedClientAudience *string `json:"includedClientAudience,omitempty"`
+	// Consent required
+	// +kubebuilder:default=false
+	// +optional
+	ConsentRequired *bool `json:"consentRequired,omitempty"`
+	// Additional configs
+	// +optional
+	Config *map[string]string `json:"config,omitempty"`
 }
 
 // Defines the structure for the Keycloak Client Secret
@@ -361,5 +397,44 @@ func (k *KeycloakClient) GetClient(config *models.KeycloakConfig) (*gocloak.Clie
 	client.SurrogateAuthRequired = k.Spec.SurrogateAuthRequired
 	client.WebOrigins = k.Spec.WebOrigins
 
+	protocolMappers, err := k.GetClientProtocolMappers()
+	if err != nil {
+		return nil, err
+	}
+	client.ProtocolMappers = &protocolMappers
+
 	return client, nil
+}
+
+func (k *KeycloakClient) GetClientProtocolMappers() ([]gocloak.ProtocolMapperRepresentation, error) {
+	var mappers []gocloak.ProtocolMapperRepresentation
+
+	if k.Spec.ProtocolMappers == nil {
+		return nil, nil
+	}
+
+	for _, m := range k.Spec.ProtocolMappers {
+		mapper := gocloak.ProtocolMapperRepresentation{
+			Name:            m.Name,
+			Protocol:        m.Protocol,
+			ProtocolMapper:  m.Type,
+			ConsentRequired: m.ConsentRequired,
+		}
+		config := make(map[string]string)
+		if m.IDTokenClaim != nil {
+			config["id.token.claim"] = strconv.FormatBool(*m.IDTokenClaim)
+		}
+		if m.AccessTokenClaim != nil {
+			config["access.token.claim"] = strconv.FormatBool(*m.AccessTokenClaim)
+		}
+		if m.IncludedClientAudience != nil {
+			config["included.client.audience"] = *m.IncludedClientAudience
+		}
+		if m.Config != nil {
+			maps.Copy(config, *m.Config)
+		}
+		mapper.Config = &config
+		mappers = append(mappers, mapper)
+	}
+	return mappers, nil
 }
