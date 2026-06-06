@@ -302,6 +302,9 @@ type KeycloakClientStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:printcolumn:name="ClientID",type=string,JSONPath=`.spec.clientID`,description="The Keycloak Client ClientID",priority=10
+// +kubebuilder:printcolumn:name="Realm",type=string,JSONPath=`.spec.realm`,description="The Keycloak Client Realm",priority=10
+// +kubebuilder:printcolumn:name="Ready",type=string,JSONPath=`.status.conditions[?(@.type=="Ready")].status`,description="The readiness status of the resource",priority=0
 
 // KeycloakClient is the Schema for the keycloakclients API
 type KeycloakClient struct {

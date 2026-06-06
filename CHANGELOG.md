@@ -1,3 +1,7 @@
+## v0.0.10 - 2026-06-06
+
+* Set printer columns for keycloakclient (#44)
+
 ## v0.0.9 - 2026-06-06
 
 * Support protocolMappers on keycloakclient (#43)
