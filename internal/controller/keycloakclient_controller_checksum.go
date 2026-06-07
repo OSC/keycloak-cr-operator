@@ -25,7 +25,6 @@ import (
 	"maps"
 	"sort"
 
-	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -106,7 +105,7 @@ func (r *KeycloakClientReconciler) updateChecksum(ctx context.Context, obj clien
 	return nil
 }
 
-func (r *KeycloakClientReconciler) updateChecksumDeployment(ctx context.Context, checksum string, annotationKey string, keycloakClient *keycloakv1alpha1.KeycloakClient) []error {
+func (r *KeycloakClientReconciler) updateChecksumDeployment(ctx context.Context, checksum string, annotationKey string, keycloakClient *keycloakv1alpha2.KeycloakClient) []error {
 	log := logf.FromContext(ctx)
 
 	var errs []error
@@ -150,7 +149,7 @@ func (r *KeycloakClientReconciler) updateChecksumDeployment(ctx context.Context,
 	return errs
 }
 
-func (r *KeycloakClientReconciler) updateChecksumStatefulSet(ctx context.Context, checksum string, annotationKey string, keycloakClient *keycloakv1alpha1.KeycloakClient) []error {
+func (r *KeycloakClientReconciler) updateChecksumStatefulSet(ctx context.Context, checksum string, annotationKey string, keycloakClient *keycloakv1alpha2.KeycloakClient) []error {
 	log := logf.FromContext(ctx)
 
 	var errs []error
