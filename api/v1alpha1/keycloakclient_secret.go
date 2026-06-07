@@ -63,30 +63,31 @@ func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret s
 	} else {
 		clientID = *k.Spec.ClientID
 	}
+
 	realm := config.DefaultRealm
 	if k.Spec.Realm != nil && *k.Spec.Realm != "" {
 		realm = *k.Spec.Realm
 	}
 	issuerUrl := config.KeycloakURL.JoinPath("realms", realm)
 
-	data := make(map[string]string)
+	data := make(map[string][]byte)
 	if envVarKeys {
-		data[fmt.Sprintf("%sCLIENT_ID", keyPrefix)] = clientID
+		data[fmt.Sprintf("%sCLIENT_ID", keyPrefix)] = []byte(clientID)
 		key = strcase.UpperSnakeCase(defKey)
-		data[fmt.Sprintf("%sISSUER_URL", keyPrefix)] = issuerUrl.String()
+		data[fmt.Sprintf("%sISSUER_URL", keyPrefix)] = []byte(issuerUrl.String())
 	} else {
-		data[fmt.Sprintf("%sclient-id", keyPrefix)] = clientID
+		data[fmt.Sprintf("%sclient-id", keyPrefix)] = []byte(clientID)
 		key = defKey
-		data[fmt.Sprintf("%sissuer-url", keyPrefix)] = issuerUrl.String()
+		data[fmt.Sprintf("%sissuer-url", keyPrefix)] = []byte(issuerUrl.String())
 	}
-	data[fmt.Sprintf("%s%s", keyPrefix, key)] = clientSecret
+	data[fmt.Sprintf("%s%s", keyPrefix, key)] = []byte(clientSecret)
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: k.Namespace,
 			Name:      name,
 		},
-		StringData: data,
+		Data: data,
 	}, nil
 }
 

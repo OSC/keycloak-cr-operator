@@ -50,6 +50,8 @@ const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha1_keycl
 const keycloakClientManifestPublic = "config/samples/keycloak_v1alpha1_keycloakclient_public.yaml"
 const keycloakClientManifestHeadlamp = "config/samples/keycloak_v1alpha1_keycloakclient_headlamp.yaml"
 
+const deploymentYaml = "test/e2e/deployment.yaml"
+
 var _ = Describe("Manager", Ordered, func() {
 	var controllerPodName string
 
@@ -76,6 +78,15 @@ var _ = Describe("Manager", Ordered, func() {
 		)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy the manager")
+
+		By("Create testing deployment")
+		cmd = exec.Command("kubectl", "apply", "-f", deploymentYaml)
+		_, err = utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred(), "Failed to deploy test deployment")
+		By("Wait for deployment")
+		cmd = exec.Command("kubectl", "wait", "--for=condition=Ready", "pod", "-l", "app=nginx", "--timeout=60s")
+		_, err = utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred(), "Deployment failed to start")
 	})
 
 	// After all tests have been executed, clean up by undeploying the controller, uninstalling CRDs,
@@ -99,6 +110,10 @@ var _ = Describe("Manager", Ordered, func() {
 
 		By("removing metrics clusterrolebinding")
 		cmd = exec.Command("kubectl", "delete", "clusterrolebinding", metricsRoleBindingName)
+		_, _ = utils.Run(cmd)
+
+		By("removing testing deployment")
+		cmd = exec.Command("kubectl", "delete", "-f", deploymentYaml)
 		_, _ = utils.Run(cmd)
 	})
 
