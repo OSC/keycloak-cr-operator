@@ -52,7 +52,7 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | manager.tolerations | list | `[]` | Manager pod's tolerations |
 | rbacHelpers.enable | bool | `false` | Install convenience admin/editor/viewer roles for CRDs |
 | crd.enable | bool | `true` | Install CRDs with the chart |
-| crd.annotations."helm.sh/resource-policy" | string | `"keep"` | Keep CRDs when uninstalling |
+| crd.keep | bool | `true` | Keep CRDs when uninstalling |
 | metrics.enable | bool | `true` | Enable to expose /metrics endpoint with RBAC protection |
 | metrics.protocol | string | `"https"` | Metrics protocol (http or https) |
 | metrics.ports | object | `{"http":8080,"https":8443}` | Metrics server ports.  Only supports http and https keys |
