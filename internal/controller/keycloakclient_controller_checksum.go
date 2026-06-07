@@ -26,6 +26,7 @@ import (
 	"sort"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	appsv1ac "k8s.io/client-go/applyconfigurations/apps/v1"
@@ -74,7 +75,7 @@ func computeChecksum(ctx context.Context, obj client.Object) (string, error) {
 	return checksum, nil
 }
 
-func (r *KeycloakClientReconciler) updateChecksum(ctx context.Context, obj client.Object, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
+func (r *KeycloakClientReconciler) updateChecksum(ctx context.Context, obj client.Object, keycloakClient *keycloakv1alpha2.KeycloakClient) error {
 	// log := logf.FromContext(ctx)
 
 	var annotationKey string

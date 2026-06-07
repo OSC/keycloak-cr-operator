@@ -24,7 +24,7 @@ import (
 	"maps"
 	"time"
 
-	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -37,7 +37,7 @@ import (
 
 // +kubebuilder:rbac:groups="",resources=secrets,verbs=get;list;watch;create;update;patch;delete
 
-func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
+func usesClientSecret(keycloakClient *keycloakv1alpha2.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientAuthenticatorType != nil && *keycloakClient.Spec.ClientAuthenticatorType == clientSecretVal &&
 		keycloakClient.Spec.PublicClient != nil && !*keycloakClient.Spec.PublicClient {
 		return true
@@ -46,7 +46,7 @@ func usesClientSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	}
 }
 
-func shouldLookupSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
+func shouldLookupSecret(keycloakClient *keycloakv1alpha2.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
 		keycloakClient.Spec.ClientSecretRef.Create != nil && !*keycloakClient.Spec.ClientSecretRef.Create {
 		return true
@@ -55,7 +55,7 @@ func shouldLookupSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
 	}
 }
 
-func shouldCreateSecret(keycloakClient *keycloakv1alpha1.KeycloakClient) bool {
+func shouldCreateSecret(keycloakClient *keycloakv1alpha2.KeycloakClient) bool {
 	if keycloakClient.Spec.ClientSecretRef != nil &&
 		keycloakClient.Spec.ClientSecretRef.Create != nil && *keycloakClient.Spec.ClientSecretRef.Create {
 		return true
@@ -74,7 +74,7 @@ func generateRandomString() (string, error) {
 	return base64.URLEncoding.EncodeToString(bytes), nil
 }
 
-func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (string, error) {
+func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient *keycloakv1alpha2.KeycloakClient) (string, error) {
 	log := logf.FromContext(ctx)
 	log.V(1).Info("Begin get secret")
 	secret := &corev1.Secret{}
@@ -116,7 +116,7 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 }
 
 // handleSecret creates or updates the corev1.Secret resource for the KeycloakClient
-func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
+func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakClient *keycloakv1alpha2.KeycloakClient, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
 	log.V(1).Info("Get Keycloak Client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 	client, err := GetKeycloakClient(ctx, r.Server, keycloakClient)

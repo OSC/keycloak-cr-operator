@@ -32,7 +32,7 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
 
@@ -89,19 +89,19 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Name:      resourceName,
 			Namespace: "default", // TODO(user):Modify as needed
 		}
-		keycloakclient := &keycloakv1alpha1.KeycloakClient{}
+		keycloakclient := &keycloakv1alpha2.KeycloakClient{}
 
 		BeforeEach(func() {
 			By("creating the custom resource for the Kind KeycloakClient")
 			clientID := "test"
 			err := k8sClient.Get(ctx, typeNamespacedName, keycloakclient)
 			if err != nil && errors.IsNotFound(err) {
-				resource := &keycloakv1alpha1.KeycloakClient{
+				resource := &keycloakv1alpha2.KeycloakClient{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
 						Namespace: "default",
 					},
-					Spec: keycloakv1alpha1.KeycloakClientSpec{
+					Spec: keycloakv1alpha2.KeycloakClientSpec{
 						ClientID: &clientID,
 						Realm:    stringPtr("master"),
 					},
@@ -112,7 +112,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 		AfterEach(func() {
 			// TODO(user): Cleanup logic after each test, like removing the resource instance.
-			resource := &keycloakv1alpha1.KeycloakClient{}
+			resource := &keycloakv1alpha2.KeycloakClient{}
 			err := k8sClient.Get(ctx, typeNamespacedName, resource)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -185,17 +185,17 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			// Create a KeycloakClient with ClientSecretRef configuration
 			clientID := "test-client-with-secret"
-			keycloakClientWithSecret := &keycloakv1alpha1.KeycloakClient{
+			keycloakClientWithSecret := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-secret",
 					Namespace: "default",
 				},
-				Spec: keycloakv1alpha1.KeycloakClientSpec{
+				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
 					Realm:                   stringPtr("master"),
 					ClientAuthenticatorType: stringPtr("client-secret"),
 					PublicClient:            boolPtr(false),
-					ClientSecretRef: &keycloakv1alpha1.KeycloakClientSecret{
+					ClientSecretRef: &keycloakv1alpha2.KeycloakClientSecret{
 						SecretKeySelector: corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "test-client-secret",
@@ -315,17 +315,17 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			// Create a KeycloakClient with ClientSecretRef configuration
 			clientID := "test-client-with-key-prefix"
-			keycloakClientWithSecret := &keycloakv1alpha1.KeycloakClient{
+			keycloakClientWithSecret := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-key-prefix",
 					Namespace: "default",
 				},
-				Spec: keycloakv1alpha1.KeycloakClientSpec{
+				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
 					Realm:                   stringPtr("master"),
 					ClientAuthenticatorType: stringPtr("client-secret"),
 					PublicClient:            boolPtr(false),
-					ClientSecretRef: &keycloakv1alpha1.KeycloakClientSecret{
+					ClientSecretRef: &keycloakv1alpha2.KeycloakClientSecret{
 						SecretKeySelector: corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "test-client-key-prefix",
@@ -433,17 +433,17 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			// Create a KeycloakClient with ClientSecretRef configuration
 			clientID := "test-client-with-secret"
-			keycloakClientWithSecret := &keycloakv1alpha1.KeycloakClient{
+			keycloakClientWithSecret := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-secret-no-envvars",
 					Namespace: "default",
 				},
-				Spec: keycloakv1alpha1.KeycloakClientSpec{
+				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
 					Realm:                   stringPtr("master"),
 					ClientAuthenticatorType: stringPtr("client-secret"),
 					PublicClient:            boolPtr(false),
-					ClientSecretRef: &keycloakv1alpha1.KeycloakClientSecret{
+					ClientSecretRef: &keycloakv1alpha2.KeycloakClientSecret{
 						SecretKeySelector: corev1.SecretKeySelector{
 							LocalObjectReference: corev1.LocalObjectReference{
 								Name: "test-client-secret-no-envvars",
@@ -565,15 +565,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 			// Create a KeycloakClient with ConfigMapName
 			clientID := "test-client-with-configmap"
 			configMapName := "custom-configmap-name"
-			keycloakClientWithConfigMap := &keycloakv1alpha1.KeycloakClient{
+			keycloakClientWithConfigMap := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-configmap",
 					Namespace: "default",
 				},
-				Spec: keycloakv1alpha1.KeycloakClientSpec{
+				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: &clientID,
 					Realm:    stringPtr("master"),
-					ConfigMap: &keycloakv1alpha1.KeycloakClientConfigMap{
+					ConfigMap: &keycloakv1alpha2.KeycloakClientConfigMap{
 						Name:       &configMapName,
 						EnvVarKeys: boolPtr(true),
 					},
@@ -676,15 +676,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			// Create a KeycloakClient without specifying ConfigMapName
 			clientID := "test-client-default-configmap"
-			keycloakClientWithoutConfigMap := &keycloakv1alpha1.KeycloakClient{
+			keycloakClientWithoutConfigMap := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-default-configmap",
 					Namespace: "default",
 				},
-				Spec: keycloakv1alpha1.KeycloakClientSpec{
+				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: &clientID,
 					Realm:    stringPtr("master"),
-					ConfigMap: &keycloakv1alpha1.KeycloakClientConfigMap{
+					ConfigMap: &keycloakv1alpha2.KeycloakClientConfigMap{
 						EnvVarKeys: boolPtr(false),
 					},
 				},

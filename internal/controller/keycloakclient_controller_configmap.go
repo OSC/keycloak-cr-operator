@@ -19,7 +19,7 @@ package controller
 import (
 	"context"
 
-	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -29,7 +29,7 @@ import (
 
 // +kubebuilder:rbac:groups="",resources=configmaps,verbs=get;list;watch;create;update;patch;delete
 
-func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
+func (r *KeycloakClientReconciler) handleConfigMap(ctx context.Context, keycloakClient *keycloakv1alpha2.KeycloakClient) error {
 	log := logf.FromContext(ctx)
 	log.V(1).Info("Handle Keycloak Client ConfigMap")
 

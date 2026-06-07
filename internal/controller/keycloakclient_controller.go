@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -79,7 +79,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	log := logf.FromContext(ctx)
 
 	// Fetch the KeycloakClient instance
-	keycloakClient := &keycloakv1alpha1.KeycloakClient{}
+	keycloakClient := &keycloakv1alpha2.KeycloakClient{}
 	log.Info("Received reconcile for KeycloakClient")
 	err := r.Get(ctx, req.NamespacedName, keycloakClient)
 	if err != nil {
@@ -216,7 +216,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	return ctrl.Result{}, nil
 }
 
-func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) (bool, error) {
+func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloakClient *keycloakv1alpha2.KeycloakClient) (bool, error) {
 	log := logf.FromContext(ctx)
 	if keycloakClient.DeletionTimestamp.IsZero() {
 		// add finalizer in case of create/update
@@ -243,7 +243,7 @@ func (r *KeycloakClientReconciler) handleFinalizer(ctx context.Context, keycloak
 	return false, nil
 }
 
-func (r *KeycloakClientReconciler) setStatus(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, condition metav1.Condition) error {
+func (r *KeycloakClientReconciler) setStatus(ctx context.Context, keycloakClient *keycloakv1alpha2.KeycloakClient, condition metav1.Condition) error {
 	log := logf.FromContext(ctx)
 	namespacedName := types.NamespacedName{Name: keycloakClient.Name, Namespace: keycloakClient.Namespace}
 	// Re-fetch object to avoid "the object has been modified" errors
@@ -265,7 +265,7 @@ func (r *KeycloakClientReconciler) setStatus(ctx context.Context, keycloakClient
 }
 
 // ensureKeycloakClient checks if the client exists in Keycloak and creates/updates it if needed
-func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient, gocloakClient *gocloak.Client) error {
+func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha2.KeycloakClient, gocloakClient *gocloak.Client) error {
 	log := logf.FromContext(ctx)
 
 	log.V(1).Info("Ensure Keycloak Client", "namespace", keycloakClient.Namespace, "name", keycloakClient.Name, "clientID", *gocloakClient.ClientID, "realm", *keycloakClient.Spec.Realm)
@@ -342,7 +342,7 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 	return nil
 }
 
-func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha1.KeycloakClient) error {
+func (r *KeycloakClientReconciler) deleteKeycloakClient(ctx context.Context, keycloakClient *keycloakv1alpha2.KeycloakClient) error {
 	log := logf.FromContext(ctx)
 
 	if *keycloakClient.Spec.ClientID == "" {
@@ -541,7 +541,7 @@ func (r *KeycloakClientReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		},
 	}
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&keycloakv1alpha1.KeycloakClient{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
+		For(&keycloakv1alpha2.KeycloakClient{}, builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
 		Watches(

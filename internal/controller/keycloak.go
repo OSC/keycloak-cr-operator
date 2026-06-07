@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/Nerzal/gocloak/v13"
-	"github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	"github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 )
@@ -65,7 +65,7 @@ func KeycloakLogin(ctx context.Context, server GoCloakServer, config *models.Key
 	return nil
 }
 
-func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient *v1alpha1.KeycloakClient) (*gocloak.Client, error) {
+func GetKeycloakClient(ctx context.Context, server GoCloakServer, keycloakClient *v1alpha2.KeycloakClient) (*gocloak.Client, error) {
 	log := logf.FromContext(ctx)
 	getClientParams := gocloak.GetClientsParams{
 		ClientID: keycloakClient.Spec.ClientID,
