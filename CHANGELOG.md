@@ -1,3 +1,7 @@
+## v0.0.12 - 2026-06-08
+
+* Support adding managed configmap and secret checksums to Deployment and StatefulSet (#35)
+
 ## v0.0.11 - 2026-06-06
 
 * Fix printer columns for keycloakclient (#45)
