@@ -18,37 +18,20 @@ package v1alpha2
 
 import (
 	. "github.com/onsi/ginkgo/v2"
-	. "github.com/onsi/gomega"
+)
 
-	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
-	// TODO (user): Add any additional imports if needed
+var (
+	clientIDWithPrefix = "kubernetes-test-client"
+	testRealm          = "test-realm"
+	configMapName      = "test-config"
 )
 
 var _ = Describe("KeycloakClient Webhook", func() {
-	var (
-		obj    *keycloakv1alpha2.KeycloakClient
-		oldObj *keycloakv1alpha2.KeycloakClient
-	)
-
-	BeforeEach(func() {
-		obj = &keycloakv1alpha2.KeycloakClient{}
-		oldObj = &keycloakv1alpha2.KeycloakClient{}
-		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
-		Expect(obj).NotTo(BeNil(), "Expected obj to be initialized")
-	})
-
 	AfterEach(func() {
 		// TODO (user): Add any teardown logic common to all tests
 	})
 
-	Context("When creating KeycloakClient under Conversion Webhook", func() {
-		// TODO (user): Add logic to convert the object to the desired version and verify the conversion
-		// Example:
-		// It("Should convert the object correctly", func() {
-		//     convertedObj := &keycloakv1alpha2.KeycloakClient{}
-		//     Expect(obj.ConvertTo(convertedObj)).To(Succeed())
-		//     Expect(convertedObj).ToNot(BeNil())
-		// })
-	})
+	WebhookDefaulting()
 
+	WebhookValidating()
 })

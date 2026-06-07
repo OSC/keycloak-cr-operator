@@ -9,7 +9,7 @@ layout:
 plugins:
   helm.kubebuilder.io/v2-alpha:
     manifests: dist/install.yaml
-    output: charts
+    output: dist
 projectName: keycloak-cr-operator
 repo: github.com/OSC/keycloak-cr-operator
 resources:

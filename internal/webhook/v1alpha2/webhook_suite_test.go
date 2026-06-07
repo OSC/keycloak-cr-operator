@@ -40,6 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -109,7 +110,12 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).NotTo(HaveOccurred())
 
-	err = SetupKeycloakClientWebhookWithManager(mgr)
+	err = SetupKeycloakClientWebhookWithManager(mgr, &models.KeycloakConfig{
+		AdminUsername:  "admin",
+		AdminPassword:  "password",
+		AdminRealm:     "master",
+		ClientIDPrefix: "kubernetes",
+	})
 	Expect(err).NotTo(HaveOccurred())
 
 	// +kubebuilder:scaffold:webhook
@@ -162,4 +168,13 @@ func getFirstFoundEnvTestBinaryDir() string {
 		}
 	}
 	return ""
+}
+
+// Helper functions for test data
+func stringPtr(s string) *string {
+	return &s
+}
+
+func boolPtr(b bool) *bool {
+	return &b
 }

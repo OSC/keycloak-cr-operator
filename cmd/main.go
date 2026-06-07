@@ -282,7 +282,7 @@ func main() {
 	}
 	// nolint:goconst
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
-		if err := webhookv1alpha2.SetupKeycloakClientWebhookWithManager(mgr); err != nil {
+		if err := webhookv1alpha2.SetupKeycloakClientWebhookWithManager(mgr, keycloakConfig); err != nil {
 			setupLog.Error(err, "Failed to create webhook", "webhook", "KeycloakClient")
 			os.Exit(1)
 		}

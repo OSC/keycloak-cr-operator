@@ -17,20 +17,338 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"context"
+	"fmt"
+	"slices"
+	"strings"
+
+	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
+	"github.com/stoewer/go-strcase"
 )
 
-// nolint:unused
-// log is for logging in this package.
-var keycloakclientlog = logf.Log.WithName("keycloakclient-resource")
+var (
+	keycloakclientlog = logf.Log.WithName("keycloakclient-resource")
+	clientSecretType  = "client-secret"
+	defaultEnvVarKeys = true
+)
 
 // SetupKeycloakClientWebhookWithManager registers the webhook for KeycloakClient in the manager.
-func SetupKeycloakClientWebhookWithManager(mgr ctrl.Manager) error {
+func SetupKeycloakClientWebhookWithManager(mgr ctrl.Manager, keycloakConfig *models.KeycloakConfig) error {
 	return ctrl.NewWebhookManagedBy(mgr, &keycloakv1alpha2.KeycloakClient{}).
+		WithValidator(&KeycloakClientCustomValidator{keycloakConfig: keycloakConfig}).
+		WithDefaulter(&KeycloakClientCustomDefaulter{keycloakConfig: keycloakConfig}).
 		Complete()
 }
 
-// TODO(user): EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
+// +kubebuilder:webhook:path=/mutate-keycloak-osc-edu-v1alpha2-keycloakclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha2,name=mkeycloakclient-v1alpha2.kb.io,admissionReviewVersions=v1,servicePort=9443
+
+// KeycloakClientCustomDefaulter struct is responsible for setting default values on the custom resource of the
+// Kind KeycloakClient when those are created or updated.
+//
+// NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
+// as it is used only for temporary operations and does not need to be deeply copied.
+type KeycloakClientCustomDefaulter struct {
+	keycloakConfig *models.KeycloakConfig
+}
+
+// Default implements webhook.CustomDefaulter so a webhook will be registered for the Kind KeycloakClient.
+func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloakv1alpha2.KeycloakClient) error {
+	keycloakclientlog.Info("Defaulting for KeycloakClient", "name", obj.GetName(), "namespace", obj.GetNamespace())
+
+	// Set default ClientID if not set
+	if obj.Spec.ClientID == nil || *obj.Spec.ClientID == "" {
+		clientIDPrefix := d.keycloakConfig.ClientIDPrefix
+		if clientIDPrefix == "" {
+			// If no prefix is set, just use namespace-name
+			clientID := fmt.Sprintf("%s-%s", obj.GetNamespace(), obj.GetName())
+			obj.Spec.ClientID = &clientID
+		} else {
+			// If prefix is set, use prefix-namespace-name
+			clientID := fmt.Sprintf("%s-%s-%s", clientIDPrefix, obj.GetNamespace(), obj.GetName())
+			obj.Spec.ClientID = &clientID
+		}
+	}
+
+	if d.keycloakConfig.ClientIDRequired != nil {
+		requiredClientID, err := keycloakv1alpha2.RequiredClientID(d.keycloakConfig, obj)
+		if err != nil {
+			keycloakclientlog.Error(err, "Failed to get required ClientID")
+			return err
+		}
+		if requiredClientID != "" {
+			obj.Spec.ClientID = &requiredClientID
+		}
+	}
+
+	// Set default Realm if not set
+	if obj.Spec.Realm == nil || *obj.Spec.Realm == "" {
+		defaultRealm := d.keycloakConfig.DefaultRealm
+		obj.Spec.Realm = &defaultRealm
+	}
+
+	if obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == clientSecretType &&
+		obj.Spec.PublicClient != nil && !*obj.Spec.PublicClient {
+		if obj.Spec.ClientSecretRef == nil {
+			obj.Spec.ClientSecretRef = &keycloakv1alpha2.KeycloakClientSecret{}
+		}
+		if obj.Spec.ClientSecretRef.Name == "" {
+			obj.Spec.ClientSecretRef.Name = fmt.Sprintf("%s-secret", obj.Name)
+		}
+		if obj.Spec.ClientSecretRef.Key == "" {
+			obj.Spec.ClientSecretRef.Key = "CLIENT_SECRET"
+		}
+		if obj.Spec.ClientSecretRef.Create == nil {
+			create := true
+			obj.Spec.ClientSecretRef.Create = &create
+		}
+		// Set default EnvVarKeys to true if not set
+		if obj.Spec.ClientSecretRef.EnvVarKeys == nil {
+			obj.Spec.ClientSecretRef.EnvVarKeys = &defaultEnvVarKeys
+		}
+	}
+
+	// Handle ConfigMap structure
+	defaultConfigMapName := fmt.Sprintf("%s-config", obj.Name)
+	if obj.Spec.ConfigMap != nil {
+		// Set default ConfigMap.Name if not set
+		if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
+			obj.Spec.ConfigMap.Name = &defaultConfigMapName
+		}
+		// Set default EnvVarKeys to true if not set
+		if obj.Spec.ConfigMap.EnvVarKeys == nil {
+			obj.Spec.ConfigMap.EnvVarKeys = &defaultEnvVarKeys
+		}
+	} else {
+		// If ConfigMap is nil, create a new one with defaults
+		obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
+			Name:       &defaultConfigMapName,
+			EnvVarKeys: &defaultEnvVarKeys,
+		}
+	}
+
+	// Apply defaulting to ProtocolMappers
+	if obj.Spec.ProtocolMappers != nil {
+		// Create a new slice with default values applied
+		for _, mapper := range obj.Spec.ProtocolMappers {
+			// Protocol defaults to "openid-connect"
+			if mapper.Protocol == nil {
+				protocol := "openid-connect"
+				mapper.Protocol = &protocol
+			}
+
+			// IDTokenClaim defaults to true
+			if mapper.IDTokenClaim == nil {
+				idTokenClaim := true
+				mapper.IDTokenClaim = &idTokenClaim
+			}
+
+			// AccessTokenClaim defaults to true
+			if mapper.AccessTokenClaim == nil {
+				accessTokenClaim := true
+				mapper.AccessTokenClaim = &accessTokenClaim
+			}
+
+			// ConsentRequired defaults to false
+			if mapper.ConsentRequired == nil {
+				consentRequired := false
+				mapper.ConsentRequired = &consentRequired
+			}
+		}
+	}
+
+	return nil
+}
+
+// +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha2-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha2,name=vkeycloakclient-v1alpha2.kb.io,admissionReviewVersions=v1,servicePort=9443
+
+// KeycloakClientCustomValidator struct is responsible for validating the KeycloakClient resource
+// when it is created, updated, or deleted.
+//
+// NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
+// as this struct is used only for temporary operations and does not need to be deeply copied.
+type KeycloakClientCustomValidator struct {
+	keycloakConfig *models.KeycloakConfig
+}
+
+// validateKeycloakClient validates a KeycloakClient resource based on the specified rules.
+func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1alpha2.KeycloakClient) error {
+	var allErrs field.ErrorList
+
+	// ClientID must be set
+	if obj.Spec.ClientID == nil || *obj.Spec.ClientID == "" {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientID"), "clientID must be set"))
+	}
+
+	// Realm must be set
+	if obj.Spec.Realm == nil || *obj.Spec.Realm == "" {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "realm"), "realm must be set"))
+	}
+
+	// Realm matched AllowedRealms
+	if obj.Spec.Realm != nil && *obj.Spec.Realm != "" && len(v.keycloakConfig.AllowedRealms) > 0 {
+		if !slices.Contains(v.keycloakConfig.AllowedRealms, *obj.Spec.Realm) {
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "realm"), *obj.Spec.Realm, fmt.Sprintf("realm must be one of: %s", strings.Join(v.keycloakConfig.AllowedRealms, ","))))
+		}
+	}
+
+	// If ClientIDPrefix is set, the ClientID must begin with the prefix from ClientIDPrefix
+	if v.keycloakConfig.ClientIDPrefix != "" && v.keycloakConfig.ClientIDRequired == nil {
+		if obj.Spec.ClientID != nil && *obj.Spec.ClientID != "" {
+			if !strings.HasPrefix(*obj.Spec.ClientID, v.keycloakConfig.ClientIDPrefix) {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientID"), *obj.Spec.ClientID, fmt.Sprintf("clientID must begin with the prefix %s", v.keycloakConfig.ClientIDPrefix)))
+			}
+		}
+	}
+
+	// If ClientIDRequired is set, the ClientID must match the required template
+	if v.keycloakConfig.ClientIDRequired != nil && obj.Spec.ClientID != nil && *obj.Spec.ClientID != "" {
+		requiredClientID, err := keycloakv1alpha2.RequiredClientID(v.keycloakConfig, obj)
+		if err != nil {
+			keycloakclientlog.Error(err, "Failed to execute ClientIDRequired template during validation")
+			allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientID"), *obj.Spec.ClientID, fmt.Sprintf("failed to apply ClientIDRequired template: %s", err)))
+		} else {
+			if *obj.Spec.ClientID != requiredClientID {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientID"), *obj.Spec.ClientID, fmt.Sprintf("clientID must match the required template: %s", requiredClientID)))
+			}
+		}
+	}
+
+	// Validate ClientSecretRef is present if ClientAuthenticatorType=client-secret and Public=false
+	clientSecretErrs := v.validateClientSecretRef(obj)
+	if clientSecretErrs != nil {
+		allErrs = append(allErrs, clientSecretErrs...)
+	}
+
+	// Validate ConfigMap structure
+	if obj.Spec.ConfigMap != nil {
+		if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "name"), "configMap.name must be set"))
+		}
+		if obj.Spec.ConfigMap.EnvVarKeys == nil {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "envVarKeys"), "configMap.envVarKeys must be set"))
+		}
+	} else {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap"), "configMap data must be provided"))
+	}
+
+	protocolMapperErrs := v.validateProtocolMappers(obj)
+	if protocolMapperErrs != nil {
+		allErrs = append(allErrs, protocolMapperErrs...)
+	}
+
+	if len(allErrs) > 0 {
+		return errors.NewInvalid(keycloakv1alpha2.GroupVersion.WithKind("KeycloakClient").GroupKind(), obj.Name, allErrs)
+	}
+
+	return nil
+}
+
+func (v *KeycloakClientCustomValidator) validateClientSecretRef(obj *keycloakv1alpha2.KeycloakClient) field.ErrorList {
+	var allErrs field.ErrorList
+	if (obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == clientSecretType) && (obj.Spec.PublicClient == nil || !*obj.Spec.PublicClient) {
+		if obj.Spec.ClientSecretRef == nil {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef"), fmt.Sprintf("clientSecretRef must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+		} else {
+			if obj.Spec.ClientSecretRef.Name == "" {
+				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "name"), fmt.Sprintf("clientSecretRef name must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+			}
+			if obj.Spec.ClientSecretRef.Key == "" {
+				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "key"), fmt.Sprintf("clientSecretRef key must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+			}
+			if obj.Spec.ClientSecretRef.Create == nil {
+				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "create"), fmt.Sprintf("clientSecretRef create must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+			}
+			// Validate EnvVarKeys is set for ClientSecretRef
+			if obj.Spec.ClientSecretRef.EnvVarKeys == nil {
+				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "envVarKeys"), fmt.Sprintf("clientSecretRef envVarKeys must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+			}
+			// Validate that ClientSecretRef.Key is upper snake case when EnvVarKeys is true
+			if obj.Spec.ClientSecretRef.EnvVarKeys != nil && *obj.Spec.ClientSecretRef.EnvVarKeys {
+				if obj.Spec.ClientSecretRef.Key != "" {
+					upperSnakeCase := strcase.UpperSnakeCase(obj.Spec.ClientSecretRef.Key)
+					if upperSnakeCase != obj.Spec.ClientSecretRef.Key {
+						allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientSecretRef", "key"), obj.Spec.ClientSecretRef.Key, fmt.Sprintf("clientSecretRef key must be upper snake case when envVarKeys is true, expected: %s", upperSnakeCase)))
+					}
+				}
+			}
+		}
+	}
+	return allErrs
+}
+
+// validateProtocolMappers validates the ProtocolMappers field of KeycloakClient
+func (v *KeycloakClientCustomValidator) validateProtocolMappers(obj *keycloakv1alpha2.KeycloakClient) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// Validate ProtocolMappers if they exist
+	if obj.Spec.ProtocolMappers != nil {
+		for i, mapper := range obj.Spec.ProtocolMappers {
+			path := field.NewPath("spec", "protocolMappers").Index(i)
+
+			// Name is required
+			if mapper.Name == nil || *mapper.Name == "" {
+				allErrs = append(allErrs, field.Required(path.Child("name"), "name must be set"))
+			}
+
+			// Protocol is required
+			if mapper.Protocol == nil || *mapper.Protocol == "" {
+				allErrs = append(allErrs, field.Required(path.Child("protocol"), "protocol must be set"))
+			}
+
+			// Type is required
+			if mapper.Type == nil || *mapper.Type == "" {
+				allErrs = append(allErrs, field.Required(path.Child("type"), "type must be set"))
+			}
+
+			// If type is oidc-audience-mapper, IncludedClientAudience is required
+			if mapper.Type != nil && *mapper.Type == "oidc-audience-mapper" {
+				if mapper.IncludedClientAudience == nil || *mapper.IncludedClientAudience == "" {
+					allErrs = append(allErrs, field.Required(path.Child("includedClientAudience"), "includedClientAudience must be set when type is oidc-audience-mapper"))
+				}
+			}
+		}
+	}
+
+	return allErrs
+}
+
+// ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
+func (v *KeycloakClientCustomValidator) ValidateCreate(_ context.Context, obj *keycloakv1alpha2.KeycloakClient) (admission.Warnings, error) {
+	keycloakclientlog.Info("Validation for KeycloakClient upon creation", "name", obj.GetName(), "namespace", obj.GetNamespace())
+
+	// Validate the KeycloakClient resource
+	if err := v.validateKeycloakClient(obj); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
+func (v *KeycloakClientCustomValidator) ValidateUpdate(_ context.Context, oldObj, newObj *keycloakv1alpha2.KeycloakClient) (admission.Warnings, error) {
+	keycloakclientlog.Info("Validation for KeycloakClient upon update", "name", newObj.GetName(), "namespace", newObj.GetNamespace())
+
+	// Validate the KeycloakClient resource
+	if err := v.validateKeycloakClient(newObj); err != nil {
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
+func (v *KeycloakClientCustomValidator) ValidateDelete(_ context.Context, obj *keycloakv1alpha2.KeycloakClient) (admission.Warnings, error) {
+	keycloakclientlog.Info("Validation for KeycloakClient upon deletion", "name", obj.GetName(), "namespace", obj.GetNamespace())
+
+	// For deletion, we don't perform any validation as the resource is being deleted
+	// but we can add validation logic here if needed in the future
+
+	return nil, nil
+}
