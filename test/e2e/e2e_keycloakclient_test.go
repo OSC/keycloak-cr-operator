@@ -211,7 +211,7 @@ func KeycloakClientSpec() {
 			invalidClientTest := func(g Gomega) {
 				// Create an invalid KeycloakClient resource (missing ClientID)
 				invalidClientYAML := `
-apiVersion: keycloak.osc.edu/v1alpha1
+apiVersion: keycloak.osc.edu/v1alpha2
 kind: KeycloakClient
 metadata:
   name: invalid-client-test

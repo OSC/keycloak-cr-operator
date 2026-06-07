@@ -212,6 +212,8 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 build-helm:
 	kubebuilder edit --plugins=helm/v2-alpha
 	cp -f dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	$(SED) -i 's/.Release.Namespace/include "keycloak-cr-operator.namespaceName" ./g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	$(SED) -i 's/9443/{{ .Values.webhook.port }}/g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 
 ##@ Deployment
 

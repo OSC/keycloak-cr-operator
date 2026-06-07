@@ -45,10 +45,10 @@ const metricsServiceName = "keycloak-cr-operator-metrics-service"
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
 const metricsRoleBindingName = "keycloak-cr-operator-metrics-binding"
 
-const keycloakClientManifest = "config/samples/keycloak_v1alpha1_keycloakclient.yaml"
-const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha1_keycloakclient_with_secret.yaml"
-const keycloakClientManifestPublic = "config/samples/keycloak_v1alpha1_keycloakclient_public.yaml"
-const keycloakClientManifestHeadlamp = "config/samples/keycloak_v1alpha1_keycloakclient_headlamp.yaml"
+const keycloakClientManifest = "config/samples/keycloak_v1alpha2_keycloakclient.yaml"
+const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha2_keycloakclient_with_secret.yaml"
+const keycloakClientManifestPublic = "config/samples/keycloak_v1alpha2_keycloakclient_public.yaml"
+const keycloakClientManifestHeadlamp = "config/samples/keycloak_v1alpha2_keycloakclient_headlamp.yaml"
 
 const deploymentYaml = "test/e2e/deployment.yaml"
 

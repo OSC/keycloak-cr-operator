@@ -6,7 +6,7 @@ metadata:
     {{- if .Values.crd.keep }}
     "helm.sh/resource-policy": keep
     {{- end }}
-    cert-manager.io/inject-ca-from: {{ include "keycloak-cr-operator.namespaceName" . | quote }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
+    cert-manager.io/inject-ca-from: {{ include "keycloak-cr-operator.namespaceName" . }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
     controller-gen.kubebuilder.io/version: v0.20.1
   name: keycloakclients.keycloak.osc.edu
 spec:
@@ -16,8 +16,9 @@ spec:
       clientConfig:
         service:
           name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
-          namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+          namespace: {{ include "keycloak-cr-operator.namespaceName" . }}
           path: /convert
+          port: {{ .Values.webhook.port }}
       conversionReviewVersions:
       - v1
   group: keycloak.osc.edu
