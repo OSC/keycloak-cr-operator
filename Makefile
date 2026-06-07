@@ -52,11 +52,6 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(CONTAINER_TOOL) run --rm -v $(shell pwd):/workdir $(CRDOC_IMAGE) --resources /workdir/config/crd/bases --output /workdir/docs/crds.md
-	@echo Copy CRD to Helm chart
-	@cp -f config/crd/bases/keycloak.osc.edu_keycloakclients.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	@$(SED) -i '1i {{- if .Values.crd.enable }}' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	@$(SED) -i 's/annotations:/annotations: {{ toYaml .Values.crd.annotations | nindent 4 }}/g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	@echo "{{- end }}" >> charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -154,12 +149,12 @@ verify-helm-docs: helm-docs ## Check Helm charts docs are up to date
 	@git diff --quiet --exit-code charts
 
 .PHONY: verify-helm-crds
-verify-helm-crds: manifests generate ## Verify Helm CRDs match Kustomize
+verify-helm-crds: build-helm ## Verify Helm CRDs match Kustomize
 	@diff -uw <( helm template keycloak-cr-operator charts/keycloak-cr-operator \
 		-f charts/keycloak-cr-operator/ci/test-values.yaml \
 		--api-versions "cert-manager.io/v1" \
 		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" ) \
-		config/crd/bases/keycloak.osc.edu_keycloakclients.yaml
+		dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 
 .PHONY: verify-helm-role
 verify-helm-role: manifests generate kustomize ## Verify Helm role for this operator matches Kustomize
@@ -212,6 +207,11 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	mkdir -p dist
 	cd config/manager && "$(KUSTOMIZE)" edit set image controller=${IMG}
 	"$(KUSTOMIZE)" build config/default > dist/install.yaml
+
+.PHONY: build-helm
+build-helm:
+	kubebuilder edit --plugins=helm/v2-alpha
+	cp -f dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 
 ##@ Deployment
 
