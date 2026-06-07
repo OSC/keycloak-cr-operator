@@ -212,8 +212,20 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 build-helm:
 	kubebuilder edit --plugins=helm/v2-alpha
 	cp -f dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	$(SED) -i 's/.Release.Namespace/include "keycloak-cr-operator.namespaceName" ./g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	$(SED) -i 's/9443/{{ .Values.webhook.port }}/g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	cp -f dist/chart/templates/webhook/validating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/validating-webhook-configuration.yaml
+	cp -f dist/chart/templates/webhook/mutating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/mutating-webhook-configuration.yaml
+	$(SED) -i 's/.Release.Namespace/include "keycloak-cr-operator.namespaceName" ./g' \
+		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i 's/9443/{{ .Values.webhook.port }}/g' \
+		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i 's/name: webhook-service/name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $$) }}/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i 's/namespace: system/namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i -r 's/cert-manager.io\/inject-ca-from: \{\{ (.+) \}\}/cert-manager.io\/inject-ca-from: "\{\{ \1 \}\}"/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 
 ##@ Deployment
 
