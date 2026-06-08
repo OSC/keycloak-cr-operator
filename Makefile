@@ -149,12 +149,12 @@ verify-helm-docs: helm-docs ## Check Helm charts docs are up to date
 	@git diff --quiet --exit-code charts
 
 .PHONY: verify-helm-crds
-verify-helm-crds: build-helm ## Verify Helm CRDs match Kustomize
+verify-helm-crds: build-helm yamlfmt ## Verify Helm CRDs match Kustomize
 	@diff -uw <( helm template keycloak-cr-operator charts/keycloak-cr-operator \
 		-f charts/keycloak-cr-operator/ci/test-values.yaml \
-		--api-versions "cert-manager.io/v1" \
-		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" ) \
-		dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+		--api-versions "cert-manager.io/v1" -n keycloak-cr-operator-system \
+		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" | grep -v '\-\-\-' ) \
+		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "CustomResourceDefinition")' | $(YAMLFMT) -in -formatter indentless_arrays=true,max_line_length=80 )
 
 .PHONY: verify-helm-role
 verify-helm-role: manifests generate kustomize ## Verify Helm role for this operator matches Kustomize
@@ -266,6 +266,8 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+YAMLFMT = $(LOCALBIN)/yamlfmt
+YAMLFMT_VERSION ?= v0.21.0
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.8.1
@@ -314,6 +316,11 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 		$(GOLANGCI_LINT) custom --destination $(LOCALBIN) --name golangci-lint-custom && \
 		mv -f $(LOCALBIN)/golangci-lint-custom $(GOLANGCI_LINT); \
 	} || true
+
+.PHONY: yamlfmt
+yamlfmt: $(YAMLFMT)
+$(YAMLFMT): $(LOCALBIN)
+	$(call go-install-tool,$(YAMLFMT),github.com/google/yamlfmt/cmd/yamlfmt,$(YAMLFMT_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary
