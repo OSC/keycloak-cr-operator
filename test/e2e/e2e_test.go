@@ -50,6 +50,9 @@ const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha2_keycl
 const keycloakClientManifestPublic = "config/samples/keycloak_v1alpha2_keycloakclient_public.yaml"
 const keycloakClientManifestHeadlamp = "config/samples/keycloak_v1alpha2_keycloakclient_headlamp.yaml"
 
+const keycloakClientManifestUpgradeFrom = "config/samples/keycloak_v1alpha1_keycloakclient_upgrade.yaml"
+const keycloakClientManifestUpgradeTo = "config/samples/keycloak_v1alpha2_keycloakclient_upgrade.yaml"
+
 const deploymentYaml = "test/e2e/deployment.yaml"
 
 var _ = Describe("Manager", Ordered, func() {

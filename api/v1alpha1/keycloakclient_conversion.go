@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
+	"github.com/stoewer/go-strcase"
 )
 
 // ConvertTo converts this KeycloakClient (v1alpha1) to the Hub version (v1alpha2).
@@ -68,9 +69,21 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Handle ClientSecretRef conversion
 	if src.Spec.ClientSecretRef != nil {
+		envVarKeys := true
+		if src.Spec.ClientSecretRef.EnvVarKeys != nil {
+			envVarKeys = *src.Spec.ClientSecretRef.EnvVarKeys
+		}
+		clientIdKey := "client-id"
+		issuerUrlKey := "issuer-url"
+		if envVarKeys {
+			clientIdKey = strcase.UpperSnakeCase(clientIdKey)
+			issuerUrlKey = strcase.UpperSnakeCase(issuerUrlKey)
+		}
 		dst.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
 			Name:            &src.Spec.ClientSecretRef.Name,
 			ClientSecretKey: &src.Spec.ClientSecretRef.Key,
+			ClientIdKey:     &clientIdKey,
+			IssuerUrlKey:    &issuerUrlKey,
 			Create:          src.Spec.ClientSecretRef.Create,
 			EnvVarKeys:      src.Spec.ClientSecretRef.EnvVarKeys,
 			KeyPrefix:       src.Spec.ClientSecretRef.KeyPrefix,

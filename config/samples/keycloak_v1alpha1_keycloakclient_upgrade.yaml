@@ -1,0 +1,23 @@
+apiVersion: keycloak.osc.edu/v1alpha1
+kind: KeycloakClient
+metadata:
+  labels:
+    app.kubernetes.io/name: keycloak-cr-operator
+    app.kubernetes.io/managed-by: kustomize
+  name: keycloakclient-test-upgrade
+  namespace: default
+spec:
+  realm: master
+  clientSecretRef:
+    name: keycloak-upgrade-secret
+    key: CLIENT_SECRET
+    create: true
+  redirectUris:
+    - https://example.com/*
+    - https://example.test.com/*
+  defaultClientScopes:
+    - web-origins
+    - profile
+    - email
+  configMap:
+    name: keycloak-upgrade-config

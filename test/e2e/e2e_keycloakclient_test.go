@@ -20,6 +20,7 @@ limitations under the License.
 package e2e
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -275,6 +276,149 @@ spec:
 				g.Expect(output).To(ContainSubstring("not found"))
 			}
 			Eventually(verifyKeycloakClientDelete, 2*time.Minute).Should(Succeed())
+		})
+
+		It("should upgrade from v1alpha1 to v1alpha2 preserving managed resources", func() {
+			By("Apply v1alpha1 KeycloakClient resource")
+			verifyV1Alpha1Created := func(g Gomega) {
+				cmd := exec.Command("kubectl", "apply", "-f", keycloakClientManifestUpgradeFrom)
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("created"))
+				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",
+					"keycloakclient", "keycloakclient-test-upgrade", "--timeout=20s")
+				waitOut, waitErr := utils.Run(waitCmd)
+				g.Expect(waitOut).To(ContainSubstring("condition met"))
+				g.Expect(waitErr).NotTo(HaveOccurred())
+			}
+			Eventually(verifyV1Alpha1Created, 2*time.Minute).Should(Succeed())
+
+			By("Capturing v1alpha1 managed secret and configmap values")
+			var v1Alpha1SecretValues map[string]string
+			var v1Alpha1ConfigMapValues map[string]string
+			captureV1Alpha1Values := func(g Gomega) {
+				// Get all secret keys
+				cmd := exec.Command("kubectl", "get", "secret", "keycloak-upgrade-secret",
+					"-o", "jsonpath={.data}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				// Parse the secret data
+				var secretData map[string]string
+				err = json.Unmarshal([]byte(output), &secretData)
+				g.Expect(err).NotTo(HaveOccurred())
+				v1Alpha1SecretValues = secretData
+
+				// Get all configmap keys
+				cmd = exec.Command("kubectl", "get", "configmap", "keycloak-upgrade-config",
+					"-o", "jsonpath={.data}")
+				output, err = utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				// Parse the configmap data
+				var configMapData map[string]string
+				err = json.Unmarshal([]byte(output), &configMapData)
+				g.Expect(err).NotTo(HaveOccurred())
+				v1Alpha1ConfigMapValues = configMapData
+			}
+			Eventually(captureV1Alpha1Values).Should(Succeed())
+
+			By("Upgrading to v1alpha2 by applying new manifest")
+			verifyUpgrade := func(g Gomega) {
+				// Apply v1alpha2 resource - this should update the CRD version
+				cmd := exec.Command("kubectl", "apply", "-f", keycloakClientManifestUpgradeTo)
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(Or(ContainSubstring("created"), ContainSubstring("configured")))
+
+				// Wait for the resource to be available after upgrade
+				waitCmd := exec.Command("kubectl", "wait", "--for=condition=Available",
+					"keycloakclient", "keycloakclient-test-upgrade", "--timeout=20s")
+				waitOut, waitErr := utils.Run(waitCmd)
+				g.Expect(waitOut).To(ContainSubstring("condition met"))
+				g.Expect(waitErr).NotTo(HaveOccurred())
+			}
+			Eventually(verifyUpgrade, 2*time.Minute).Should(Succeed())
+
+			By("Verifying v1alpha2 resource exists after upgrade")
+			verifyV1Alpha2Exists := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "keycloakclient", "keycloakclient-test-upgrade",
+					"-o", "jsonpath={.apiVersion}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("v1alpha2"))
+			}
+			Eventually(verifyV1Alpha2Exists, 2*time.Minute).Should(Succeed())
+
+			By("Verifying secret values are unchanged after upgrade")
+			verifySecretValuesUnchanged := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "secret", "keycloak-upgrade-secret",
+					"-o", "jsonpath={.data}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				var secretData map[string]string
+				err = json.Unmarshal([]byte(output), &secretData)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(secretData).To(Equal(v1Alpha1SecretValues),
+					"Secret values should remain the same after upgrade")
+			}
+			Eventually(verifySecretValuesUnchanged, 2*time.Minute).Should(Succeed())
+
+			By("Verifying configmap values are unchanged after upgrade")
+			verifyConfigMapValuesUnchanged := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "configmap", "keycloak-upgrade-config",
+					"-o", "jsonpath={.data}")
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				var configMapData map[string]string
+				err = json.Unmarshal([]byte(output), &configMapData)
+				g.Expect(err).NotTo(HaveOccurred())
+
+				g.Expect(configMapData).To(Equal(v1Alpha1ConfigMapValues),
+					"ConfigMap values should remain the same after upgrade")
+			}
+			Eventually(verifyConfigMapValuesUnchanged, 2*time.Minute).Should(Succeed())
+
+			By("Verifying Keycloak client still exists with correct configuration")
+			verifyKeycloakClientAfterUpgrade := func(g Gomega) {
+				client := getKeycloakClient("kubernetes-default-keycloakclient-test-upgrade", "master")
+				g.Expect(client).To(Not(BeNil()), "keycloak client should still exist after upgrade")
+				g.Expect(*client.ClientID).To(Equal("kubernetes-default-keycloakclient-test-upgrade"))
+				g.Expect(*client.RedirectURIs).To(ConsistOf("https://example.com/*", "https://example.test.com/*"))
+				g.Expect(*client.DefaultClientScopes).To(ConsistOf("web-origins", "profile", "email"))
+			}
+			Eventually(verifyKeycloakClientAfterUpgrade, 2*time.Minute).Should(Succeed())
+
+			By("Cleaning up upgraded resource")
+			cleanupUpgrade := func(g Gomega) {
+				cmd := exec.Command("kubectl", "delete", "-f", keycloakClientManifestUpgradeTo)
+				output, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(output).To(Or(ContainSubstring("deleted"), ContainSubstring("not found")))
+			}
+			Eventually(cleanupUpgrade, 2*time.Minute).Should(Succeed())
+
+			By("Verifying resources are deleted after cleanup")
+			verifyDeleted := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get", "keycloakclient", "keycloakclient-test-upgrade")
+				output, err := utils.Run(cmd)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("not found"))
+
+				cmd = exec.Command("kubectl", "get", "secret", "keycloak-upgrade-secret")
+				output, err = utils.Run(cmd)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("not found"))
+
+				cmd = exec.Command("kubectl", "get", "configmap", "keycloak-upgrade-config")
+				output, err = utils.Run(cmd)
+				g.Expect(err).To(HaveOccurred())
+				g.Expect(output).To(ContainSubstring("not found"))
+			}
+			Eventually(verifyDeleted, 2*time.Minute).Should(Succeed())
 		})
 	})
 }
