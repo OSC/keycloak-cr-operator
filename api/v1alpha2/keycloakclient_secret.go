@@ -29,25 +29,13 @@ import (
 // GetSecret creates a corev1.Secret object using data from ClientSecretRef for name and key
 // and KeycloakClient for namespace. It sets data based on the secret argument to StringData.
 func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret string) (*corev1.Secret, error) {
-	var defKey, key, name, clientID string
-	var envVarKeys bool
-	var keyPrefix string
-	if k.Spec.ClientSecretRef != nil {
-		name = k.Spec.ClientSecretRef.Name
-		defKey = k.Spec.ClientSecretRef.Key
-		if k.Spec.ClientSecretRef.EnvVarKeys == nil {
-			envVarKeys = true
-		} else {
-			envVarKeys = *k.Spec.ClientSecretRef.EnvVarKeys
-		}
-		if k.Spec.ClientSecretRef.KeyPrefix != nil {
-			keyPrefix = *k.Spec.ClientSecretRef.KeyPrefix
-		}
-	} else {
-		name = fmt.Sprintf("%s-secret", k.Name)
-		envVarKeys = true
-		defKey = "CLIENT_SECRET"
-	}
+	var clientID string
+	name := k.SecretName()
+	envVarKeys := k.SecretEnvVarKeys()
+	clientSecretKey := k.SecretClientSecretKey()
+	clientIdKey := k.SecretClientIdKey()
+	issuerUrlKey := k.SecretIssuerUrlKey()
+	keyPrefix := k.SecretKeyPrefix()
 	if config.ClientIDRequired != nil && (k.Spec.ClientID == nil || *k.Spec.ClientID == "") {
 		requiredClientID, err := RequiredClientID(config, k)
 		if err != nil {
@@ -72,15 +60,13 @@ func (k *KeycloakClient) GetSecret(config *models.KeycloakConfig, clientSecret s
 
 	data := make(map[string][]byte)
 	if envVarKeys {
-		data[fmt.Sprintf("%sCLIENT_ID", keyPrefix)] = []byte(clientID)
-		key = strcase.UpperSnakeCase(defKey)
-		data[fmt.Sprintf("%sISSUER_URL", keyPrefix)] = []byte(issuerUrl.String())
-	} else {
-		data[fmt.Sprintf("%sclient-id", keyPrefix)] = []byte(clientID)
-		key = defKey
-		data[fmt.Sprintf("%sissuer-url", keyPrefix)] = []byte(issuerUrl.String())
+		clientSecretKey = strcase.UpperSnakeCase(clientSecretKey)
+		clientIdKey = strcase.UpperSnakeCase(clientIdKey)
+		issuerUrlKey = strcase.UpperSnakeCase(issuerUrlKey)
 	}
-	data[fmt.Sprintf("%s%s", keyPrefix, key)] = []byte(clientSecret)
+	data[fmt.Sprintf("%s%s", keyPrefix, clientSecretKey)] = []byte(clientSecret)
+	data[fmt.Sprintf("%s%s", keyPrefix, clientIdKey)] = []byte(clientID)
+	data[fmt.Sprintf("%s%s", keyPrefix, issuerUrlKey)] = []byte(issuerUrl.String())
 
 	return &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
@@ -107,4 +93,76 @@ func RequiredClientID(config *models.KeycloakConfig, obj *KeycloakClient) (strin
 		return buf.String(), nil
 	}
 	return "", nil
+}
+
+func (k *KeycloakClient) SecretName() string {
+	name := fmt.Sprintf("%s-secret", k.Name)
+	if k.Spec.Secret != nil {
+		if k.Spec.Secret.Name != nil && *k.Spec.Secret.Name != "" {
+			name = *k.Spec.Secret.Name
+		}
+	}
+	return name
+}
+
+func (k *KeycloakClient) SecretEnvVarKeys() bool {
+	envVarKeys := true
+	if k.Spec.Secret != nil {
+		if k.Spec.Secret.EnvVarKeys != nil {
+			envVarKeys = *k.Spec.Secret.EnvVarKeys
+		}
+	}
+	return envVarKeys
+}
+
+func (k *KeycloakClient) SecretClientSecretKey() string {
+	key := "client-secret"
+	envVarKeys := k.SecretEnvVarKeys()
+	if k.Spec.Secret != nil {
+		if k.Spec.Secret.ClientSecretKey != nil && *k.Spec.Secret.ClientSecretKey != "" {
+			key = *k.Spec.Secret.ClientSecretKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
+}
+
+func (k *KeycloakClient) SecretClientIdKey() string {
+	key := "client-id"
+	envVarKeys := k.SecretEnvVarKeys()
+	if k.Spec.Secret != nil {
+		if k.Spec.Secret.ClientIdKey != nil && *k.Spec.Secret.ClientIdKey != "" {
+			key = *k.Spec.Secret.ClientIdKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
+}
+
+func (k *KeycloakClient) SecretIssuerUrlKey() string {
+	key := "issuer-url"
+	envVarKeys := k.SecretEnvVarKeys()
+	if k.Spec.Secret != nil {
+		if k.Spec.Secret.IssuerUrlKey != nil && *k.Spec.Secret.IssuerUrlKey != "" {
+			key = *k.Spec.Secret.IssuerUrlKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
+}
+
+func (k *KeycloakClient) SecretKeyPrefix() string {
+	var keyPrefix string
+	if k.Spec.Secret != nil {
+		if k.Spec.Secret.KeyPrefix != nil {
+			keyPrefix = *k.Spec.Secret.KeyPrefix
+		}
+	}
+	return keyPrefix
 }

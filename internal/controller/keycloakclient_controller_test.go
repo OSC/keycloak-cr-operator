@@ -195,15 +195,11 @@ var _ = Describe("KeycloakClient Controller", func() {
 					Realm:                   stringPtr("master"),
 					ClientAuthenticatorType: stringPtr("client-secret"),
 					PublicClient:            boolPtr(false),
-					ClientSecretRef: &keycloakv1alpha2.KeycloakClientSecret{
-						SecretKeySelector: corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "test-client-secret",
-							},
-							Key: "client-secret",
-						},
-						Create:     boolPtr(true),
-						EnvVarKeys: boolPtr(true),
+					Secret: &keycloakv1alpha2.KeycloakClientSecret{
+						Name:            stringPtr("test-client-secret"),
+						ClientSecretKey: stringPtr("client-secret"),
+						Create:          boolPtr(true),
+						EnvVarKeys:      boolPtr(true),
 					},
 				},
 			}
@@ -325,16 +321,12 @@ var _ = Describe("KeycloakClient Controller", func() {
 					Realm:                   stringPtr("master"),
 					ClientAuthenticatorType: stringPtr("client-secret"),
 					PublicClient:            boolPtr(false),
-					ClientSecretRef: &keycloakv1alpha2.KeycloakClientSecret{
-						SecretKeySelector: corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "test-client-key-prefix",
-							},
-							Key: "client-secret",
-						},
-						Create:     boolPtr(true),
-						EnvVarKeys: boolPtr(true),
-						KeyPrefix:  stringPtr("OIDC_"),
+					Secret: &keycloakv1alpha2.KeycloakClientSecret{
+						Name:            stringPtr("test-client-key-prefix"),
+						ClientSecretKey: stringPtr("client-secret"),
+						Create:          boolPtr(true),
+						EnvVarKeys:      boolPtr(true),
+						KeyPrefix:       stringPtr("OIDC_"),
 					},
 				},
 			}
@@ -443,15 +435,11 @@ var _ = Describe("KeycloakClient Controller", func() {
 					Realm:                   stringPtr("master"),
 					ClientAuthenticatorType: stringPtr("client-secret"),
 					PublicClient:            boolPtr(false),
-					ClientSecretRef: &keycloakv1alpha2.KeycloakClientSecret{
-						SecretKeySelector: corev1.SecretKeySelector{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "test-client-secret-no-envvars",
-							},
-							Key: "client-secret",
-						},
-						Create:     boolPtr(true),
-						EnvVarKeys: boolPtr(false),
+					Secret: &keycloakv1alpha2.KeycloakClientSecret{
+						Name:            stringPtr("test-client-secret-no-envvars"),
+						ClientSecretKey: stringPtr("client-secret"),
+						Create:          boolPtr(true),
+						EnvVarKeys:      boolPtr(false),
 					},
 				},
 			}

@@ -22,7 +22,6 @@ import (
 	"strconv"
 
 	"github.com/Nerzal/gocloak/v13"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/OSC/keycloak-cr-operator/internal/models"
@@ -201,9 +200,9 @@ type KeycloakClientSpec struct {
 	// +optional
 	Realm *string `json:"realm,omitempty"`
 
-	// Reference to the secret holding the ClientSecret
+	// The Secret configuration
 	// +optional
-	ClientSecretRef *KeycloakClientSecret `json:"clientSecretRef,omitempty"`
+	Secret *KeycloakClientSecret `json:"secret,omitempty"`
 
 	// The ConfigMap configuration
 	// +optional
@@ -246,12 +245,24 @@ type KeycloakClientProtocolMapper struct {
 
 // Defines the structure for the Keycloak Client Secret
 type KeycloakClientSecret struct {
-	// The name will default to "<name>-secret"
-	// The key value defaults to "client-secret"
-	corev1.SecretKeySelector `json:",inline"`
+	// The Secret name, defaults to "<name>-secret"
+	// +optional
+	Name *string `json:"name,omitempty"`
 	// +kubebuilder:default=true
 	// +optional
 	Create *bool `json:"create,omitempty"`
+	// The Client Secret key
+	// defaults to "client-secret" or "CLIENT_SECRET" based on envVarKeys
+	// +optional
+	ClientSecretKey *string `json:"clientSecretKey,omitempty"`
+	// The Client ID key
+	// Defaults to "client-id" or "CLIENT_ID" based on envVarKeys
+	// +optional
+	ClientIdKey *string `json:"clientIdKey,omitempty"`
+	// The Issuer URL key
+	// Defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys
+	// +optional
+	IssuerUrlKey *string `json:"issuerUrlKey,omitempty"`
 	// Whether to use envVar keys
 	// +kubebuilder:default=true
 	// +optional

@@ -6,9 +6,9 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
   name: oauth2-proxy-test
 spec:
-  clientSecretRef:
+  secret:
     name: oauth2-proxy-test-secret
-    key: client-secret
+    clientSecretKey: client-secret
     create: true
     envVarKeys: false
   redirectUris:

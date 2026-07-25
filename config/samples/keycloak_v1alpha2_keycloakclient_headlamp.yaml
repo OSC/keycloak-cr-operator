@@ -9,9 +9,9 @@ metadata:
 spec:
   clientID: kubernetes-default-keycloakclient-headlamp
   realm: master
-  clientSecretRef:
+  secret:
     name: keycloak-headlamp
-    key: CLIENT_SECRET
+    clientSecretKey: CLIENT_SECRET
     create: true
     envVarKeys: true
     keyPrefix: OIDC_

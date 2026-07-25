@@ -802,13 +802,6 @@ spec defines the desired state of KeycloakClient
         </td>
         <td>false</td>
       </tr><tr>
-        <td><b><a href="#keycloakclientspecclientsecretref-1">clientSecretRef</a></b></td>
-        <td>object</td>
-        <td>
-          Reference to the secret holding the ClientSecret<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
         <td><b><a href="#keycloakclientspecconfigmap-1">configMap</a></b></td>
         <td>object</td>
         <td>
@@ -995,6 +988,13 @@ spec defines the desired state of KeycloakClient
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b><a href="#keycloakclientspecsecret">secret</a></b></td>
+        <td>object</td>
+        <td>
+          The Secret configuration<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>serviceAccountsEnabled</b></td>
         <td>boolean</td>
         <td>
@@ -1024,80 +1024,6 @@ spec defines the desired state of KeycloakClient
           WebOrigins is the list of valid web origins<br/>
           <br/>
             <i>Default</i>: []<br/>
-        </td>
-        <td>false</td>
-      </tr></tbody>
-</table>
-
-
-### KeycloakClient.spec.clientSecretRef
-<sup><sup>[↩ Parent](#keycloakclientspec-1)</sup></sup>
-
-
-
-Reference to the secret holding the ClientSecret
-
-<table>
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Type</th>
-            <th>Description</th>
-            <th>Required</th>
-        </tr>
-    </thead>
-    <tbody><tr>
-        <td><b>key</b></td>
-        <td>string</td>
-        <td>
-          The key of the secret to select from.  Must be a valid secret key.<br/>
-        </td>
-        <td>true</td>
-      </tr><tr>
-        <td><b>create</b></td>
-        <td>boolean</td>
-        <td>
-          <br/>
-          <br/>
-            <i>Default</i>: true<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>envVarKeys</b></td>
-        <td>boolean</td>
-        <td>
-          Whether to use envVar keys<br/>
-          <br/>
-            <i>Default</i>: true<br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>keyPrefix</b></td>
-        <td>string</td>
-        <td>
-          The prefix for secret keys<br/>
-          <br/>
-            <i>Default</i>: <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>name</b></td>
-        <td>string</td>
-        <td>
-          Name of the referent.
-This field is effectively required, but due to backwards compatibility is
-allowed to be empty. Instances of this type with an empty value here are
-almost certainly wrong.
-More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names<br/>
-          <br/>
-            <i>Default</i>: <br/>
-        </td>
-        <td>false</td>
-      </tr><tr>
-        <td><b>optional</b></td>
-        <td>boolean</td>
-        <td>
-          Specify whether the Secret or its key must be defined<br/>
         </td>
         <td>false</td>
       </tr></tbody>
@@ -1219,6 +1145,84 @@ Required for type=oidc-audience-mapper<br/>
           The protocol mapper protocol<br/>
           <br/>
             <i>Default</i>: openid-connect<br/>
+        </td>
+        <td>false</td>
+      </tr></tbody>
+</table>
+
+
+### KeycloakClient.spec.secret
+<sup><sup>[↩ Parent](#keycloakclientspec-1)</sup></sup>
+
+
+
+The Secret configuration
+
+<table>
+    <thead>
+        <tr>
+            <th>Name</th>
+            <th>Type</th>
+            <th>Description</th>
+            <th>Required</th>
+        </tr>
+    </thead>
+    <tbody><tr>
+        <td><b>clientIdKey</b></td>
+        <td>string</td>
+        <td>
+          The Client ID key
+Defaults to "client-id" or "CLIENT_ID" based on envVarKeys<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>clientSecretKey</b></td>
+        <td>string</td>
+        <td>
+          The Client Secret key
+defaults to "client-secret" or "CLIENT_SECRET" based on envVarKeys<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>create</b></td>
+        <td>boolean</td>
+        <td>
+          <br/>
+          <br/>
+            <i>Default</i>: true<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>envVarKeys</b></td>
+        <td>boolean</td>
+        <td>
+          Whether to use envVar keys<br/>
+          <br/>
+            <i>Default</i>: true<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>issuerUrlKey</b></td>
+        <td>string</td>
+        <td>
+          The Issuer URL key
+Defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>keyPrefix</b></td>
+        <td>string</td>
+        <td>
+          The prefix for secret keys<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>name</b></td>
+        <td>string</td>
+        <td>
+          The Secret name, defaults to "<name>-secret"<br/>
         </td>
         <td>false</td>
       </tr></tbody>

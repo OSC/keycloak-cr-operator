@@ -150,7 +150,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	}
 
 	// Get the ClientSecret from clientSecretRef, if set
-	if keycloakClient.Spec.ClientSecretRef == nil {
+	if keycloakClient.Spec.Secret == nil {
 		log.V(1).Info("Secret not defined")
 	} else if shouldLookupSecret(keycloakClient) {
 		secret, err := r.getSecret(ctx, keycloakClient)
@@ -159,7 +159,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionFalse,
 				Reason:  "Failed",
-				Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.Spec.ClientSecretRef.Name),
+				Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.SecretName()),
 			})
 			log.Error(err, "Unable to get secret")
 			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "GetSecretFailed", "Get",

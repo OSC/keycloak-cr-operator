@@ -35,7 +35,6 @@ import (
 
 var (
 	keycloakclientlog = logf.Log.WithName("keycloakclient-resource")
-	clientSecretType  = "client-secret"
 	defaultEnvVarKeys = true
 )
 
@@ -60,7 +59,7 @@ type KeycloakClientCustomDefaulter struct {
 
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the Kind KeycloakClient.
 func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloakv1alpha2.KeycloakClient) error {
-	keycloakclientlog.Info("Defaulting for KeycloakClient", "name", obj.GetName(), "namespace", obj.GetNamespace())
+	keycloakclientlog.Info("Defaulting for KeycloakClient v1alpha2", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
 	// Set default ClientID if not set
 	if obj.Spec.ClientID == nil || *obj.Spec.ClientID == "" {
@@ -93,25 +92,32 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		obj.Spec.Realm = &defaultRealm
 	}
 
-	if obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == clientSecretType &&
-		obj.Spec.PublicClient != nil && !*obj.Spec.PublicClient {
-		if obj.Spec.ClientSecretRef == nil {
-			obj.Spec.ClientSecretRef = &keycloakv1alpha2.KeycloakClientSecret{}
-		}
-		if obj.Spec.ClientSecretRef.Name == "" {
-			obj.Spec.ClientSecretRef.Name = fmt.Sprintf("%s-secret", obj.Name)
-		}
-		if obj.Spec.ClientSecretRef.Key == "" {
-			obj.Spec.ClientSecretRef.Key = "CLIENT_SECRET"
-		}
-		if obj.Spec.ClientSecretRef.Create == nil {
-			create := true
-			obj.Spec.ClientSecretRef.Create = &create
-		}
-		// Set default EnvVarKeys to true if not set
-		if obj.Spec.ClientSecretRef.EnvVarKeys == nil {
-			obj.Spec.ClientSecretRef.EnvVarKeys = &defaultEnvVarKeys
-		}
+	if obj.Spec.Secret == nil {
+		obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{}
+	}
+	if obj.Spec.Secret.Name == nil || *obj.Spec.Secret.Name == "" {
+		defaultSecretName := obj.SecretName()
+		obj.Spec.Secret.Name = &defaultSecretName
+	}
+	if obj.Spec.Secret.ClientSecretKey == nil || *obj.Spec.Secret.ClientSecretKey == "" {
+		defaultClientSecretKey := obj.SecretClientSecretKey()
+		obj.Spec.Secret.ClientSecretKey = &defaultClientSecretKey
+	}
+	if obj.Spec.Secret.ClientIdKey == nil || *obj.Spec.Secret.ClientIdKey == "" {
+		defaultClientIdKey := obj.SecretClientIdKey()
+		obj.Spec.Secret.ClientIdKey = &defaultClientIdKey
+	}
+	if obj.Spec.Secret.IssuerUrlKey == nil || *obj.Spec.Secret.IssuerUrlKey == "" {
+		defaultIssuerUrlKey := obj.SecretIssuerUrlKey()
+		obj.Spec.Secret.IssuerUrlKey = &defaultIssuerUrlKey
+	}
+	if obj.Spec.Secret.Create == nil {
+		create := true
+		obj.Spec.Secret.Create = &create
+	}
+	if obj.Spec.Secret.EnvVarKeys == nil {
+		envVarKeys := obj.SecretEnvVarKeys()
+		obj.Spec.Secret.EnvVarKeys = &envVarKeys
 	}
 
 	// Handle ConfigMap structure
@@ -220,8 +226,7 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 		}
 	}
 
-	// Validate ClientSecretRef is present if ClientAuthenticatorType=client-secret and Public=false
-	clientSecretErrs := v.validateClientSecretRef(obj)
+	clientSecretErrs := v.validateSecret(obj)
 	if clientSecretErrs != nil {
 		allErrs = append(allErrs, clientSecretErrs...)
 	}
@@ -250,34 +255,43 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 	return nil
 }
 
-func (v *KeycloakClientCustomValidator) validateClientSecretRef(obj *keycloakv1alpha2.KeycloakClient) field.ErrorList {
+func (v *KeycloakClientCustomValidator) validateSecret(obj *keycloakv1alpha2.KeycloakClient) field.ErrorList {
 	var allErrs field.ErrorList
-	if (obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == clientSecretType) && (obj.Spec.PublicClient == nil || !*obj.Spec.PublicClient) {
-		if obj.Spec.ClientSecretRef == nil {
-			allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef"), fmt.Sprintf("clientSecretRef must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
-		} else {
-			if obj.Spec.ClientSecretRef.Name == "" {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "name"), fmt.Sprintf("clientSecretRef name must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+	if obj.Spec.Secret == nil {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret"), "secret must be set"))
+	} else {
+		if obj.Spec.Secret.Name == nil || *obj.Spec.Secret.Name == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "name"), "secret name must be set"))
+		}
+		if obj.Spec.Secret.ClientSecretKey == nil || *obj.Spec.Secret.ClientSecretKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "clientSecretKey"), "secret clientSecretKey must be set"))
+		} else if obj.SecretEnvVarKeys() {
+			envClientSecretKey := strcase.UpperSnakeCase(*obj.Spec.Secret.ClientSecretKey)
+			if envClientSecretKey != *obj.Spec.Secret.ClientSecretKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "clientSecretKey"), obj.Spec.Secret.ClientSecretKey, fmt.Sprintf("secret clientSecretKey must be upper snake case when envVarKeys is true, expected: %s", envClientSecretKey)))
 			}
-			if obj.Spec.ClientSecretRef.Key == "" {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "key"), fmt.Sprintf("clientSecretRef key must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+		}
+		if obj.Spec.Secret.ClientIdKey == nil || *obj.Spec.Secret.ClientIdKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "clientIdKey"), "secret clientIdKey must be set"))
+		} else if obj.SecretEnvVarKeys() {
+			envClientIdKey := strcase.UpperSnakeCase(*obj.Spec.Secret.ClientIdKey)
+			if envClientIdKey != *obj.Spec.Secret.ClientIdKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "clientIdKey"), obj.Spec.Secret.ClientIdKey, fmt.Sprintf("secret clientIdKey must be upper snake case when envVarKeys is true, expected: %s", envClientIdKey)))
 			}
-			if obj.Spec.ClientSecretRef.Create == nil {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "create"), fmt.Sprintf("clientSecretRef create must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
+		}
+		if obj.Spec.Secret.IssuerUrlKey == nil || *obj.Spec.Secret.IssuerUrlKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "issuerUrlKey"), "secret issuerUrlKey must be set"))
+		} else if obj.SecretEnvVarKeys() {
+			envIssuerUrlKey := strcase.UpperSnakeCase(*obj.Spec.Secret.IssuerUrlKey)
+			if envIssuerUrlKey != *obj.Spec.Secret.IssuerUrlKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "issuerUrlKey"), obj.Spec.Secret.IssuerUrlKey, fmt.Sprintf("secret issuerUrlKey must be upper snake case when envVarKeys is true, expected: %s", envIssuerUrlKey)))
 			}
-			// Validate EnvVarKeys is set for ClientSecretRef
-			if obj.Spec.ClientSecretRef.EnvVarKeys == nil {
-				allErrs = append(allErrs, field.Required(field.NewPath("spec", "clientSecretRef", "envVarKeys"), fmt.Sprintf("clientSecretRef envVarKeys must be set when clientAuthenticatorType is %s and public is false", clientSecretType)))
-			}
-			// Validate that ClientSecretRef.Key is upper snake case when EnvVarKeys is true
-			if obj.Spec.ClientSecretRef.EnvVarKeys != nil && *obj.Spec.ClientSecretRef.EnvVarKeys {
-				if obj.Spec.ClientSecretRef.Key != "" {
-					upperSnakeCase := strcase.UpperSnakeCase(obj.Spec.ClientSecretRef.Key)
-					if upperSnakeCase != obj.Spec.ClientSecretRef.Key {
-						allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "clientSecretRef", "key"), obj.Spec.ClientSecretRef.Key, fmt.Sprintf("clientSecretRef key must be upper snake case when envVarKeys is true, expected: %s", upperSnakeCase)))
-					}
-				}
-			}
+		}
+		if obj.Spec.Secret.Create == nil {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "create"), "secret create must be set"))
+		}
+		if obj.Spec.Secret.EnvVarKeys == nil {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "envVarKeys"), "secret envVarKeys must be set"))
 		}
 	}
 	return allErrs
@@ -321,7 +335,7 @@ func (v *KeycloakClientCustomValidator) validateProtocolMappers(obj *keycloakv1a
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
 func (v *KeycloakClientCustomValidator) ValidateCreate(_ context.Context, obj *keycloakv1alpha2.KeycloakClient) (admission.Warnings, error) {
-	keycloakclientlog.Info("Validation for KeycloakClient upon creation", "name", obj.GetName(), "namespace", obj.GetNamespace())
+	keycloakclientlog.Info("Validation for KeycloakClient v1alpha2 upon creation", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
 	// Validate the KeycloakClient resource
 	if err := v.validateKeycloakClient(obj); err != nil {
@@ -333,7 +347,7 @@ func (v *KeycloakClientCustomValidator) ValidateCreate(_ context.Context, obj *k
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
 func (v *KeycloakClientCustomValidator) ValidateUpdate(_ context.Context, oldObj, newObj *keycloakv1alpha2.KeycloakClient) (admission.Warnings, error) {
-	keycloakclientlog.Info("Validation for KeycloakClient upon update", "name", newObj.GetName(), "namespace", newObj.GetNamespace())
+	keycloakclientlog.Info("Validation for KeycloakClient v1alpha2 upon update", "name", newObj.GetName(), "namespace", newObj.GetNamespace())
 
 	// Validate the KeycloakClient resource
 	if err := v.validateKeycloakClient(newObj); err != nil {
@@ -345,7 +359,7 @@ func (v *KeycloakClientCustomValidator) ValidateUpdate(_ context.Context, oldObj
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
 func (v *KeycloakClientCustomValidator) ValidateDelete(_ context.Context, obj *keycloakv1alpha2.KeycloakClient) (admission.Warnings, error) {
-	keycloakclientlog.Info("Validation for KeycloakClient upon deletion", "name", obj.GetName(), "namespace", obj.GetNamespace())
+	keycloakclientlog.Info("Validation for KeycloakClient v1alpha2 upon deletion", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
 	// For deletion, we don't perform any validation as the resource is being deleted
 	// but we can add validation logic here if needed in the future

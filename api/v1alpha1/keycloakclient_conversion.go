@@ -28,11 +28,10 @@ import (
 // ConvertTo converts this KeycloakClient (v1alpha1) to the Hub version (v1alpha2).
 func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 	dst := dstRaw.(*keycloakv1alpha2.KeycloakClient)
-	log.Printf("ConvertTo: Converting KeycloakClient from Spoke version v1alpha1 to Hub version v1alpha2;"+
-		"source: %s/%s, target: %s/%s", src.Namespace, src.Name, dst.Namespace, dst.Name)
-
 	// Copy ObjectMeta to preserve name, namespace, labels, etc.
 	dst.ObjectMeta = src.ObjectMeta
+	log.Printf("ConvertTo: Converting KeycloakClient from Spoke version v1alpha1 to Hub version v1alpha2;"+
+		"source: %s/%s, target: %s/%s", src.Namespace, src.Name, dst.Namespace, dst.Name)
 
 	// Copy all spec fields from v1alpha1 to v1alpha2
 	dst.Spec.AdminURL = src.Spec.AdminURL
@@ -69,19 +68,15 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Handle ClientSecretRef conversion
 	if src.Spec.ClientSecretRef != nil {
-		dst.Spec.ClientSecretRef = &keycloakv1alpha2.KeycloakClientSecret{
-			SecretKeySelector: corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: src.Spec.ClientSecretRef.Name,
-				},
-				Key: src.Spec.ClientSecretRef.Key,
-			},
-			Create:     src.Spec.ClientSecretRef.Create,
-			EnvVarKeys: src.Spec.ClientSecretRef.EnvVarKeys,
-			KeyPrefix:  src.Spec.ClientSecretRef.KeyPrefix,
+		dst.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
+			Name:            &src.Spec.ClientSecretRef.Name,
+			ClientSecretKey: &src.Spec.ClientSecretRef.Key,
+			Create:          src.Spec.ClientSecretRef.Create,
+			EnvVarKeys:      src.Spec.ClientSecretRef.EnvVarKeys,
+			KeyPrefix:       src.Spec.ClientSecretRef.KeyPrefix,
 		}
 	} else {
-		dst.Spec.ClientSecretRef = nil
+		dst.Spec.Secret = nil
 	}
 
 	// Handle ConfigMap conversion
@@ -123,11 +118,10 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 // ConvertFrom converts the Hub version (v1alpha2) to this KeycloakClient (v1alpha1).
 func (dst *KeycloakClient) ConvertFrom(srcRaw conversion.Hub) error {
 	src := srcRaw.(*keycloakv1alpha2.KeycloakClient)
-	log.Printf("ConvertFrom: Converting KeycloakClient from Hub version v1alpha2 to Spoke version v1alpha1;"+
-		"source: %s/%s, target: %s/%s", src.Namespace, src.Name, dst.Namespace, dst.Name)
-
 	// Copy ObjectMeta to preserve name, namespace, labels, etc.
 	dst.ObjectMeta = src.ObjectMeta
+	log.Printf("ConvertFrom: Converting KeycloakClient from Hub version v1alpha2 to Spoke version v1alpha1;"+
+		"source: %s/%s, target: %s/%s", src.Namespace, src.Name, dst.Namespace, dst.Name)
 
 	// Copy all spec fields from v1alpha2 to v1alpha1
 	dst.Spec.AdminURL = src.Spec.AdminURL
@@ -163,17 +157,24 @@ func (dst *KeycloakClient) ConvertFrom(srcRaw conversion.Hub) error {
 	dst.Spec.Realm = src.Spec.Realm
 
 	// Handle ClientSecretRef conversion
-	if src.Spec.ClientSecretRef != nil {
+	if src.Spec.Secret != nil {
+		var name, key string
+		if src.Spec.Secret.Name != nil {
+			name = *src.Spec.Secret.Name
+		}
+		if src.Spec.Secret.ClientSecretKey != nil {
+			key = *src.Spec.Secret.ClientSecretKey
+		}
 		dst.Spec.ClientSecretRef = &KeycloakClientSecret{
 			SecretKeySelector: corev1.SecretKeySelector{
 				LocalObjectReference: corev1.LocalObjectReference{
-					Name: src.Spec.ClientSecretRef.Name,
+					Name: name,
 				},
-				Key: src.Spec.ClientSecretRef.Key,
+				Key: key,
 			},
-			Create:     src.Spec.ClientSecretRef.Create,
-			EnvVarKeys: src.Spec.ClientSecretRef.EnvVarKeys,
-			KeyPrefix:  src.Spec.ClientSecretRef.KeyPrefix,
+			Create:     src.Spec.Secret.Create,
+			EnvVarKeys: src.Spec.Secret.EnvVarKeys,
+			KeyPrefix:  src.Spec.Secret.KeyPrefix,
 		}
 	} else {
 		dst.Spec.ClientSecretRef = nil

@@ -155,6 +155,7 @@ verify-helm-crds: build-helm yamlfmt ## Verify Helm CRDs match Kustomize
 		--api-versions "cert-manager.io/v1" -n keycloak-cr-operator-system \
 		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" | grep -v '\-\-\-' ) \
 		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "CustomResourceDefinition")' | $(YAMLFMT) -in -formatter indentless_arrays=true,max_line_length=80 )
+	@git diff --quiet --exit-code charts
 
 .PHONY: verify-helm-role
 verify-helm-role: manifests generate kustomize ## Verify Helm role for this operator matches Kustomize
@@ -163,6 +164,7 @@ verify-helm-role: manifests generate kustomize ## Verify Helm role for this oper
 		--api-versions "cert-manager.io/v1" \
 		-s templates/rbac/keycloak-cr-operator-manager-role.yaml | grep -E -v "^#" | yq --no-doc '.' ) \
 		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "ClusterRole" and .metadata.name == "keycloak-cr-operator-manager-role")' )
+	@git diff --quiet --exit-code charts
 
 ##@ Build
 

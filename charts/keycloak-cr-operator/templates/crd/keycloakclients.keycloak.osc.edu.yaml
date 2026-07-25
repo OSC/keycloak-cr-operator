@@ -428,40 +428,6 @@ spec:
               clientID:
                 description: ClientID is the unique identifier for the client
                 type: string
-              clientSecretRef:
-                description: Reference to the secret holding the ClientSecret
-                properties:
-                  create:
-                    default: true
-                    type: boolean
-                  envVarKeys:
-                    default: true
-                    description: Whether to use envVar keys
-                    type: boolean
-                  key:
-                    description: The key of the secret to select from.  Must be a
-                      valid secret key.
-                    type: string
-                  keyPrefix:
-                    default: ""
-                    description: The prefix for secret keys
-                    type: string
-                  name:
-                    default: ""
-                    description: |-
-                      Name of the referent.
-                      This field is effectively required, but due to backwards compatibility is
-                      allowed to be empty. Instances of this type with an empty value here are
-                      almost certainly wrong.
-                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names
-                    type: string
-                  optional:
-                    description: Specify whether the Secret or its key must be defined
-                    type: boolean
-                required:
-                - key
-                type: object
-                x-kubernetes-map-type: atomic
               configMap:
                 description: The ConfigMap configuration
                 properties:
@@ -601,6 +567,39 @@ spec:
               rootUrl:
                 description: RootURL is the root URL for the client
                 type: string
+              secret:
+                description: The Secret configuration
+                properties:
+                  clientIdKey:
+                    description: |-
+                      The Client ID key
+                      Defaults to "client-id" or "CLIENT_ID" based on envVarKeys
+                    type: string
+                  clientSecretKey:
+                    description: |-
+                      The Client Secret key
+                      defaults to "client-secret" or "CLIENT_SECRET" based on envVarKeys
+                    type: string
+                  create:
+                    default: true
+                    type: boolean
+                  envVarKeys:
+                    default: true
+                    description: Whether to use envVar keys
+                    type: boolean
+                  issuerUrlKey:
+                    description: |-
+                      The Issuer URL key
+                      Defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys
+                    type: string
+                  keyPrefix:
+                    default: ""
+                    description: The prefix for secret keys
+                    type: string
+                  name:
+                    description: The Secret name, defaults to "<name>-secret"
+                    type: string
+                type: object
               serviceAccountsEnabled:
                 default: false
                 description: ServiceAccountsEnabled indicates if service accounts

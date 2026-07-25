@@ -9,9 +9,9 @@ metadata:
 spec:
   clientID: kubernetes-default-keycloakclient-test-public
   realm: master
-  clientSecretRef:
+  secret:
     name: keycloak-test-public
-    key: CLIENT_SECRET
+    clientSecretKey: CLIENT_SECRET
     create: true
   redirectUris:
     - https://example.com/*

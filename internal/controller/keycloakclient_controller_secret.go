@@ -47,8 +47,8 @@ func usesClientSecret(keycloakClient *keycloakv1alpha2.KeycloakClient) bool {
 }
 
 func shouldLookupSecret(keycloakClient *keycloakv1alpha2.KeycloakClient) bool {
-	if keycloakClient.Spec.ClientSecretRef != nil &&
-		keycloakClient.Spec.ClientSecretRef.Create != nil && !*keycloakClient.Spec.ClientSecretRef.Create {
+	if keycloakClient.Spec.Secret != nil &&
+		keycloakClient.Spec.Secret.Create != nil && !*keycloakClient.Spec.Secret.Create {
 		return true
 	} else {
 		return false
@@ -56,8 +56,8 @@ func shouldLookupSecret(keycloakClient *keycloakv1alpha2.KeycloakClient) bool {
 }
 
 func shouldCreateSecret(keycloakClient *keycloakv1alpha2.KeycloakClient) bool {
-	if keycloakClient.Spec.ClientSecretRef != nil &&
-		keycloakClient.Spec.ClientSecretRef.Create != nil && *keycloakClient.Spec.ClientSecretRef.Create {
+	if keycloakClient.Spec.Secret != nil &&
+		keycloakClient.Spec.Secret.Create != nil && *keycloakClient.Spec.Secret.Create {
 		return true
 	} else {
 		return false
@@ -78,7 +78,9 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 	log := logf.FromContext(ctx)
 	log.V(1).Info("Begin get secret")
 	secret := &corev1.Secret{}
-	log.V(1).Info("Get secret", "secret", keycloakClient.Spec.ClientSecretRef.Name, "key", keycloakClient.Spec.ClientSecretRef.Key)
+	name := keycloakClient.SecretName()
+	clientSecretKey := keycloakClient.SecretClientSecretKey()
+	log.V(1).Info("Get secret", "secret", name, "key", clientSecretKey)
 
 	// Set up retry logic with timeout
 	ctxWithTimeout, cancel := context.WithTimeout(ctx, *r.SecretWaitTimeout)
@@ -86,12 +88,12 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 
 	// Retry until the secret is found or timeout occurs
 	for {
-		err := r.Get(ctxWithTimeout, types.NamespacedName{Name: keycloakClient.Spec.ClientSecretRef.Name, Namespace: keycloakClient.Namespace}, secret)
+		err := r.Get(ctxWithTimeout, types.NamespacedName{Name: name, Namespace: keycloakClient.Namespace}, secret)
 		if err == nil {
 			// Secret found successfully
-			clientSecret, found := secret.Data[keycloakClient.Spec.ClientSecretRef.Key]
+			clientSecret, found := secret.Data[clientSecretKey]
 			if !found {
-				return "", fmt.Errorf("unable to find secret key %s in secret %s", keycloakClient.Spec.ClientSecretRef.Key, keycloakClient.Spec.ClientSecretRef.Name)
+				return "", fmt.Errorf("unable to find secret key %s in secret %s", clientSecretKey, name)
 			}
 			return string(clientSecret), nil
 		}
@@ -101,10 +103,10 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 			// Check if we've timed out
 			select {
 			case <-ctxWithTimeout.Done():
-				return "", fmt.Errorf("timed out waiting for secret %s to become available", keycloakClient.Spec.ClientSecretRef.Name)
+				return "", fmt.Errorf("timed out waiting for secret %s to become available", name)
 			default:
 				// Not timed out yet, continue with retry
-				log.V(1).Info("Secret not found, retrying", "namespace", keycloakClient.Namespace, "secret", keycloakClient.Spec.ClientSecretRef.Name, "timeout", r.SecretWaitTimeout)
+				log.V(1).Info("Secret not found, retrying", "namespace", keycloakClient.Namespace, "secret", name, "timeout", r.SecretWaitTimeout)
 				time.Sleep(1 * time.Second) // Wait 1 second before retrying
 				continue
 			}
@@ -129,6 +131,8 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 		log.Error(err, "Unable to get Keycloak Client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 		return err
 	}
+	envVarKeys := keycloakClient.SecretEnvVarKeys()
+	keyPrefix := keycloakClient.SecretKeyPrefix()
 	gocloakClient.Secret = client.Secret
 
 	// Get the secret using the GetSecret method from the KeycloakClient
@@ -136,11 +140,6 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 	if err != nil {
 		log.Error(err, "Failed to generate Secret")
 		return err
-	}
-
-	var keyPrefix string
-	if keycloakClient.Spec.ClientSecretRef != nil && keycloakClient.Spec.ClientSecretRef.KeyPrefix != nil {
-		keyPrefix = *keycloakClient.Spec.ClientSecretRef.KeyPrefix
 	}
 
 	// Check if the secret already exists
@@ -156,7 +155,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 			return err
 		}
-		if keycloakClient.Spec.ClientSecretRef.EnvVarKeys == nil || (keycloakClient.Spec.ClientSecretRef.EnvVarKeys != nil && *keycloakClient.Spec.ClientSecretRef.EnvVarKeys) {
+		if envVarKeys {
 			secret.Data[fmt.Sprintf("%s%s", keyPrefix, cookieSecretEnvKey)] = []byte(cookieSecret)
 		} else {
 			secret.Data[fmt.Sprintf("%s%s", keyPrefix, cookieSecretKey)] = []byte(cookieSecret)
@@ -202,7 +201,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 				return err
 			}
 			var cookieKey string
-			if keycloakClient.Spec.ClientSecretRef.EnvVarKeys == nil || (keycloakClient.Spec.ClientSecretRef.EnvVarKeys != nil && *keycloakClient.Spec.ClientSecretRef.EnvVarKeys) {
+			if envVarKeys {
 				cookieKey = cookieSecretEnvKey
 			} else {
 				cookieKey = cookieSecretKey
