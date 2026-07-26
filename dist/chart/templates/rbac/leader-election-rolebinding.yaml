@@ -14,5 +14,5 @@ roleRef:
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "leader-election-role" "context" $) }}
 subjects:
 - kind: ServiceAccount
-  name: {{ include "keycloak-cr-operator.serviceAccountName" . }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" $) }}
   namespace: {{ .Release.Namespace }}

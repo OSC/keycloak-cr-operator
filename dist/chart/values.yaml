@@ -25,6 +25,9 @@ manager:
   ## Arguments
   ##
   args:
+    - --keycloak-url=http://keycloak.keycloak.svc.cluster.local
+    - --keycloak-admin-username=$(KEYCLOAK_ADMIN_USERNAME)
+    - --keycloak-admin-password=$(KEYCLOAK_ADMIN_PASSWORD)
     - --leader-elect
 
   ## Image pull secrets
@@ -181,5 +184,5 @@ prometheus:
 ## Enable to restrict ingress to the controller manager.
 ##
 networkPolicy:
-  enabled: false
+  enabled: true
 

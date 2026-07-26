@@ -13,7 +13,7 @@ metadata:
     {{- toYaml . | nindent 4 }}
     {{- end }}
     {{- end }}
-  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "controller-manager" "context" $) }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" $) }}
   namespace: {{ .Release.Namespace }}
   {{- if .Values.manager.annotations }}
   annotations:
@@ -87,11 +87,17 @@ spec:
         {{- range .Values.manager.args }}
         - {{ . }}
         {{- end }}
+        {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
+        - --metrics-cert-path=/tmp/k8s-metrics-server/metrics-certs
+        {{- end }}
         {{- if .Values.certManager.enabled }}
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
         {{- end }}
         command:
         - /manager
+        envFrom:
+        - secretRef:
+            name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "keycloak-cr-operator-54c7265fkf" "context" $) }}
         image: "{{ .Values.manager.image.repository }}{{- if not (contains "@" .Values.manager.image.repository) }}:{{ .Values.manager.image.tag | default .Chart.AppVersion }}{{- end }}"
         {{- with .Values.manager.image.pullPolicy }}
         imagePullPolicy: {{ . }}
@@ -132,6 +138,11 @@ spec:
           {{- if .Values.manager.extraVolumeMounts }}
           {{- toYaml .Values.manager.extraVolumeMounts | nindent 10 }}
           {{- end }}
+          {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
+          - mountPath: /tmp/k8s-metrics-server/metrics-certs
+            name: metrics-certs
+            readOnly: true
+          {{- end }}
           {{- if .Values.certManager.enabled }}
           - mountPath: /tmp/k8s-webhook-server/serving-certs
             name: webhook-certs
@@ -143,13 +154,26 @@ spec:
         {{- else }}
         {}
         {{- end }}
-      serviceAccountName: {{ include "keycloak-cr-operator.serviceAccountName" . }}
+      serviceAccountName: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" $) }}
       {{- if and (hasKey .Values.manager "terminationGracePeriodSeconds") (ne .Values.manager.terminationGracePeriodSeconds nil) }}
       terminationGracePeriodSeconds: {{ .Values.manager.terminationGracePeriodSeconds }}
       {{- end }}
       volumes:
         {{- if .Values.manager.extraVolumes }}
         {{- toYaml .Values.manager.extraVolumes | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
+        - name: metrics-certs
+          secret:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            - key: tls.crt
+              path: tls.crt
+            - key: tls.key
+              path: tls.key
+            optional: false
+            secretName: metrics-server-cert
         {{- end }}
         {{- if .Values.certManager.enabled }}
         - name: webhook-certs
