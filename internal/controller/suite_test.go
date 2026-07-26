@@ -103,10 +103,10 @@ var _ = AfterSuite(func() {
 func bootstrapDeployment(keycloakClientName string) {
 	By("Create Deployment")
 	deployment := &appsv1.Deployment{}
-	err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: "default"}, deployment)
+	err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: testNamespace}, deployment)
 	if errors.IsNotFound(err) {
 		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: "default", Labels: map[string]string{keycloakClientMatchLabel: keycloakClientName}},
+			ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: testNamespace, Labels: map[string]string{keycloakClientMatchLabel: keycloakClientName}},
 			Spec: appsv1.DeploymentSpec{
 				Replicas: int32Ptr(1),
 				Selector: &metav1.LabelSelector{

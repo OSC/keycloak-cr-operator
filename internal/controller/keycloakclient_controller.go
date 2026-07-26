@@ -55,6 +55,10 @@ type GoCloakServer interface {
 	DeleteClient(ctx context.Context, token, realm, idOfClient string) error
 }
 
+const (
+	reasonFailed = "Failed"
+)
+
 // KeycloakClientReconciler reconciles a KeycloakClient object
 type KeycloakClientReconciler struct {
 	runtimeclient.Client
@@ -114,7 +118,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 			Type:    typeAvailableKeycloakClient,
 			Status:  metav1.ConditionFalse,
-			Reason:  "Failed",
+			Reason:  reasonFailed,
 			Message: "failed to handle finalizer",
 		})
 		r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "HandleFinalizerFailed", "Handle",
@@ -143,7 +147,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 			Type:    typeAvailableKeycloakClient,
 			Status:  metav1.ConditionFalse,
-			Reason:  "Failed",
+			Reason:  reasonFailed,
 			Message: fmt.Sprintf("Failed to gocloak client: %s", err),
 		})
 		return ctrl.Result{}, err
@@ -158,7 +162,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionFalse,
-				Reason:  "Failed",
+				Reason:  reasonFailed,
 				Message: fmt.Sprintf("Unable to get secret %s", keycloakClient.SecretName()),
 			})
 			log.Error(err, "Unable to get secret")
@@ -185,7 +189,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionFalse,
-				Reason:  "Failed",
+				Reason:  reasonFailed,
 				Message: fmt.Sprintf("Failed to create Keycloak client secret: %s", err),
 			})
 			return ctrl.Result{}, err
@@ -199,7 +203,7 @@ func (r *KeycloakClientReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 			Type:    typeAvailableKeycloakClient,
 			Status:  metav1.ConditionFalse,
-			Reason:  "Failed",
+			Reason:  reasonFailed,
 			Message: fmt.Sprintf("Failed to create Keycloak client config map: %s", err),
 		})
 		return ctrl.Result{}, err
@@ -295,7 +299,7 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionFalse,
-				Reason:  "Failed",
+				Reason:  reasonFailed,
 				Message: "Failed to create Keycloak client",
 			})
 			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "CreateKeycloakClientFailed", "Create",
@@ -313,7 +317,7 @@ func (r *KeycloakClientReconciler) ensureKeycloakClient(ctx context.Context, key
 			_ = r.setStatus(ctx, keycloakClient, metav1.Condition{
 				Type:    typeAvailableKeycloakClient,
 				Status:  metav1.ConditionFalse,
-				Reason:  "Failed",
+				Reason:  reasonFailed,
 				Message: "Failed to update Keycloak client",
 			})
 			r.Recorder.Eventf(keycloakClient, nil, corev1.EventTypeWarning, "UpdateKeycloakClientFailed", "Update",

@@ -27,6 +27,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	testSecretNameForValidating = "test-secret"
+	testKeyForValidating        = "TEST_KEY"
+)
+
 func WebhookValidating() {
 	var (
 		obj              *keycloakv1alpha1.KeycloakClient
@@ -38,20 +43,20 @@ func WebhookValidating() {
 	BeforeEach(func() {
 		obj = &keycloakv1alpha1.KeycloakClient{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-keycloak-client",
-				Namespace: "test-namespace",
+				Name:      testKeycloakClient,
+				Namespace: testNamespace,
 			},
 		}
 		oldObj = &keycloakv1alpha1.KeycloakClient{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-keycloak-client",
-				Namespace: "test-namespace",
+				Name:      testKeycloakClient,
+				Namespace: testNamespace,
 			},
 		}
 		validator = KeycloakClientCustomValidator{
 			keycloakConfig: &models.KeycloakConfig{
-				DefaultRealm:   "master",
-				ClientIDPrefix: "kubernetes",
+				DefaultRealm:   masterRealm,
+				ClientIDPrefix: kubernetesPrefix,
 				AllowedRealms:  []string{},
 			},
 		}
@@ -208,9 +213,9 @@ func WebhookValidating() {
 			secretRef := keycloakv1alpha1.KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretNameForValidating,
 					},
-					Key: "TEST_KEY",
+					Key: testKeyForValidating,
 				},
 				Create:     &create,
 				EnvVarKeys: boolPtr(true),
@@ -320,9 +325,9 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
-						Key: "TEST_KEY",
+						Key: testKeyForValidating,
 					},
 					Create:     &create,
 					EnvVarKeys: boolPtr(true),
@@ -375,7 +380,7 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
 						Key: "",
 					},
@@ -405,7 +410,7 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
 						Key: "testKey", // Not upper snake case
 					},
@@ -435,9 +440,9 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
-						Key: "TEST_KEY", // Upper snake case
+						Key: testKeyForValidating, // Upper snake case
 					},
 					Create:     &create,
 					EnvVarKeys: boolPtr(true), // EnvVarKeys is true
@@ -464,7 +469,7 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
 						Key: "testKey", // Not upper snake case
 					},

@@ -26,6 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
+const (
+	testNamespace   = "default"
+	testSecretName  = "test-secret"
+	clientSecretKey = "client-secret"
+)
+
 var _ = Describe("KeycloakClient Conversion", func() {
 	Context("ConvertTo", func() {
 		It("should convert v1alpha1 KeycloakClient to v1alpha2 correctly", func() {
@@ -33,7 +39,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
 					ClientID:                     stringPtr("test-client-id"),
@@ -68,14 +74,14 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			}
 
 			// Set up ClientSecretRef with envVarKeys=true
-			clientSecretKey := "client-secret"
+			// clientSecretKey is already a constant defined at package level
 			create := true
 			envVarKeys := true
 			keyPrefix := ""
 			src.Spec.ClientSecretRef = &KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretName,
 					},
 					Key: clientSecretKey,
 				},
@@ -179,7 +185,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -197,7 +203,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -215,7 +221,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-mappers",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -235,7 +241,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-envvars",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -245,7 +251,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src.Spec.ClientSecretRef = &KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretName,
 					},
 					Key: "client-secret",
 				},
@@ -266,7 +272,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-nil-values",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -296,7 +302,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                     stringPtr("test-client-id"),
@@ -437,7 +443,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -455,7 +461,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -473,7 +479,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-mappers",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -491,7 +497,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-empty-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -525,7 +531,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bidirectional",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
 					ClientID: stringPtr("test-client-id"),
@@ -539,7 +545,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src.Spec.ClientSecretRef = &KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretName,
 					},
 					Key: "client-secret",
 				},
