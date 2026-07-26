@@ -31,3 +31,5 @@ go.work
 
 # Do not support install.yaml
 dist/install.yaml
+# Ignore generated chart
+dist/chart

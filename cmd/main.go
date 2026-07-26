@@ -46,9 +46,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	webhookv1alpha1 "github.com/OSC/keycloak-cr-operator/internal/webhook/v1alpha1"
+	webhookv1alpha2 "github.com/OSC/keycloak-cr-operator/internal/webhook/v1alpha2"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -61,6 +63,7 @@ func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
 
 	utilruntime.Must(keycloakv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(keycloakv1alpha2.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -274,6 +277,10 @@ func main() {
 		os.Exit(1)
 	}
 	if err := webhookv1alpha1.SetupKeycloakClientWebhookWithManager(mgr, keycloakConfig); err != nil {
+		setupLog.Error(err, "Failed to create webhook", "webhook", "KeycloakClient")
+		os.Exit(1)
+	}
+	if err := webhookv1alpha2.SetupKeycloakClientWebhookWithManager(mgr, keycloakConfig); err != nil {
 		setupLog.Error(err, "Failed to create webhook", "webhook", "KeycloakClient")
 		os.Exit(1)
 	}

@@ -14,10 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package v1alpha2
 
 import (
 	"context"
+	"crypto/tls"
+	"fmt"
+	"net"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,19 +29,18 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
+	"github.com/OSC/keycloak-cr-operator/internal/models"
 	// +kubebuilder:scaffold:imports
 )
 
@@ -46,18 +48,17 @@ import (
 // http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var (
-	ctx            context.Context
-	cancel         context.CancelFunc
-	testEnv        *envtest.Environment
-	cfg            *rest.Config
-	k8sClient      client.Client
-	deploymentName = "nginx-deployment"
+	ctx       context.Context
+	cancel    context.CancelFunc
+	k8sClient client.Client
+	cfg       *rest.Config
+	testEnv   *envtest.Environment
 )
 
-func TestControllers(t *testing.T) {
+func TestAPIs(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	RunSpecs(t, "Webhook Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -73,8 +74,12 @@ var _ = BeforeSuite(func() {
 
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
-		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
-		ErrorIfCRDPathMissing: true,
+		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "..", "config", "crd", "bases")},
+		ErrorIfCRDPathMissing: false,
+
+		WebhookInstallOptions: envtest.WebhookInstallOptions{
+			Paths: []string{filepath.Join("..", "..", "..", "config", "webhook")},
+		},
 	}
 
 	// Retrieve the first found binary directory to allow running tests from IDEs
@@ -90,6 +95,48 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
+
+	// start webhook server using Manager.
+	webhookInstallOptions := &testEnv.WebhookInstallOptions
+	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
+		Scheme: scheme.Scheme,
+		WebhookServer: webhook.NewServer(webhook.Options{
+			Host:    webhookInstallOptions.LocalServingHost,
+			Port:    webhookInstallOptions.LocalServingPort,
+			CertDir: webhookInstallOptions.LocalServingCertDir,
+		}),
+		LeaderElection: false,
+		Metrics:        metricsserver.Options{BindAddress: "0"},
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	err = SetupKeycloakClientWebhookWithManager(mgr, &models.KeycloakConfig{
+		AdminUsername:  "admin",
+		AdminPassword:  "password",
+		AdminRealm:     "master",
+		ClientIDPrefix: "kubernetes",
+	})
+	Expect(err).NotTo(HaveOccurred())
+
+	// +kubebuilder:scaffold:webhook
+
+	go func() {
+		defer GinkgoRecover()
+		err = mgr.Start(ctx)
+		Expect(err).NotTo(HaveOccurred())
+	}()
+
+	// wait for the webhook server to get ready.
+	dialer := &net.Dialer{Timeout: time.Second}
+	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
+	Eventually(func() error {
+		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
+		if err != nil {
+			return err
+		}
+
+		return conn.Close()
+	}).Should(Succeed())
 })
 
 var _ = AfterSuite(func() {
@@ -100,36 +147,6 @@ var _ = AfterSuite(func() {
 	}, time.Minute, time.Second).Should(Succeed())
 })
 
-func bootstrapDeployment(keycloakClientName string) {
-	By("Create Deployment")
-	deployment := &appsv1.Deployment{}
-	err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: "default"}, deployment)
-	if errors.IsNotFound(err) {
-		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: "default", Labels: map[string]string{keycloakClientMatchLabel: keycloakClientName}},
-			Spec: appsv1.DeploymentSpec{
-				Replicas: int32Ptr(1),
-				Selector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{"app": "nginx"},
-				},
-				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "nginx"}},
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{{Name: "web", Image: "nginx:1.14.2"}},
-					},
-				},
-			},
-		}
-		err := k8sClient.Create(context.TODO(), deployment, &client.CreateOptions{})
-		Expect(err).NotTo(HaveOccurred())
-	} else {
-		patch := client.MergeFrom(deployment.DeepCopyObject().(client.Object))
-		deployment.Labels[keycloakClientMatchLabel] = keycloakClientName
-		err := k8sClient.Patch(ctx, deployment, patch)
-		Expect(err).NotTo(HaveOccurred())
-	}
-}
-
 // getFirstFoundEnvTestBinaryDir locates the first binary in the specified path.
 // ENVTEST-based tests depend on specific binaries, usually located in paths set by
 // controller-runtime. When running tests directly (e.g., via an IDE) without using
@@ -139,7 +156,7 @@ func bootstrapDeployment(keycloakClientName string) {
 // setting the 'KUBEBUILDER_ASSETS' environment variable. To ensure the binaries are
 // properly set up, run 'make setup-envtest' beforehand.
 func getFirstFoundEnvTestBinaryDir() string {
-	basePath := filepath.Join("..", "..", "bin", "k8s")
+	basePath := filepath.Join("..", "..", "..", "bin", "k8s")
 	entries, err := os.ReadDir(basePath)
 	if err != nil {
 		logf.Log.Error(err, "Failed to read directory", "path", basePath)
@@ -161,5 +178,3 @@ func stringPtr(s string) *string {
 func boolPtr(b bool) *bool {
 	return &b
 }
-
-func int32Ptr(i int32) *int32 { return &i }

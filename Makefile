@@ -52,11 +52,6 @@ help: ## Display this help.
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
 	"$(CONTROLLER_GEN)" rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases
 	$(CONTAINER_TOOL) run --rm -v $(shell pwd):/workdir $(CRDOC_IMAGE) --resources /workdir/config/crd/bases --output /workdir/docs/crds.md
-	@echo Copy CRD to Helm chart
-	@cp -f config/crd/bases/keycloak.osc.edu_keycloakclients.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	@$(SED) -i '1i {{- if .Values.crd.enable }}' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	@$(SED) -i 's/annotations:/annotations: {{ toYaml .Values.crd.annotations | nindent 4 }}/g' charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
-	@echo "{{- end }}" >> charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
@@ -154,12 +149,13 @@ verify-helm-docs: helm-docs ## Check Helm charts docs are up to date
 	@git diff --quiet --exit-code charts
 
 .PHONY: verify-helm-crds
-verify-helm-crds: manifests generate ## Verify Helm CRDs match Kustomize
+verify-helm-crds: build-helm yamlfmt ## Verify Helm CRDs match Kustomize
 	@diff -uw <( helm template keycloak-cr-operator charts/keycloak-cr-operator \
 		-f charts/keycloak-cr-operator/ci/test-values.yaml \
-		--api-versions "cert-manager.io/v1" \
-		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" ) \
-		config/crd/bases/keycloak.osc.edu_keycloakclients.yaml
+		--api-versions "cert-manager.io/v1" -n keycloak-cr-operator-system \
+		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" | grep -v '\-\-\-' ) \
+		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "CustomResourceDefinition")' | $(YAMLFMT) -in -formatter indentless_arrays=true,max_line_length=80 )
+	@git diff --quiet --exit-code charts
 
 .PHONY: verify-helm-role
 verify-helm-role: manifests generate kustomize ## Verify Helm role for this operator matches Kustomize
@@ -168,6 +164,7 @@ verify-helm-role: manifests generate kustomize ## Verify Helm role for this oper
 		--api-versions "cert-manager.io/v1" \
 		-s templates/rbac/keycloak-cr-operator-manager-role.yaml | grep -E -v "^#" | yq --no-doc '.' ) \
 		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "ClusterRole" and .metadata.name == "keycloak-cr-operator-manager-role")' )
+	@git diff --quiet --exit-code charts
 
 ##@ Build
 
@@ -213,6 +210,25 @@ build-installer: manifests generate kustomize ## Generate a consolidated YAML wi
 	cd config/manager && "$(KUSTOMIZE)" edit set image controller=${IMG}
 	"$(KUSTOMIZE)" build config/default > dist/install.yaml
 
+.PHONY: build-helm
+build-helm:
+	kubebuilder edit --plugins=helm/v2-alpha
+	cp -f dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
+	cp -f dist/chart/templates/webhook/validating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/validating-webhook-configuration.yaml
+	cp -f dist/chart/templates/webhook/mutating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/mutating-webhook-configuration.yaml
+	$(SED) -i 's/.Release.Namespace/include "keycloak-cr-operator.namespaceName" ./g' \
+		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i 's/9443/{{ .Values.webhook.port }}/g' \
+		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i 's/name: webhook-service/name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $$) }}/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i 's/namespace: system/namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i -r 's/cert-manager.io\/inject-ca-from: \{\{ (.+) \}\}/cert-manager.io\/inject-ca-from: "\{\{ \1 \}\}"/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+
 ##@ Deployment
 
 ifndef ignore-not-found
@@ -252,6 +268,8 @@ KUSTOMIZE ?= $(LOCALBIN)/kustomize
 CONTROLLER_GEN ?= $(LOCALBIN)/controller-gen
 ENVTEST ?= $(LOCALBIN)/setup-envtest
 GOLANGCI_LINT = $(LOCALBIN)/golangci-lint
+YAMLFMT = $(LOCALBIN)/yamlfmt
+YAMLFMT_VERSION ?= v0.21.0
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.8.1
@@ -300,6 +318,11 @@ $(GOLANGCI_LINT): $(LOCALBIN)
 		$(GOLANGCI_LINT) custom --destination $(LOCALBIN) --name golangci-lint-custom && \
 		mv -f $(LOCALBIN)/golangci-lint-custom $(GOLANGCI_LINT); \
 	} || true
+
+.PHONY: yamlfmt
+yamlfmt: $(YAMLFMT)
+$(YAMLFMT): $(LOCALBIN)
+	$(call go-install-tool,$(YAMLFMT),github.com/google/yamlfmt/cmd/yamlfmt,$(YAMLFMT_VERSION))
 
 # go-install-tool will 'go install' any package with custom target and name of binary, if it doesn't exist
 # $1 - target path with name of binary

@@ -30,4 +30,26 @@ webhooks:
     resources:
     - keycloakclients
   sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+      path: /mutate-keycloak-osc-edu-v1alpha2-keycloakclient
+      port: {{ .Values.webhook.port }}
+  failurePolicy: Fail
+  name: mkeycloakclient-v1alpha2.kb.io
+  rules:
+  - apiGroups:
+    - keycloak.osc.edu
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - keycloakclients
+  sideEffects: None
 {{- end }}

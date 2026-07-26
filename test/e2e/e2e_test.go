@@ -45,10 +45,13 @@ const metricsServiceName = "keycloak-cr-operator-metrics-service"
 // metricsRoleBindingName is the name of the RBAC that will be created to allow get the metrics data
 const metricsRoleBindingName = "keycloak-cr-operator-metrics-binding"
 
-const keycloakClientManifest = "config/samples/keycloak_v1alpha1_keycloakclient.yaml"
-const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha1_keycloakclient_with_secret.yaml"
-const keycloakClientManifestPublic = "config/samples/keycloak_v1alpha1_keycloakclient_public.yaml"
-const keycloakClientManifestHeadlamp = "config/samples/keycloak_v1alpha1_keycloakclient_headlamp.yaml"
+const keycloakClientManifest = "config/samples/keycloak_v1alpha2_keycloakclient.yaml"
+const keycloakClientManifestWithSecret = "config/samples/keycloak_v1alpha2_keycloakclient_with_secret.yaml"
+const keycloakClientManifestPublic = "config/samples/keycloak_v1alpha2_keycloakclient_public.yaml"
+const keycloakClientManifestHeadlamp = "config/samples/keycloak_v1alpha2_keycloakclient_headlamp.yaml"
+
+const keycloakClientManifestUpgradeFrom = "config/samples/keycloak_v1alpha1_keycloakclient_upgrade.yaml"
+const keycloakClientManifestUpgradeTo = "config/samples/keycloak_v1alpha2_keycloakclient_upgrade.yaml"
 
 const deploymentYaml = "test/e2e/deployment.yaml"
 
@@ -366,6 +369,20 @@ var _ = Describe("Manager", Ordered, func() {
 					"validatingwebhookconfigurations.admissionregistration.k8s.io",
 					"keycloak-cr-operator-validating-webhook-configuration",
 					"-o", "go-template={{ range .webhooks }}{{ .clientConfig.caBundle }}{{ end }}")
+				vwhOutput, err := utils.Run(cmd)
+				g.Expect(err).NotTo(HaveOccurred())
+				g.Expect(len(vwhOutput)).To(BeNumerically(">", 10))
+			}
+			Eventually(verifyCAInjection).Should(Succeed())
+		})
+
+		It("should have CA injection for KeycloakClient conversion webhook", func() {
+			By("checking CA injection for KeycloakClient conversion webhook")
+			verifyCAInjection := func(g Gomega) {
+				cmd := exec.Command("kubectl", "get",
+					"customresourcedefinitions.apiextensions.k8s.io",
+					"keycloakclients.keycloak.osc.edu",
+					"-o", "go-template={{ .spec.conversion.webhook.clientConfig.caBundle }}")
 				vwhOutput, err := utils.Run(cmd)
 				g.Expect(err).NotTo(HaveOccurred())
 				g.Expect(len(vwhOutput)).To(BeNumerically(">", 10))

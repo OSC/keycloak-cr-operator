@@ -24,7 +24,7 @@ import (
 	"fmt"
 
 	"github.com/Nerzal/gocloak/v13"
-	"github.com/OSC/keycloak-cr-operator/api/v1alpha1"
+	"github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/controller"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	"github.com/OSC/keycloak-cr-operator/test/utils"
@@ -66,8 +66,8 @@ func getKeycloakClient(clientID, realm string) *gocloak.Client {
 	ctx := context.Background()
 	clientSecret := "client-secret"
 	public := false
-	keycloakClient := &v1alpha1.KeycloakClient{
-		Spec: v1alpha1.KeycloakClientSpec{
+	keycloakClient := &v1alpha2.KeycloakClient{
+		Spec: v1alpha2.KeycloakClientSpec{
 			ClientID:                &clientID,
 			Realm:                   &realm,
 			ClientAuthenticatorType: &clientSecret,

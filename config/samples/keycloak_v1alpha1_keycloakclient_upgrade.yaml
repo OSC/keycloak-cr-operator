@@ -4,13 +4,12 @@ metadata:
   labels:
     app.kubernetes.io/name: keycloak-cr-operator
     app.kubernetes.io/managed-by: kustomize
-  name: keycloakclient-test
+  name: keycloakclient-test-upgrade
   namespace: default
 spec:
-  clientID: kubernetes-default-keycloakclient-test
   realm: master
   clientSecretRef:
-    name: keycloak-test
+    name: keycloak-upgrade-secret
     key: CLIENT_SECRET
     create: true
   redirectUris:
@@ -21,4 +20,4 @@ spec:
     - profile
     - email
   configMap:
-    name: keycloak-config
+    name: keycloak-upgrade-config

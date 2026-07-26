@@ -117,9 +117,8 @@ rbacHelpers:
 crd:
   # -- Install CRDs with the chart
   enable: true
-  annotations:
-    # -- Keep CRDs when uninstalling
-    helm.sh/resource-policy: keep
+  # -- Keep CRDs when uninstalling
+  keep: true
 
 # Controller metrics endpoint
 metrics:

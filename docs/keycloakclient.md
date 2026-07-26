@@ -2,6 +2,7 @@
 
 ### Table of Contents
 - [CRD Overview](#crd-overview)
+- [Migrating from v1alpha1 to v1alpha2](#migrating-from-v1alpha1-to-v1alpha2)
 - [Default Values Applied by Webhook](#default-values-applied-by-webhook)
 - [Using an Existing Secret](#using-an-existing-secret)
 - [Creating a Secret Automatically](#creating-a-secret-automatically)
@@ -17,6 +18,49 @@ The operator manages Keycloak clients through the `KeycloakClient` Custom Resour
 
 For detailed information about all available fields and their usage, please refer to the [KeycloakClient CRD documentation](docs/crds.md).
 
+## Migrating from v1alpha1 to v1alpha2
+
+### API Version Update
+Update the API version in your existing KeycloakClient resources from `keycloak.osc.edu/v1alpha1` to `keycloak.osc.edu/v1alpha2`.
+
+### Secret Configuration Changes
+The `clientSecretRef` field has been renamed to `secret` and restructured:
+
+**v1alpha1 (old):**
+```yaml
+spec:
+  clientSecretRef:
+    name: "my-secret"
+    key: "client-secret"
+    create: true
+    envVarKeys: true
+```
+
+**v1alpha2 (new):**
+```yaml
+spec:
+  secret:
+    name: "my-secret"
+    clientSecretKey: "client-secret"
+    clientIdKey: "client-id"
+    issuerUrlKey: "issuer-url"
+    create: true
+    envVarKeys: true
+```
+
+### Configuration Mapping
+
+| v1alpha1 Field | v1alpha2 Field | Notes |
+|----------------|----------------|-------|
+| `clientSecretRef.name` | `secret.name` | Same functionality |
+| `clientSecretRef.key` | `secret.clientSecretKey` | Renamed for clarity |
+| N/A | `secret.clientIdKey` | New field for Client ID key |
+| N/A | `secret.issuerUrlKey` | New field for Issuer URL key |
+| `clientSecretRef.create` | `secret.create` | Same functionality |
+| `clientSecretRef.envVarKeys` | `secret.envVarKeys` | Same functionality |
+
+The operator automatically defaults the new secret configuration when migrating, but it's recommended to update your manifests to explicitly specify the new structure.
+
 ## Default Values Applied by Webhook
 When creating or updating a KeycloakClient, the webhook automatically applies the following defaults:
 
@@ -27,10 +71,12 @@ When creating or updating a KeycloakClient, the webhook automatically applies th
 
 - **Realm**: If not specified, it will default to the operator's configured `--keycloak-default-realm`
 
-- **ClientSecretRef**: When `clientAuthenticatorType` is "client-secret" and `publicClient` is false:
-  - If `clientSecretRef` is not set, it will be auto-created with:
+- **Secret**: When `clientAuthenticatorType` is "client-secret" and `publicClient` is false:
+  - If `secret` is not set, it will be auto-created with:
     - `name`: `name-secret` (where `name` is the KeycloakClient resource name)
-    - `key`: `client-secret`
+    - `clientSecretKey`: `client-secret` or `CLIENT_SECRET` based on `envVarKeys`
+    - `clientIdKey`: `client-id` or `CLIENT_ID` based on `envVarKeys`
+    - `issuerUrlKey`: `issuer-url` or `ISSUER_URL` based on `envVarKeys`
     - `create`: `true` (indicating the secret should be auto-created)
     - `envVarKeys`: `true` (use EnvVar keys for Secret data)
 
@@ -42,7 +88,7 @@ When creating or updating a KeycloakClient, the webhook automatically applies th
 To reference an existing Kubernetes Secret for the client secret:
 
 ```yaml
-apiVersion: keycloak.osc.edu/v1alpha1
+apiVersion: keycloak.osc.edu/v1alpha2
 kind: KeycloakClient
 metadata:
   name: example-client
@@ -55,9 +101,11 @@ spec:
   clientID: "my-client-id"
 
   # Reference an existing secret
-  clientSecretRef:
+  secret:
     name: "existing-secret"
-    key: "client-secret"
+    clientSecretKey: "client-secret"
+    clientIdKey: "client-id"
+    issuerUrlKey: "issuer-url"
     # Set to false if you want to use an existing secret without creating it
     create: false
     # Do not force EnvVar keys in Secret
@@ -102,7 +150,7 @@ data:
 To have the operator automatically create a secret with a generated client secret:
 
 ```yaml
-apiVersion: keycloak.osc.edu/v1alpha1
+apiVersion: keycloak.osc.edu/v1alpha2
 kind: KeycloakClient
 metadata:
   name: example-client-auto-secret
@@ -115,10 +163,12 @@ spec:
   clientID: "my-client-id"
 
   # Configure secret creation
-  clientSecretRef:
+  secret:
     # Name will default to name-secret if not specified
     name: "my-client-secret"
-    key: "client-secret"
+    clientSecretKey: "client-secret"
+    clientIdKey: "client-id"
+    issuerUrlKey: "issuer-url"
     # Set to true (default) to create the secret automatically
     create: true
     # Use EnvVar keys in Secret
@@ -152,9 +202,9 @@ The operator creates Kubernetes Secrets containing client credentials with the f
 - `COOKIE_SECRET`: A randomly generated secret used for OAuth2 Proxy cookie encryption
 - `ISSUER_URL`: The issuer URL for OpenID Connect
 
-The `COOKIE_SECRET` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates.  If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
+The `COOKIE_SECRET` is specifically intended to be used with OAuth2 Proxy for securing cookies. It is automatically generated upon Secret creation and not modified on updates. If the cookie secret keys are removed from the Secret, a new random cookie secret will be added back to the Secret.
 
-When `envVarKeys` is set to `false` in the ClientSecretRef configuration, the operator will use `client-id`, `client-secret`, `cookie-secret` and `issuer-url` keys.
+When `envVarKeys` is set to `false` in the Secret configuration, the operator will use `client-id`, `client-secret`, `cookie-secret` and `issuer-url` keys.
 
 Set `keyPrefix` to give all Secret keys a prefix.
 
@@ -172,6 +222,20 @@ data:
   COOKIE_SECRET: <base64-encoded-cookie-secret>
   ISSUER_URL: "https://keycloak.example.com/realms/my-realm"
 ```
+
+### Secret Configuration Options
+
+The `secret` field has the following configurable properties:
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `name` | The Secret name | `<name>-secret` |
+| `create` | Whether to create the secret automatically | `true` |
+| `clientSecretKey` | The key for the client secret in the Secret | `client-secret` or `CLIENT_SECRET` (based on `envVarKeys`) |
+| `clientIdKey` | The key for the client ID in the Secret | `client-id` or `CLIENT_ID` (based on `envVarKeys`) |
+| `issuerUrlKey` | The key for the issuer URL in the Secret | `issuer-url` or `ISSUER_URL` (based on `envVarKeys`) |
+| `envVarKeys` | Whether to use environment variable-style keys (uppercase with underscores) | `true` |
+| `keyPrefix` | A prefix to add to all secret keys | `` (empty) |
 
 ## ConfigMap Creation
 The operator creates Kubernetes ConfigMaps with Keycloak client configuration:
@@ -221,7 +285,7 @@ This would enforce that all client IDs must follow the pattern: `prefix-namespac
 
 ### Example Template:
 ```yaml
-apiVersion: keycloak.osc.edu/v1alpha1
+apiVersion: keycloak.osc.edu/v1alpha2
 kind: KeycloakClient
 metadata:
   name: example-client
@@ -250,7 +314,7 @@ Protocol mappers can be configured in the `protocolMappers` field of the Keycloa
 
 ### Example Usage
 ```yaml
-apiVersion: keycloak.osc.edu/v1alpha1
+apiVersion: keycloak.osc.edu/v1alpha2
 kind: KeycloakClient
 metadata:
   name: example-client
@@ -274,7 +338,7 @@ The KeycloakClient operator integrates well with OAuth2 Proxy for secure authent
 
 ### Sample Configuration
 For an example of how to configure a KeycloakClient for use with OAuth2 Proxy, see the sample configuration file:
-- [`config/samples/keycloak_v1alpha1_keycloakclient_oauth2-proxy.yaml`](../config/samples/keycloak_v1alpha1_keycloakclient_oauth2-proxy.yaml)
+- [`config/samples/keycloak_v1alpha2_keycloakclient_oauth2-proxy.yaml`](../config/samples/keycloak_v1alpha2_keycloakclient_oauth2-proxy.yaml)
 
 ### OAuth2 Proxy Configuration Values
 The OAuth2 Proxy Helm configuration can be found in:

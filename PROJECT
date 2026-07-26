@@ -9,7 +9,7 @@ layout:
 plugins:
   helm.kubebuilder.io/v2-alpha:
     manifests: dist/install.yaml
-    output: charts
+    output: dist
 projectName: keycloak-cr-operator
 repo: github.com/OSC/keycloak-cr-operator
 resources:
@@ -24,6 +24,21 @@ resources:
   version: v1alpha1
   webhooks:
     defaulting: true
+    validation: true
+    webhookVersion: v1
+- api:
+    crdVersion: v1
+    namespaced: true
+  domain: osc.edu
+  group: keycloak
+  kind: KeycloakClient
+  path: github.com/OSC/keycloak-cr-operator/api/v1alpha2
+  version: v1alpha2
+  webhooks:
+    conversion: true
+    defaulting: true
+    spoke:
+    - v1alpha1
     validation: true
     webhookVersion: v1
 version: "3"
