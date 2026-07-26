@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-=======
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -16,7 +14,6 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
->>>>>>> tmp-original-26-07-26-14-00
 package main
 
 import (
@@ -257,13 +254,6 @@ func main() {
 		os.Exit(1)
 	}
 
-<<<<<<< HEAD
-	if err := (&controller.KeycloakClientReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "Failed to create controller", "controller", "keycloakclient")
-=======
 	keycloakConfig := &models.KeycloakConfig{
 		KeycloakURL:      keycloakUrlObj,
 		AdminUsername:    keycloakAdminUsername,
@@ -274,17 +264,15 @@ func main() {
 		ClientIDPrefix:   keycloakClientIDPrefix,
 		ClientIDRequired: clientIDRequiredTmpl,
 	}
-	reconciler := &controller.KeycloakClientReconciler{
+	if err := (&controller.KeycloakClientReconciler{
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Recorder:          mgr.GetEventRecorder("keycloakclient-controller"),
 		SecretWaitTimeout: &secretWaitDuration,
 		Config:            keycloakConfig,
-	}
-	reconciler.Server = gocloak.NewClient(keycloakUrl)
-	if err := (reconciler).SetupWithManager(mgr); err != nil {
-		setupLog.Error(err, "Failed to create controller", "controller", "KeycloakClient")
->>>>>>> tmp-original-26-07-26-14-00
+		Server:            gocloak.NewClient(keycloakUrl),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "keycloakclient")
 		os.Exit(1)
 	}
 	if err := webhookv1alpha1.SetupKeycloakClientWebhookWithManager(mgr, keycloakConfig); err != nil {

@@ -1,9 +1,3 @@
-<<<<<<< HEAD
-package controller
-
-import (
-	. "github.com/onsi/ginkgo/v2"
-=======
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -40,7 +34,6 @@ import (
 
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
->>>>>>> tmp-original-26-07-26-14-00
 )
 
 var (
@@ -88,10 +81,7 @@ func (m *MockGoCloak) DeleteClient(ctx context.Context, token, realm, idOfClient
 
 var _ = Describe("KeycloakClient Controller", func() {
 	Context("When reconciling a resource", func() {
-
-<<<<<<< HEAD
-		It("should successfully reconcile the resource", func() {
-=======
+		const resourceName = "test-resource"
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
@@ -177,8 +167,11 @@ var _ = Describe("KeycloakClient Controller", func() {
 					ClientIDPrefix: "kubernetes",
 				},
 			}
->>>>>>> tmp-original-26-07-26-14-00
 
+			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
+				NamespacedName: typeNamespacedName,
+			})
+			Expect(err).NotTo(HaveOccurred())
 			// TODO(user): Add more specific assertions depending on your controller's reconciliation logic.
 			// Example: If you expect a certain status condition after reconciliation, verify it here.
 
