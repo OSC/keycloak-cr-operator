@@ -170,11 +170,7 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should run successfully", func() {
 			By("validating that the manager pod is running as expected")
 			verifyControllerUp := func(g Gomega) {
-<<<<<<< HEAD
 				By("getting the name of the controller-manager pod")
-=======
-				// Get the name of the manager pod
->>>>>>> tmp-original-26-07-26-14-00
 				cmd := exec.Command("kubectl", "get",
 					"pods", "-l", "control-plane=controller-manager",
 					"-o", "go-template={{ range .items }}"+
