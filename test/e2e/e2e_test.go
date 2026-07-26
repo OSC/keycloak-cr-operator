@@ -1,6 +1,8 @@
 //go:build e2e
 // +build e2e
 
+<<<<<<< HEAD
+=======
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -17,6 +19,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+>>>>>>> tmp-original-26-07-26-14-00
 package e2e
 
 import (
@@ -170,7 +173,11 @@ var _ = Describe("Manager", Ordered, func() {
 		It("should run successfully", func() {
 			By("validating that the manager pod is running as expected")
 			verifyControllerUp := func(g Gomega) {
+<<<<<<< HEAD
+				By("getting the name of the controller-manager pod")
+=======
 				// Get the name of the manager pod
+>>>>>>> tmp-original-26-07-26-14-00
 				cmd := exec.Command("kubectl", "get",
 					"pods", "-l", "control-plane=controller-manager",
 					"-o", "go-template={{ range .items }}"+
@@ -187,7 +194,7 @@ var _ = Describe("Manager", Ordered, func() {
 				controllerPodName = podNames[0]
 				g.Expect(controllerPodName).To(ContainSubstring("manager"))
 
-				// Validate the pod's status
+				By("validating the pod's status")
 				cmd = exec.Command("kubectl", "get",
 					"pods", controllerPodName, "-o", "jsonpath={.status.phase}",
 					"-n", namespace,
@@ -405,7 +412,7 @@ func serviceAccountToken() (string, error) {
 		"kind": "TokenRequest"
 	}`
 
-	// Temporary file to store the token request
+	By("creating temporary file to store the token request")
 	secretName := fmt.Sprintf("%s-token-request", serviceAccountName)
 	tokenRequestFile := filepath.Join("/tmp", secretName)
 	err := os.WriteFile(tokenRequestFile, []byte(tokenRequestRawString), os.FileMode(0o644))
@@ -415,7 +422,7 @@ func serviceAccountToken() (string, error) {
 
 	var out string
 	verifyTokenCreation := func(g Gomega) {
-		// Execute kubectl command to create the token
+		By("executing kubectl command to create the token")
 		cmd := exec.Command("kubectl", "create", "--raw", fmt.Sprintf(
 			"/api/v1/namespaces/%s/serviceaccounts/%s/token",
 			namespace,
@@ -425,7 +432,7 @@ func serviceAccountToken() (string, error) {
 		output, err := cmd.CombinedOutput()
 		g.Expect(err).NotTo(HaveOccurred())
 
-		// Parse the JSON output to extract the token
+		By("parsing the JSON output to extract the token")
 		var token tokenRequest
 		err = json.Unmarshal(output, &token)
 		g.Expect(err).NotTo(HaveOccurred())

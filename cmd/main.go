@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -14,6 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+>>>>>>> tmp-original-26-07-26-14-00
 package main
 
 import (
@@ -197,7 +200,7 @@ func main() {
 
 	// Metrics endpoint is enabled in 'config/default/kustomization.yaml'. The Metrics options configure the server.
 	// More info:
-	// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/metrics/server
+	// - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.24.1/pkg/metrics/server
 	// - https://book.kubebuilder.io/reference/metrics.html
 	metricsServerOptions := metricsserver.Options{
 		BindAddress:   metricsAddr,
@@ -209,7 +212,7 @@ func main() {
 		// FilterProvider is used to protect the metrics endpoint with authn/authz.
 		// These configurations ensure that only authorized users and service accounts
 		// can access the metrics endpoint. The RBAC are configured in 'config/rbac/kustomization.yaml'. More info:
-		// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.23.1/pkg/metrics/filters#WithAuthenticationAndAuthorization
+		// https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.24.1/pkg/metrics/filters#WithAuthenticationAndAuthorization
 		metricsServerOptions.FilterProvider = filters.WithAuthenticationAndAuthorization
 	}
 
@@ -254,6 +257,13 @@ func main() {
 		os.Exit(1)
 	}
 
+<<<<<<< HEAD
+	if err := (&controller.KeycloakClientReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "Failed to create controller", "controller", "keycloakclient")
+=======
 	keycloakConfig := &models.KeycloakConfig{
 		KeycloakURL:      keycloakUrlObj,
 		AdminUsername:    keycloakAdminUsername,
@@ -274,6 +284,7 @@ func main() {
 	reconciler.Server = gocloak.NewClient(keycloakUrl)
 	if err := (reconciler).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "Failed to create controller", "controller", "KeycloakClient")
+>>>>>>> tmp-original-26-07-26-14-00
 		os.Exit(1)
 	}
 	if err := webhookv1alpha1.SetupKeycloakClientWebhookWithManager(mgr, keycloakConfig); err != nil {

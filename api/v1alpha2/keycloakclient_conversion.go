@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -14,6 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+>>>>>>> tmp-original-26-07-26-14-00
 package v1alpha2
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!

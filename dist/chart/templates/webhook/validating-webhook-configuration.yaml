@@ -1,0 +1,51 @@
+{{- if .Values.webhook.enabled }}
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  annotations:
+    {{- if .Values.certManager.enabled }}
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
+    {{- end }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "validating-webhook-configuration" "context" $) }}
+webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-keycloak-osc-edu-v1alpha1-keycloakclient
+  failurePolicy: Fail
+  name: vkeycloakclient-v1alpha1.kb.io
+  rules:
+  - apiGroups:
+    - keycloak.osc.edu
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - keycloakclients
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
+      namespace: {{ .Release.Namespace }}
+      path: /validate-keycloak-osc-edu-v1alpha2-keycloakclient
+  failurePolicy: Fail
+  name: vkeycloakclient-v1alpha2.kb.io
+  rules:
+  - apiGroups:
+    - keycloak.osc.edu
+    apiVersions:
+    - v1alpha2
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - keycloakclients
+  sideEffects: None
+{{- end }}

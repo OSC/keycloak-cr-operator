@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -14,6 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+>>>>>>> tmp-original-26-07-26-14-00
 package utils
 
 import (
@@ -28,9 +31,14 @@ import (
 )
 
 const (
+<<<<<<< HEAD
+	certmanagerVersion = "v1.20.2"
+	certmanagerURLTmpl = "https://github.com/cert-manager/cert-manager/releases/download/%s/cert-manager.yaml"
+=======
 	KeycloakPort          = "30080"
 	KeycloakAdminUsername = "admin"
 	KeycloakAdminPassword = "secret"
+>>>>>>> tmp-original-26-07-26-14-00
 
 	defaultKindBinary  = "kind"
 	defaultKindCluster = "kind"

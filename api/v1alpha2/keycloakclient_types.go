@@ -1,3 +1,5 @@
+<<<<<<< HEAD
+=======
 /*
 Copyright 2026 Ohio Supercomputer Center.
 
@@ -14,6 +16,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+>>>>>>> tmp-original-26-07-26-14-00
 package v1alpha2
 
 import (
@@ -23,8 +26,12 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+<<<<<<< HEAD
+	"k8s.io/apimachinery/pkg/runtime"
+=======
 
 	"github.com/OSC/keycloak-cr-operator/internal/models"
+>>>>>>> tmp-original-26-07-26-14-00
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -352,7 +359,10 @@ type KeycloakClientData struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(SchemeGroupVersion, &KeycloakClient{}, &KeycloakClientList{})
+		return nil
+	})
 }
 
 func (k *KeycloakClient) GetClient(config *models.KeycloakConfig) (*gocloak.Client, error) {
