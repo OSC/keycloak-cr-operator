@@ -2,8 +2,7 @@
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  labels:
-    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+  labels: {{ include "keycloak-cr-operator.labels" . | nindent 4 }}
   annotations:
     {{- if .Values.certManager.enabled }}
     cert-manager.io/inject-ca-from: "{{ .Release.Namespace }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}"

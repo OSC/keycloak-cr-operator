@@ -159,7 +159,7 @@ verify-helm-crds: build-helm yamlfmt ## Verify Helm CRDs match Kustomize
 		--api-versions "cert-manager.io/v1" -n keycloak-cr-operator-system \
 		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" | grep -v '\-\-\-' ) \
 		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "CustomResourceDefinition")' | $(YAMLFMT) -in -formatter indentless_arrays=true,max_line_length=80 )
-	@git diff --quiet --exit-code charts
+	@git diff --exit-code charts
 
 .PHONY: verify-helm-role
 verify-helm-role: manifests generate kustomize ## Verify Helm role for this operator matches Kustomize
@@ -220,17 +220,16 @@ build-helm:
 	cp -f dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 	cp -f dist/chart/templates/webhook/validating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/validating-webhook-configuration.yaml
 	cp -f dist/chart/templates/webhook/mutating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/mutating-webhook-configuration.yaml
-	$(SED) -i 's/.Release.Namespace/include "keycloak-cr-operator.namespaceName" ./g' \
-		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
-		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 	$(SED) -i 's/9443/{{ .Values.webhook.port }}/g' \
 		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 	$(SED) -i 's/name: webhook-service/name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $$) }}/g' \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
-	$(SED) -i 's/namespace: system/namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}/g' \
+	$(SED) -i 's/namespace: system/namespace: {{ .Release.Namespace }}/g' \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 	$(SED) -i -r 's/cert-manager.io\/inject-ca-from: \{\{ (.+) \}\}/cert-manager.io\/inject-ca-from: "\{\{ \1 \}\}"/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i -r 's/metadata:/metadata:\n  labels: {{ include "keycloak-cr-operator.labels" . | nindent 4 }}/g' \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 
 ##@ Deployment
