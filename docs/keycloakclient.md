@@ -2,6 +2,7 @@
 
 ### Table of Contents
 - [CRD Overview](#crd-overview)
+- [Migrating from v1alpha1 to v1alpha2](#migrating-from-v1alpha1-to-v1alpha2)
 - [Default Values Applied by Webhook](#default-values-applied-by-webhook)
 - [Using an Existing Secret](#using-an-existing-secret)
 - [Creating a Secret Automatically](#creating-a-secret-automatically)
@@ -16,6 +17,49 @@
 The operator manages Keycloak clients through the `KeycloakClient` Custom Resource Definition (CRD). This CRD supports various Keycloak client properties and configurations.
 
 For detailed information about all available fields and their usage, please refer to the [KeycloakClient CRD documentation](docs/crds.md).
+
+## Migrating from v1alpha1 to v1alpha2
+
+### API Version Update
+Update the API version in your existing KeycloakClient resources from `keycloak.osc.edu/v1alpha1` to `keycloak.osc.edu/v1alpha2`.
+
+### Secret Configuration Changes
+The `clientSecretRef` field has been renamed to `secret` and restructured:
+
+**v1alpha1 (old):**
+```yaml
+spec:
+  clientSecretRef:
+    name: "my-secret"
+    key: "client-secret"
+    create: true
+    envVarKeys: true
+```
+
+**v1alpha2 (new):**
+```yaml
+spec:
+  secret:
+    name: "my-secret"
+    clientSecretKey: "client-secret"
+    clientIdKey: "client-id"
+    issuerUrlKey: "issuer-url"
+    create: true
+    envVarKeys: true
+```
+
+### Configuration Mapping
+
+| v1alpha1 Field | v1alpha2 Field | Notes |
+|----------------|----------------|-------|
+| `clientSecretRef.name` | `secret.name` | Same functionality |
+| `clientSecretRef.key` | `secret.clientSecretKey` | Renamed for clarity |
+| N/A | `secret.clientIdKey` | New field for Client ID key |
+| N/A | `secret.issuerUrlKey` | New field for Issuer URL key |
+| `clientSecretRef.create` | `secret.create` | Same functionality |
+| `clientSecretRef.envVarKeys` | `secret.envVarKeys` | Same functionality |
+
+The operator automatically defaults the new secret configuration when migrating, but it's recommended to update your manifests to explicitly specify the new structure.
 
 ## Default Values Applied by Webhook
 When creating or updating a KeycloakClient, the webhook automatically applies the following defaults:
