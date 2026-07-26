@@ -1,4 +1,4 @@
-{{- if .Values.prometheus.enable }}
+{{- if .Values.prometheus.enabled }}
 apiVersion: monitoring.coreos.com/v1
 kind: ServiceMonitor
 metadata:
@@ -6,7 +6,7 @@ metadata:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
     control-plane: controller-manager
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-monitor" "context" $) }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  namespace: {{ .Release.Namespace }}
 spec:
   endpoints:
     - path: /metrics
@@ -15,7 +15,7 @@ spec:
       {{- if eq .Values.metrics.protocol "https" }}
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
       tlsConfig:
-        {{- if .Values.certManager.enable }}
+        {{- if .Values.certManager.enabled }}
         serverName: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ .Release.Namespace }}.svc
         # Apply secure TLS configuration with cert-manager
         insecureSkipVerify: false

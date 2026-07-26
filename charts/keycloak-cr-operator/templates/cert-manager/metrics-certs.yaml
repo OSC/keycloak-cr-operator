@@ -1,15 +1,15 @@
-{{- if and .Values.certManager.enable .Values.metrics.enable }}
+{{- if and .Values.certManager.enabled .Values.metrics.enabled }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   labels:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-certs" "context" $) }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  namespace: {{ .Release.Namespace }}
 spec:
   dnsNames:
-  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ include "keycloak-cr-operator.namespaceName" $ }}.svc
-  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ include "keycloak-cr-operator.namespaceName" $ }}.svc.cluster.local
+  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ .Release.Namespace }}.svc
+  - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ .Release.Namespace }}.svc.cluster.local
   issuerRef:
     kind: Issuer
     name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "selfsigned-issuer" "context" $) }}

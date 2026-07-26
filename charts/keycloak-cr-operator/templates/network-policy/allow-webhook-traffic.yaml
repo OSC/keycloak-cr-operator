@@ -1,24 +1,29 @@
-{{- if .Values.networkPolicy.enable }}
+{{- if .Values.networkPolicy.enabled }}
 apiVersion: networking.k8s.io/v1
 kind: NetworkPolicy
 metadata:
   labels:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
-  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "allow-metrics-traffic" "context" $) }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "allow-webhook-traffic" "context" $) }}
+  namespace: {{ .Release.Namespace }}
 spec:
   ingress:
   - from:
-  {{- if .Values.networkPolicy.allowMetricsFromPods }}
-    - podSelector: {}
-  {{- end }}
+    - namespaceSelector:
+        matchLabels:
+          kubernetes.io/metadata.name: {{ .Values.networkPolicy.apiServerNamespace }}
+      podSelector:
+        matchLabels:
+        {{- with .Values.networkPolicy.apiServerPodLabels }}
+          {{- toYaml . | nindent 10 }}
+        {{- end }}
     - namespaceSelector:
         matchLabels:
         {{- with .Values.networkPolicy.prometheusLabels }}
           {{- toYaml . | nindent 10 }}
         {{- end }}
     ports:
-    - port: {{ get .Values.metrics.ports .Values.metrics.protocol }}
+    - port: {{ .Values.webhook.port }}
       protocol: TCP
   podSelector:
     matchLabels:

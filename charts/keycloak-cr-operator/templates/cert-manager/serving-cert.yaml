@@ -1,11 +1,11 @@
-{{- if .Values.certManager.enable }}
+{{- if .Values.certManager.enabled }}
 apiVersion: cert-manager.io/v1
 kind: Certificate
 metadata:
   labels:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  namespace: {{ .Release.Namespace }}
 spec:
   dnsNames:
   - {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}.{{ .Release.Namespace }}.svc

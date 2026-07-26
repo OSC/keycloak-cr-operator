@@ -1,10 +1,12 @@
-{{- if .Values.webhook.enable }}
+{{- if .Values.webhook.enabled }}
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
   annotations:
-    {{- if .Values.certManager.enable }}
-    cert-manager.io/inject-ca-from: "{{ include "keycloak-cr-operator.namespaceName" . }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}"
+    {{- if .Values.certManager.enabled }}
+    cert-manager.io/inject-ca-from: "{{ .Release.Namespace }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}"
     {{- end }}
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "mutating-webhook-configuration" "context" $) }}
 webhooks:
@@ -13,7 +15,7 @@ webhooks:
   clientConfig:
     service:
       name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
-      namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+      namespace: {{ .Release.Namespace }}
       path: /mutate-keycloak-osc-edu-v1alpha1-keycloakclient
       port: {{ .Values.webhook.port }}
   failurePolicy: Fail
@@ -35,7 +37,7 @@ webhooks:
   clientConfig:
     service:
       name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
-      namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+      namespace: {{ .Release.Namespace }}
       path: /mutate-keycloak-osc-edu-v1alpha2-keycloakclient
       port: {{ .Values.webhook.port }}
   failurePolicy: Fail

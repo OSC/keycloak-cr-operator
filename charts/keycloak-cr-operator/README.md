@@ -15,12 +15,30 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
   --set manager.config.adminPassword="your-admin-password"
 ```
 
+## Migration from v0.0.x to v0.1.0
+
+Version 0.1.0 introduces several changes to the `values.yaml` structure. If you're upgrading from v0.0.x, please update your values accordingly:
+
+The following values have been renamed for consistency:
+
+| Old Path | New Path |
+|----------|----------|
+| `rbacHelpers.enable` | `rbac.helpers.enabled` |
+| `crd.enable` | `crd.enabled` |
+| `metrics.enable` | `metrics.enabled` |
+| `certManager.enable` | `certManager.enabled` |
+| `webhook.enable` | `webhook.enabled` |
+| `networkPolicy.enable` | `networkPolicy.enabled` |
+| `hooks.enable` | `hooks.enabled` |
+| `prometheus.enable` | `prometheus.enabled` |
+
 ## Values
 
 | Key | Type | Default | Description |
 |-----|------|---------|-------------|
 | nameOverride | string | `""` | String to partially override chart.fullname template (will maintain the release name) |
 | fullnameOverride | string | `""` | String to fully override chart.fullname template |
+| manager.enabled | bool | `true` | Set to false to skip manager installation |
 | manager.replicas | int | `1` | Number of manager replicas |
 | manager.image.registry | string | `"quay.io"` | Image registry |
 | manager.image.repository | string | `"ohiosupercomputercenter/keycloak-cr-operator"` | Manager image repository |
@@ -36,7 +54,9 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | manager.config.clientIdRequired | string | `""` | Required ClientID template |
 | manager.extraArgs | list | `[]` | Extra arguments to pass to the manager |
 | manager.annotations | object | `{}` | Annotations to add to manager Deployment |
+| manager.labels | object | `{}` | Custom Deployment labels |
 | manager.podAnnotations | object | `{"kubectl.kubernetes.io/default-container":"manager"}` | Pod annotations to add to manager pods |
+| manager.podLabels | object | `{}` | Pod labels to add to manager pods |
 | manager.healthPort | int | `8081` | Health check port |
 | manager.env | list | `[]` | Environment variables to add to manager pods |
 | manager.useImagePullSecret | bool | `false` | Use the imagePullSecret resource created by this chart |
@@ -50,30 +70,40 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
 | manager.affinity | object | `{}` | Manager pod's affinity |
 | manager.nodeSelector | object | `{}` | Manager pod's node selector |
 | manager.tolerations | list | `[]` | Manager pod's tolerations |
-| rbacHelpers.enable | bool | `false` | Install convenience admin/editor/viewer roles for CRDs |
-| crd.enable | bool | `true` | Install CRDs with the chart |
+| manager.strategy | object | RollingUpdate | Deployment strategy |
+| manager.priorityClassName | string | `""` | Priority class name |
+| manager.topologySpreadConstraints | list | `[]` | Topology spread constraints |
+| manager.terminationGracePeriodSeconds | int | `10` | Termination grace period seconds |
+| rbac.namespaced | bool | `false` | RBAC resource scope - false (default): ClusterRole/ClusterRoleBinding (all namespaces) - true: Role/RoleBinding (release namespace only) |
+| rbac.helpers | object | `{"enabled":false}` | Helper roles for CRD management (admin/editor/viewer) |
+| rbac.helpers.enabled | bool | `false` | Install convenience admin/editor/viewer roles for CRDs |
+| serviceAccount.enabled | bool | `true` | Install default ServiceAccount provided |
+| serviceAccount.name | string | `""` | Existing ServiceAccount name (only when enabled=false) Note: When enabled=true, respects nameOverride/fullnameOverride |
+| serviceAccount.annotations | object | `{}` | Custom ServiceAccount annotations |
+| serviceAccount.labels | object | `{}` | Custom ServiceAccount labels |
+| crd.enabled | bool | `true` | Install CRDs with the chart |
 | crd.keep | bool | `true` | Keep CRDs when uninstalling |
-| metrics.enable | bool | `true` | Enable to expose /metrics endpoint with RBAC protection |
+| metrics.enabled | bool | `true` | Enable to expose /metrics endpoint with RBAC protection |
 | metrics.protocol | string | `"https"` | Metrics protocol (http or https) |
 | metrics.ports | object | `{"http":8080,"https":8443}` | Metrics server ports.  Only supports http and https keys |
 | metrics.ports.http | int | `8080` | HTTP port |
 | metrics.ports.https | int | `8443` | HTTPS port |
 | metrics.annotations | object | `{}` | Annotations to add to metrics endpoint |
-| certManager.enable | bool | `true` | Enable cert-manager integration. Required for webhook certificates and metrics endpoint certificates |
-| webhook.enable | bool | `true` | Enable webhook server |
+| certManager.enabled | bool | `true` | Enable cert-manager integration. Required for webhook certificates and metrics endpoint certificates |
+| webhook.enabled | bool | `true` | Enable webhook server |
 | webhook.port | int | `9443` | Webhook server port |
 | webhook.annotations | object | `{}` | Annotations to add to webhook server |
-| networkPolicy.enable | bool | `true` | Enable NetworkPolicy resources for this operator |
+| prometheus.enabled | bool | `false` | Enable Prometheus ServiceMonitor. Requires prometheus-operator to be installed in the cluster |
+| networkPolicy.enabled | bool | `true` | Enable NetworkPolicy resources for this operator |
 | networkPolicy.allowMetricsFromPods | bool | `false` | Allow all pods in operator's namespace to access the operator's metrics |
 | networkPolicy.prometheusLabels | object | `{"app.kubernetes.io/name":"prometheus"}` | The Prometheus namespace to allow access |
 | networkPolicy.apiServerNamespace | string | `"kube-system"` | The API server namespace name |
 | networkPolicy.apiServerPodLabels | object | `{"tier":"control-plane"}` | The API server pod labels to allow |
-| prometheus.enable | bool | `false` | Enable Prometheus ServiceMonitor. Requires prometheus-operator to be installed in the cluster |
 | imagePullSecret.create | bool | `false` | Create the image pull secret |
 | imagePullSecret.registry | string | `""` | imagePullSecret registry |
 | imagePullSecret.username | string | `""` | imagePullSecret username |
 | imagePullSecret.password | string | `""` | imagePullSecret password |
-| hooks.enable | bool | `true` | Enable post-install hooks |
+| hooks.enabled | bool | `true` | Enable post-install hooks |
 | hooks.image.registry | string | `"docker.io"` | hook image registry |
 | hooks.image.repository | string | `"portainer/kubectl-shell"` | hook image repository |
 | hooks.image.tag | string | `"2.39.0"` | hook image tag |

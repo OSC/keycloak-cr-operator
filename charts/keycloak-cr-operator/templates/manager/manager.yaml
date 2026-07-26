@@ -1,3 +1,4 @@
+{{- if or (not (hasKey .Values.manager "enabled")) (.Values.manager.enabled) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,9 +9,15 @@ metadata:
   labels:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
     control-plane: controller-manager
+    {{- with .Values.manager.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" $) }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  namespace: {{ .Release.Namespace }}
 spec:
+  {{- with .Values.manager.strategy }}
+  strategy: {{ toYaml . | nindent 6 }}
+  {{- end }}
   replicas: {{ .Values.manager.replicas }}
   selector:
     matchLabels:
@@ -26,14 +33,20 @@ spec:
         {{- include "keycloak-cr-operator.labels" . | nindent 8 }}
         control-plane: controller-manager
     spec:
+      {{- with .Values.manager.topologySpreadConstraints }}
+      topologySpreadConstraints: {{ toYaml . | nindent 10 }}
+      {{- end }}
+      {{- with .Values.manager.priorityClassName }}
+      priorityClassName: {{ . | quote }}
+      {{- end }}
       {{- with .Values.manager.tolerations }}
-      tolerations: {{ toYaml . | nindent 10 }}
+      tolerations: {{ toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.manager.affinity }}
-      affinity: {{ toYaml . | nindent 10 }}
+      affinity: {{ toYaml . | nindent 8 }}
       {{- end }}
       {{- with .Values.manager.nodeSelector }}
-      nodeSelector: {{ toYaml . | nindent 10 }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
       {{- end }}
       {{- if .Values.manager.imagePullSecrets }}
       {{- with .Values.manager.imagePullSecrets }}
@@ -46,7 +59,7 @@ spec:
       {{- end }}
       containers:
       - args:
-        {{- if .Values.metrics.enable }}
+        {{- if .Values.metrics.enabled }}
         - --metrics-bind-address=:{{ get .Values.metrics.ports .Values.metrics.protocol }}
         {{- else }}
         # Bind to :0 to disable the controller-runtime managed metrics server
@@ -76,10 +89,10 @@ spec:
         {{- if .Values.manager.config.clientIdRequired }}
         - --keycloak-client-id-required={{ .Values.manager.config.clientIdRequired }}
         {{- end }}
-        {{- if and .Values.certManager.enable .Values.metrics.enable }}
+        {{- if and .Values.certManager.enabled .Values.metrics.enabled }}
         - --metrics-cert-path=/tmp/k8s-metrics-server/metrics-certs
         {{- end }}
-        {{- if .Values.certManager.enable }}
+        {{- if .Values.certManager.enabled }}
         - --webhook-cert-path=/tmp/k8s-webhook-server/serving-certs
         {{- end }}
         command:
@@ -99,17 +112,20 @@ spec:
             port: {{ .Values.manager.healthPort }}
           initialDelaySeconds: 15
           periodSeconds: 20
-        name: manager
-        ports:
-        - containerPort: {{ .Values.webhook.port }}
-          name: webhook-server
-          protocol: TCP
         readinessProbe:
           httpGet:
             path: /readyz
             port: {{ .Values.manager.healthPort }}
           initialDelaySeconds: 5
           periodSeconds: 10
+        name: manager
+        ports:
+        - containerPort: {{ .Values.manager.healthPort }}
+          name: health
+          protocol: TCP
+        - containerPort: {{ .Values.webhook.port }}
+          name: webhook-server
+          protocol: TCP
         resources:
           {{- if .Values.manager.resources }}
           {{- toYaml .Values.manager.resources | nindent 10 }}
@@ -123,12 +139,12 @@ spec:
           {}
           {{- end }}
         volumeMounts:
-        {{- if and .Values.certManager.enable .Values.metrics.enable }}
+        {{- if and .Values.certManager.enabled .Values.metrics.enabled }}
         - mountPath: /tmp/k8s-metrics-server/metrics-certs
           name: metrics-certs
           readOnly: true
         {{- end }}
-        {{- if .Values.certManager.enable }}
+        {{- if .Values.certManager.enabled }}
         - mountPath: /tmp/k8s-webhook-server/serving-certs
           name: webhook-certs
           readOnly: true
@@ -140,9 +156,9 @@ spec:
         {}
         {{- end }}
       serviceAccountName: {{ include "keycloak-cr-operator.serviceAccountName" . }}
-      terminationGracePeriodSeconds: 10
+      terminationGracePeriodSeconds: {{ .Values.manager.terminationGracePeriodSeconds }}
       volumes:
-      {{- if and .Values.certManager.enable .Values.metrics.enable }}
+      {{- if and .Values.certManager.enabled .Values.metrics.enabled }}
       - name: metrics-certs
         secret:
           items:
@@ -155,8 +171,9 @@ spec:
           optional: false
           secretName: metrics-server-cert
       {{- end }}
-      {{- if .Values.certManager.enable }}
+      {{- if .Values.certManager.enabled }}
       - name: webhook-certs
         secret:
           secretName: webhook-server-cert
       {{- end }}
+{{- end }}

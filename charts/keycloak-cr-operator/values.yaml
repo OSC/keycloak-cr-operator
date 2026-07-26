@@ -5,6 +5,9 @@ nameOverride: ""
 fullnameOverride: ""
 
 manager:
+  # -- Set to false to skip manager installation
+  enabled: true
+
   # -- Number of manager replicas
   replicas: 1
 
@@ -49,9 +52,13 @@ manager:
 
   # -- Annotations to add to manager Deployment
   annotations: {}
+  # -- Custom Deployment labels
+  labels: {}
   # -- Pod annotations to add to manager pods
   podAnnotations:
     kubectl.kubernetes.io/default-container: manager
+  # -- Pod labels to add to manager pods
+  podLabels: {}
 
   # -- Health check port
   healthPort: 8081
@@ -108,22 +115,61 @@ manager:
   # -- Manager pod's tolerations
   tolerations: []
 
-# Helper RBAC roles for managing custom resources
-rbacHelpers:
-  # -- Install convenience admin/editor/viewer roles for CRDs
-  enable: false
+  # -- Deployment strategy
+  # @default -- RollingUpdate
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+
+  # -- Priority class name
+  priorityClassName: ""
+
+  # -- Topology spread constraints
+  topologySpreadConstraints: []
+
+  # -- Termination grace period seconds
+  terminationGracePeriodSeconds: 10
+
+# RBAC configuration
+rbac:
+  # -- RBAC resource scope
+  # - false (default): ClusterRole/ClusterRoleBinding (all namespaces)
+  # - true: Role/RoleBinding (release namespace only)
+  namespaced: false
+
+  # -- Helper roles for CRD management (admin/editor/viewer)
+  helpers:
+    # -- Install convenience admin/editor/viewer roles for CRDs
+    enabled: false
+
+# ServiceAccount configuration
+serviceAccount:
+  # -- Install default ServiceAccount provided
+  enabled: true
+
+  # -- Existing ServiceAccount name (only when enabled=false)
+  # Note: When enabled=true, respects nameOverride/fullnameOverride
+  name: ""
+
+  # -- Custom ServiceAccount annotations
+  annotations: {}
+
+  # -- Custom ServiceAccount labels
+  labels: {}
 
 # Custom Resource Definitions
 crd:
   # -- Install CRDs with the chart
-  enable: true
+  enabled: true
   # -- Keep CRDs when uninstalling
   keep: true
 
 # Controller metrics endpoint
 metrics:
   # -- Enable to expose /metrics endpoint with RBAC protection
-  enable: true
+  enabled: true
   # -- Metrics protocol (http or https)
   protocol: https
   # -- Metrics server ports.  Only supports http and https keys
@@ -139,20 +185,26 @@ metrics:
 certManager:
   # -- Enable cert-manager integration.
   # Required for webhook certificates and metrics endpoint certificates
-  enable: true
+  enabled: true
 
 # Webhook server configuration
 webhook:
   # -- Enable webhook server
-  enable: true
+  enabled: true
   # -- Webhook server port
   port: 9443
   # -- Annotations to add to webhook server
   annotations: {}
 
+# Prometheus ServiceMonitor for metrics scraping
+prometheus:
+  # -- Enable Prometheus ServiceMonitor.
+  # Requires prometheus-operator to be installed in the cluster
+  enabled: false
+
 networkPolicy:
   # -- Enable NetworkPolicy resources for this operator
-  enable: true
+  enabled: true
   # -- Allow all pods in operator's namespace to access the operator's metrics
   allowMetricsFromPods: false
   # --  The Prometheus namespace to allow access
@@ -163,12 +215,6 @@ networkPolicy:
   # -- The API server pod labels to allow
   apiServerPodLabels:
     tier: control-plane
-
-# Prometheus ServiceMonitor for metrics scraping
-prometheus:
-  # -- Enable Prometheus ServiceMonitor.
-  # Requires prometheus-operator to be installed in the cluster
-  enable: false
 
 imagePullSecret:
   # -- Create the image pull secret
@@ -182,7 +228,7 @@ imagePullSecret:
 
 hooks:
   # -- Enable post-install hooks
-  enable: true
+  enabled: true
   image:
     # -- hook image registry
     registry: docker.io

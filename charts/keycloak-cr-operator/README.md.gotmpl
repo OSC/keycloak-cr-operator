@@ -16,6 +16,23 @@ helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
   --set manager.config.adminPassword="your-admin-password"
 ```
 
+## Migration from v0.0.x to v0.1.0
+
+Version 0.1.0 introduces several changes to the `values.yaml` structure. If you're upgrading from v0.0.x, please update your values accordingly:
+
+The following values have been renamed for consistency:
+
+| Old Path | New Path |
+|----------|----------|
+| `rbacHelpers.enable` | `rbac.helpers.enabled` |
+| `crd.enable` | `crd.enabled` |
+| `metrics.enable` | `metrics.enabled` |
+| `certManager.enable` | `certManager.enabled` |
+| `webhook.enable` | `webhook.enabled` |
+| `networkPolicy.enable` | `networkPolicy.enabled` |
+| `hooks.enable` | `hooks.enabled` |
+| `prometheus.enable` | `prometheus.enabled` |
+
 {{ template "chart.requirementsSection" . }}
 
 {{ template "chart.valuesSection" . }}
