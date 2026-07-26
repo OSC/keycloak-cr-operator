@@ -74,7 +74,6 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			}
 
 			// Set up ClientSecretRef with envVarKeys=true
-			// clientSecretKey is already a constant defined at package level
 			create := true
 			envVarKeys := true
 			keyPrefix := ""
