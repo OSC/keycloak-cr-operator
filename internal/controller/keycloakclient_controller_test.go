@@ -113,7 +113,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 					},
 					Spec: keycloakv1alpha2.KeycloakClientSpec{
 						ClientID: &clientID,
-						Realm:    stringPtr("master"),
+						Realm:    new("master"),
 					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
@@ -128,25 +128,6 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			By("Cleanup the specific resource instance KeycloakClient")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-
-			/*
-				By("Remove all KeycloakClient resources")
-				list := &keycloakv1alpha1.KeycloakClientList{}
-				err = k8sClient.List(ctx, list)
-				Expect(err).NotTo(HaveOccurred())
-				deletePolicy := metav1.DeletePropagationForeground
-				for _, resource := range list.Items {
-					resource.SetFinalizers(nil)
-					err := k8sClient.Update(ctx, &resource)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(k8sClient.Delete(ctx, &resource, &client.DeleteOptions{
-						PropagationPolicy: &deletePolicy,
-					})).To(Succeed())
-					Eventually(func() bool {
-						err := k8sClient.Get(ctx, types.NamespacedName{Name: resource.Name, Namespace: resource.Namespace}, &resource)
-						return errors.IsNotFound(err)
-					}, 10*time.Second, 1*time.Second).Should(BeTrue())
-				}*/
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -202,14 +183,14 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
-					Realm:                   stringPtr("master"),
-					ClientAuthenticatorType: stringPtr("client-secret"),
-					PublicClient:            boolPtr(false),
+					Realm:                   new("master"),
+					ClientAuthenticatorType: new("client-secret"),
+					PublicClient:            new(false),
 					Secret: &keycloakv1alpha2.KeycloakClientSecret{
-						Name:            stringPtr("test-client-secret"),
-						ClientSecretKey: stringPtr("client-secret"),
-						Create:          boolPtr(true),
-						EnvVarKeys:      boolPtr(true),
+						Name:            new("test-client-secret"),
+						ClientSecretKey: new("client-secret"),
+						Create:          new(true),
+						EnvVarKeys:      new(true),
 					},
 				},
 			}
@@ -233,15 +214,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
 				{
-					ID:       stringPtr("test"),
-					ClientID: stringPtr("test"),
+					ID:       new("test"),
+					ClientID: new("test"),
 				},
 			}, nil).Once()
 
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
-				Value: stringPtr("secret"),
+				Value: new("secret"),
 			}, nil)
 
 			controllerReconciler := &KeycloakClientReconciler{
@@ -328,15 +309,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
-					Realm:                   stringPtr("master"),
-					ClientAuthenticatorType: stringPtr("client-secret"),
-					PublicClient:            boolPtr(false),
+					Realm:                   new("master"),
+					ClientAuthenticatorType: new("client-secret"),
+					PublicClient:            new(false),
 					Secret: &keycloakv1alpha2.KeycloakClientSecret{
-						Name:            stringPtr("test-client-key-prefix"),
-						ClientSecretKey: stringPtr("client-secret"),
-						Create:          boolPtr(true),
-						EnvVarKeys:      boolPtr(true),
-						KeyPrefix:       stringPtr("OIDC_"),
+						Name:            new("test-client-key-prefix"),
+						ClientSecretKey: new("client-secret"),
+						Create:          new(true),
+						EnvVarKeys:      new(true),
+						KeyPrefix:       new("OIDC_"),
 					},
 				},
 			}
@@ -359,15 +340,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
 				{
-					ID:       stringPtr("test"),
-					ClientID: stringPtr("test"),
+					ID:       new("test"),
+					ClientID: new("test"),
 				},
 			}, nil).Once()
 
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
-				Value: stringPtr("secret"),
+				Value: new("secret"),
 			}, nil)
 
 			controllerReconciler := &KeycloakClientReconciler{
@@ -442,14 +423,14 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
-					Realm:                   stringPtr("master"),
-					ClientAuthenticatorType: stringPtr("client-secret"),
-					PublicClient:            boolPtr(false),
+					Realm:                   new("master"),
+					ClientAuthenticatorType: new("client-secret"),
+					PublicClient:            new(false),
 					Secret: &keycloakv1alpha2.KeycloakClientSecret{
-						Name:            stringPtr("test-client-secret-no-envvars"),
-						ClientSecretKey: stringPtr("client-secret"),
-						Create:          boolPtr(true),
-						EnvVarKeys:      boolPtr(false),
+						Name:            new("test-client-secret-no-envvars"),
+						ClientSecretKey: new("client-secret"),
+						Create:          new(true),
+						EnvVarKeys:      new(false),
 					},
 				},
 			}
@@ -473,15 +454,15 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
 				{
-					ID:       stringPtr("test"),
-					ClientID: stringPtr("test"),
+					ID:       new("test"),
+					ClientID: new("test"),
 				},
 			}, nil).Once()
 
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
-				Value: stringPtr("secret"),
+				Value: new("secret"),
 			}, nil)
 
 			controllerReconciler := &KeycloakClientReconciler{
@@ -570,10 +551,10 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: &clientID,
-					Realm:    stringPtr("master"),
+					Realm:    new("master"),
 					ConfigMap: &keycloakv1alpha2.KeycloakClientConfigMap{
 						Name:       &configMapName,
-						EnvVarKeys: boolPtr(true),
+						EnvVarKeys: new(true),
 					},
 				},
 			}
@@ -681,9 +662,9 @@ var _ = Describe("KeycloakClient Controller", func() {
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: &clientID,
-					Realm:    stringPtr("master"),
+					Realm:    new("master"),
 					ConfigMap: &keycloakv1alpha2.KeycloakClientConfigMap{
-						EnvVarKeys: boolPtr(false),
+						EnvVarKeys: new(false),
 					},
 				},
 			}

@@ -116,7 +116,7 @@ func WebhookDefaulting() {
 			configMapName := "existing-configmap"
 			obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
 				Name:       &configMapName,
-				EnvVarKeys: boolPtr(false),
+				EnvVarKeys: new(false),
 			}
 
 			By("Calling the Default method to apply defaults")
@@ -172,8 +172,8 @@ func WebhookDefaulting() {
 
 				// Set an existing ClientSecretRef
 				existingRef := keycloakv1alpha2.KeycloakClientSecret{
-					Name:            stringPtr("existing-secret"),
-					ClientSecretKey: stringPtr("existing-key"),
+					Name:            new("existing-secret"),
+					ClientSecretKey: new("existing-key"),
 					Create:          &create,
 				}
 				obj.Spec.Secret = &existingRef
@@ -196,8 +196,8 @@ func WebhookDefaulting() {
 
 				// Set a ClientSecretRef with empty name
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:            stringPtr(""),
-					ClientSecretKey: stringPtr("some-key"),
+					Name:            new(""),
+					ClientSecretKey: new("some-key"),
 				}
 
 				By("Calling the Default method to apply defaults")
@@ -217,8 +217,8 @@ func WebhookDefaulting() {
 
 				// Set a ClientSecretRef with empty key
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:            stringPtr("some-secret"),
-					ClientSecretKey: stringPtr(""),
+					Name:            new("some-secret"),
+					ClientSecretKey: new(""),
 				}
 
 				By("Calling the Default method to apply defaults")
@@ -237,8 +237,8 @@ func WebhookDefaulting() {
 				obj.Spec.Realm = &testRealm
 
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:        stringPtr("some-secret"),
-					ClientIdKey: stringPtr(""),
+					Name:        new("some-secret"),
+					ClientIdKey: new(""),
 				}
 
 				By("Calling the Default method to apply defaults")
@@ -257,8 +257,8 @@ func WebhookDefaulting() {
 				obj.Spec.Realm = &testRealm
 
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:         stringPtr("some-secret"),
-					IssuerUrlKey: stringPtr(""),
+					Name:         new("some-secret"),
+					IssuerUrlKey: new(""),
 				}
 
 				By("Calling the Default method to apply defaults")

@@ -113,10 +113,9 @@ func WebhookDefaulting() {
 
 		It("Should not override existing ConfigMap", func() {
 			By("Setting an explicit ConfigMap")
-			configMapName := "existing-configmap"
 			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
-				Name:       &configMapName,
-				EnvVarKeys: boolPtr(false),
+				Name:       new("existing-configmap"),
+				EnvVarKeys: new(false),
 			}
 
 			By("Calling the Default method to apply defaults")

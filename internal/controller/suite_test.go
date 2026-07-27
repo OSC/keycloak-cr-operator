@@ -108,7 +108,7 @@ func bootstrapDeployment(keycloakClientName string) {
 		deployment = &appsv1.Deployment{
 			ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: testNamespace, Labels: map[string]string{keycloakClientMatchLabel: keycloakClientName}},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: int32Ptr(1),
+				Replicas: new(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": "nginx"},
 				},
@@ -152,14 +152,3 @@ func getFirstFoundEnvTestBinaryDir() string {
 	}
 	return ""
 }
-
-// Helper functions for test data
-func stringPtr(s string) *string {
-	return &s
-}
-
-func boolPtr(b bool) *bool {
-	return &b
-}
-
-func int32Ptr(i int32) *int32 { return &i }
