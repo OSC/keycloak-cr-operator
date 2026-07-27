@@ -166,9 +166,9 @@ verify-helm-role: manifests generate kustomize ## Verify Helm role for this oper
 	@diff -uw <( helm template keycloak-cr-operator charts/keycloak-cr-operator \
 		-f charts/keycloak-cr-operator/ci/test-values.yaml \
 		--api-versions "cert-manager.io/v1" \
-		-s templates/rbac/keycloak-cr-operator-manager-role.yaml | grep -E -v "^#" | yq --no-doc '.' ) \
+		-s templates/rbac/manager-role.yaml | grep -E -v "^#" | yq --no-doc '.' ) \
 		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "ClusterRole" and .metadata.name == "keycloak-cr-operator-manager-role")' )
-	@git diff --quiet --exit-code charts
+	@git diff --exit-code charts
 
 ##@ Build
 
