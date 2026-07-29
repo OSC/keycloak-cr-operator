@@ -44,6 +44,17 @@ var (
 	ok                       bool
 )
 
+const (
+	testNamespace          = "default"
+	testToken              = "test-token"
+	httpScheme             = "http"
+	keycloakServiceHost    = "keycloak.keycloak.svc"
+	adminUsername          = "admin"
+	adminPassword          = "password"
+	masterRealm            = "master"
+	kubernetesClientPrefix = "kubernetes"
+)
+
 // MockGoCloak is a mock implementation of the GoCloak interface for testing
 type MockGoCloak struct {
 	mock.Mock
@@ -82,12 +93,11 @@ func (m *MockGoCloak) DeleteClient(ctx context.Context, token, realm, idOfClient
 var _ = Describe("KeycloakClient Controller", func() {
 	Context("When reconciling a resource", func() {
 		const resourceName = "test-resource"
-
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
 			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Namespace: testNamespace, // TODO(user):Modify as needed
 		}
 		keycloakclient := &keycloakv1alpha2.KeycloakClient{}
 
@@ -99,11 +109,11 @@ var _ = Describe("KeycloakClient Controller", func() {
 				resource := &keycloakv1alpha2.KeycloakClient{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      resourceName,
-						Namespace: "default",
+						Namespace: testNamespace,
 					},
 					Spec: keycloakv1alpha2.KeycloakClientSpec{
 						ClientID: &clientID,
-						Realm:    stringPtr("master"),
+						Realm:    new("master"),
 					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
@@ -118,25 +128,6 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			By("Cleanup the specific resource instance KeycloakClient")
 			Expect(k8sClient.Delete(ctx, resource)).To(Succeed())
-
-			/*
-				By("Remove all KeycloakClient resources")
-				list := &keycloakv1alpha1.KeycloakClientList{}
-				err = k8sClient.List(ctx, list)
-				Expect(err).NotTo(HaveOccurred())
-				deletePolicy := metav1.DeletePropagationForeground
-				for _, resource := range list.Items {
-					resource.SetFinalizers(nil)
-					err := k8sClient.Update(ctx, &resource)
-					Expect(err).NotTo(HaveOccurred())
-					Expect(k8sClient.Delete(ctx, &resource, &client.DeleteOptions{
-						PropagationPolicy: &deletePolicy,
-					})).To(Succeed())
-					Eventually(func() bool {
-						err := k8sClient.Get(ctx, types.NamespacedName{Name: resource.Name, Namespace: resource.Namespace}, &resource)
-						return errors.IsNotFound(err)
-					}, 10*time.Second, 1*time.Second).Should(BeTrue())
-				}*/
 		})
 		It("should successfully reconcile the resource", func() {
 			By("Reconciling the created resource")
@@ -146,7 +137,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 
 			// Set up expectations for the mock
 			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
-				AccessToken: "test-token",
+				AccessToken: testToken,
 			}, nil)
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil)
@@ -159,13 +150,13 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
 					KeycloakURL: &url.URL{
-						Scheme: "http",
-						Host:   "keycloak.keycloak.svc",
+						Scheme: httpScheme,
+						Host:   keycloakServiceHost,
 					},
-					AdminUsername:  "admin",
-					AdminPassword:  "password",
-					AdminRealm:     "master",
-					ClientIDPrefix: "kubernetes",
+					AdminUsername:  adminUsername,
+					AdminPassword:  adminPassword,
+					AdminRealm:     masterRealm,
+					ClientIDPrefix: kubernetesClientPrefix,
 				},
 			}
 
@@ -188,18 +179,18 @@ var _ = Describe("KeycloakClient Controller", func() {
 			keycloakClientWithSecret := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
-					Realm:                   stringPtr("master"),
-					ClientAuthenticatorType: stringPtr("client-secret"),
-					PublicClient:            boolPtr(false),
+					Realm:                   new("master"),
+					ClientAuthenticatorType: new("client-secret"),
+					PublicClient:            new(false),
 					Secret: &keycloakv1alpha2.KeycloakClientSecret{
-						Name:            stringPtr("test-client-secret"),
-						ClientSecretKey: stringPtr("client-secret"),
-						Create:          boolPtr(true),
-						EnvVarKeys:      boolPtr(true),
+						Name:            new("test-client-secret"),
+						ClientSecretKey: new("client-secret"),
+						Create:          new(true),
+						EnvVarKeys:      new(true),
 					},
 				},
 			}
@@ -216,22 +207,22 @@ var _ = Describe("KeycloakClient Controller", func() {
 			// Create a mock GoCloak client that returns a secret
 			mockServer := new(MockGoCloak)
 			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
-				AccessToken: "test-token",
+				AccessToken: testToken,
 			}, nil)
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
 				{
-					ID:       stringPtr("test"),
-					ClientID: stringPtr("test"),
+					ID:       new("test"),
+					ClientID: new("test"),
 				},
 			}, nil).Once()
 
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
-				Value: stringPtr("secret"),
+				Value: new("secret"),
 			}, nil)
 
 			controllerReconciler := &KeycloakClientReconciler{
@@ -240,13 +231,13 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
 					KeycloakURL: &url.URL{
-						Scheme: "http",
-						Host:   "keycloak.keycloak.svc",
+						Scheme: httpScheme,
+						Host:   keycloakServiceHost,
 					},
-					AdminUsername:  "admin",
-					AdminPassword:  "password",
-					AdminRealm:     "master",
-					ClientIDPrefix: "kubernetes",
+					AdminUsername:  adminUsername,
+					AdminPassword:  adminPassword,
+					AdminRealm:     masterRealm,
+					ClientIDPrefix: kubernetesClientPrefix,
 				},
 			}
 
@@ -254,7 +245,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      "test-keycloak-client-with-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -263,7 +254,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			secret := &corev1.Secret{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      "test-client-secret",
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, secret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Data).NotTo(HaveKey("client-id"))
@@ -293,7 +284,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			deployment := &appsv1.Deployment{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      deploymentName,
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
 			annotations := deployment.Spec.Template.Annotations
@@ -314,19 +305,19 @@ var _ = Describe("KeycloakClient Controller", func() {
 			keycloakClientWithSecret := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-key-prefix",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
-					Realm:                   stringPtr("master"),
-					ClientAuthenticatorType: stringPtr("client-secret"),
-					PublicClient:            boolPtr(false),
+					Realm:                   new("master"),
+					ClientAuthenticatorType: new("client-secret"),
+					PublicClient:            new(false),
 					Secret: &keycloakv1alpha2.KeycloakClientSecret{
-						Name:            stringPtr("test-client-key-prefix"),
-						ClientSecretKey: stringPtr("client-secret"),
-						Create:          boolPtr(true),
-						EnvVarKeys:      boolPtr(true),
-						KeyPrefix:       stringPtr("OIDC_"),
+						Name:            new("test-client-key-prefix"),
+						ClientSecretKey: new("client-secret"),
+						Create:          new(true),
+						EnvVarKeys:      new(true),
+						KeyPrefix:       new("OIDC_"),
 					},
 				},
 			}
@@ -342,22 +333,22 @@ var _ = Describe("KeycloakClient Controller", func() {
 			// Create a mock GoCloak client that returns a secret
 			mockServer := new(MockGoCloak)
 			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
-				AccessToken: "test-token",
+				AccessToken: testToken,
 			}, nil)
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
 				{
-					ID:       stringPtr("test"),
-					ClientID: stringPtr("test"),
+					ID:       new("test"),
+					ClientID: new("test"),
 				},
 			}, nil).Once()
 
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
-				Value: stringPtr("secret"),
+				Value: new("secret"),
 			}, nil)
 
 			controllerReconciler := &KeycloakClientReconciler{
@@ -366,13 +357,13 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
 					KeycloakURL: &url.URL{
-						Scheme: "http",
-						Host:   "keycloak.keycloak.svc",
+						Scheme: httpScheme,
+						Host:   keycloakServiceHost,
 					},
-					AdminUsername:  "admin",
-					AdminPassword:  "password",
-					AdminRealm:     "master",
-					ClientIDPrefix: "kubernetes",
+					AdminUsername:  adminUsername,
+					AdminPassword:  adminPassword,
+					AdminRealm:     masterRealm,
+					ClientIDPrefix: kubernetesClientPrefix,
 				},
 			}
 
@@ -380,7 +371,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      "test-keycloak-client-with-key-prefix",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -389,7 +380,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			secret := &corev1.Secret{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      "test-client-key-prefix",
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, secret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Data).NotTo(HaveKey("client-id"))
@@ -428,18 +419,18 @@ var _ = Describe("KeycloakClient Controller", func() {
 			keycloakClientWithSecret := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-secret-no-envvars",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID:                &clientID,
-					Realm:                   stringPtr("master"),
-					ClientAuthenticatorType: stringPtr("client-secret"),
-					PublicClient:            boolPtr(false),
+					Realm:                   new("master"),
+					ClientAuthenticatorType: new("client-secret"),
+					PublicClient:            new(false),
 					Secret: &keycloakv1alpha2.KeycloakClientSecret{
-						Name:            stringPtr("test-client-secret-no-envvars"),
-						ClientSecretKey: stringPtr("client-secret"),
-						Create:          boolPtr(true),
-						EnvVarKeys:      boolPtr(false),
+						Name:            new("test-client-secret-no-envvars"),
+						ClientSecretKey: new("client-secret"),
+						Create:          new(true),
+						EnvVarKeys:      new(false),
 					},
 				},
 			}
@@ -456,22 +447,22 @@ var _ = Describe("KeycloakClient Controller", func() {
 			// Create a mock GoCloak client that returns a secret
 			mockServer := new(MockGoCloak)
 			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
-				AccessToken: "test-token",
+				AccessToken: testToken,
 			}, nil)
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{
 				{
-					ID:       stringPtr("test"),
-					ClientID: stringPtr("test"),
+					ID:       new("test"),
+					ClientID: new("test"),
 				},
 			}, nil).Once()
 
 			mockServer.On("CreateClient", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return("", nil)
 
 			mockServer.On("GetClientSecret", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.CredentialRepresentation{
-				Value: stringPtr("secret"),
+				Value: new("secret"),
 			}, nil)
 
 			controllerReconciler := &KeycloakClientReconciler{
@@ -480,13 +471,13 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
 					KeycloakURL: &url.URL{
-						Scheme: "http",
-						Host:   "keycloak.keycloak.svc",
+						Scheme: httpScheme,
+						Host:   keycloakServiceHost,
 					},
-					AdminUsername:  "admin",
-					AdminPassword:  "password",
-					AdminRealm:     "master",
-					ClientIDPrefix: "kubernetes",
+					AdminUsername:  adminUsername,
+					AdminPassword:  adminPassword,
+					AdminRealm:     masterRealm,
+					ClientIDPrefix: kubernetesClientPrefix,
 				},
 			}
 
@@ -494,7 +485,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      "test-keycloak-client-with-secret-no-envvars",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -503,7 +494,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			secret := &corev1.Secret{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      "test-client-secret-no-envvars",
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, secret)
 			Expect(err).NotTo(HaveOccurred())
 			Expect(secret.Data).To(HaveKey("client-id"))
@@ -533,7 +524,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			deployment := &appsv1.Deployment{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      deploymentName,
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
 			annotations := deployment.Spec.Template.Annotations
@@ -556,14 +547,14 @@ var _ = Describe("KeycloakClient Controller", func() {
 			keycloakClientWithConfigMap := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-with-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: &clientID,
-					Realm:    stringPtr("master"),
+					Realm:    new("master"),
 					ConfigMap: &keycloakv1alpha2.KeycloakClientConfigMap{
 						Name:       &configMapName,
-						EnvVarKeys: boolPtr(true),
+						EnvVarKeys: new(true),
 					},
 				},
 			}
@@ -580,7 +571,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			// Create a mock GoCloak client
 			mockServer := new(MockGoCloak)
 			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
-				AccessToken: "test-token",
+				AccessToken: testToken,
 			}, nil)
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
@@ -593,14 +584,14 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
 					KeycloakURL: &url.URL{
-						Scheme: "http",
-						Host:   "keycloak.keycloak.svc",
+						Scheme: httpScheme,
+						Host:   keycloakServiceHost,
 					},
-					AdminUsername:  "admin",
-					AdminPassword:  "password",
-					AdminRealm:     "master",
+					AdminUsername:  adminUsername,
+					AdminPassword:  adminPassword,
+					AdminRealm:     masterRealm,
 					DefaultRealm:   "master",
-					ClientIDPrefix: "kubernetes",
+					ClientIDPrefix: kubernetesClientPrefix,
 				},
 			}
 
@@ -608,7 +599,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      "test-keycloak-client-with-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -617,7 +608,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			configMap := &corev1.ConfigMap{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      "custom-configmap-name",
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, configMap)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -646,7 +637,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			deployment := &appsv1.Deployment{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      deploymentName,
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
 			annotations := deployment.Spec.Template.Annotations
@@ -667,13 +658,13 @@ var _ = Describe("KeycloakClient Controller", func() {
 			keycloakClientWithoutConfigMap := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-keycloak-client-default-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
 					ClientID: &clientID,
-					Realm:    stringPtr("master"),
+					Realm:    new("master"),
 					ConfigMap: &keycloakv1alpha2.KeycloakClientConfigMap{
-						EnvVarKeys: boolPtr(false),
+						EnvVarKeys: new(false),
 					},
 				},
 			}
@@ -690,7 +681,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			// Create a mock GoCloak client
 			mockServer := new(MockGoCloak)
 			mockServer.On("LoginAdmin", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return(&gocloak.JWT{
-				AccessToken: "test-token",
+				AccessToken: testToken,
 			}, nil)
 
 			mockServer.On("GetClients", mock.Anything, mock.Anything, mock.Anything, mock.Anything).Return([]*gocloak.Client{}, nil).Once()
@@ -703,14 +694,14 @@ var _ = Describe("KeycloakClient Controller", func() {
 				Server: mockServer,
 				Config: &models.KeycloakConfig{
 					KeycloakURL: &url.URL{
-						Scheme: "http",
-						Host:   "keycloak.keycloak.svc",
+						Scheme: httpScheme,
+						Host:   keycloakServiceHost,
 					},
-					AdminUsername:  "admin",
-					AdminPassword:  "password",
-					AdminRealm:     "master",
+					AdminUsername:  adminUsername,
+					AdminPassword:  adminPassword,
+					AdminRealm:     masterRealm,
 					DefaultRealm:   "master",
-					ClientIDPrefix: "kubernetes",
+					ClientIDPrefix: kubernetesClientPrefix,
 				},
 			}
 
@@ -718,7 +709,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			_, err := controllerReconciler.Reconcile(ctx, reconcile.Request{
 				NamespacedName: types.NamespacedName{
 					Name:      "test-keycloak-client-default-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 			})
 			Expect(err).NotTo(HaveOccurred())
@@ -727,7 +718,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			configMap := &corev1.ConfigMap{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      "test-keycloak-client-default-configmap-config",
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, configMap)
 			Expect(err).NotTo(HaveOccurred())
 
@@ -753,7 +744,7 @@ var _ = Describe("KeycloakClient Controller", func() {
 			deployment := &appsv1.Deployment{}
 			err = k8sClient.Get(ctx, types.NamespacedName{
 				Name:      deploymentName,
-				Namespace: "default",
+				Namespace: testNamespace,
 			}, deployment)
 			Expect(err).NotTo(HaveOccurred())
 			annotations := deployment.Spec.Template.Annotations

@@ -1,4 +1,4 @@
-{{- if .Values.metrics.enable }}
+{{- if .Values.metrics.enabled }}
 apiVersion: v1
 kind: Service
 metadata:
@@ -10,7 +10,7 @@ metadata:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
     control-plane: controller-manager
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  namespace: {{ .Release.Namespace }}
 spec:
   ports:
   - name: {{ .Values.metrics.protocol }}

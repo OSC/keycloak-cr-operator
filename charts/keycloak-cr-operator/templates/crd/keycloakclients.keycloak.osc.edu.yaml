@@ -1,4 +1,4 @@
-{{- if .Values.crd.enable }}
+{{- if .Values.crd.enabled }}
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:
@@ -6,8 +6,8 @@ metadata:
     {{- if .Values.crd.keep }}
     "helm.sh/resource-policy": keep
     {{- end }}
-    cert-manager.io/inject-ca-from: {{ include "keycloak-cr-operator.namespaceName" . }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
-    controller-gen.kubebuilder.io/version: v0.20.1
+    cert-manager.io/inject-ca-from: {{ .Release.Namespace }}/{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "serving-cert" "context" $) }}
+    controller-gen.kubebuilder.io/version: v0.21.0
   name: keycloakclients.keycloak.osc.edu
 spec:
   conversion:
@@ -16,7 +16,7 @@ spec:
       clientConfig:
         service:
           name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $) }}
-          namespace: {{ include "keycloak-cr-operator.namespaceName" . }}
+          namespace: {{ .Release.Namespace }}
           path: /convert
           port: {{ .Values.webhook.port }}
       conversionReviewVersions:

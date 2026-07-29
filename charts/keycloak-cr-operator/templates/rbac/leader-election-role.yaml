@@ -4,7 +4,7 @@ metadata:
   labels:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "leader-election-role" "context" $) }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  namespace: {{ .Release.Namespace }}
 rules:
 - apiGroups:
   - ""

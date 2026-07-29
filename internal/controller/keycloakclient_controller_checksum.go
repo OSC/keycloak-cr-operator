@@ -23,7 +23,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"sort"
+	"slices"
 
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	appsv1 "k8s.io/api/apps/v1"
@@ -58,7 +58,7 @@ func computeChecksum(ctx context.Context, obj client.Object) (string, error) {
 	for k := range dataMap {
 		keys = append(keys, k)
 	}
-	sort.Strings(keys)
+	slices.Sort(keys)
 
 	// Calculate SHA256 checksum using sha256.New() and write each sorted item
 	hasher := sha256.New()

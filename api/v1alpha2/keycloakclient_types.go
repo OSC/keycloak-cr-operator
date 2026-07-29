@@ -23,6 +23,7 @@ import (
 
 	"github.com/Nerzal/gocloak/v13"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
@@ -352,7 +353,10 @@ type KeycloakClientData struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(SchemeGroupVersion, &KeycloakClient{}, &KeycloakClientList{})
+		return nil
+	})
 }
 
 func (k *KeycloakClient) GetClient(config *models.KeycloakConfig) (*gocloak.Client, error) {

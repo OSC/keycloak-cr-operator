@@ -1,4 +1,4 @@
-{{- if .Values.certManager.enable }}
+{{- if .Values.certManager.enabled }}
   {{- if not (.Capabilities.APIVersions.Has "cert-manager.io/v1") }}
     {{- fail "This Helm chart requires cert-manager v1+ to be installed in the cluster" }}
   {{- end }}

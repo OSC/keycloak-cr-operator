@@ -27,6 +27,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	testKeycloakClient = "test-keycloak-client"
+	testNamespace      = "test-namespace"
+	masterRealm        = "master"
+	kubernetesPrefix   = "kubernetes"
+)
+
 func WebhookDefaulting() {
 	var (
 		obj       *keycloakv1alpha2.KeycloakClient
@@ -35,14 +42,14 @@ func WebhookDefaulting() {
 	BeforeEach(func() {
 		obj = &keycloakv1alpha2.KeycloakClient{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-keycloak-client",
-				Namespace: "test-namespace",
+				Name:      testKeycloakClient,
+				Namespace: testNamespace,
 			},
 		}
 		defaulter = KeycloakClientCustomDefaulter{
 			keycloakConfig: &models.KeycloakConfig{
-				DefaultRealm:   "master",
-				ClientIDPrefix: "kubernetes",
+				DefaultRealm:   masterRealm,
+				ClientIDPrefix: kubernetesPrefix,
 			},
 		}
 		Expect(defaulter).NotTo(BeNil(), "Expected defaulter to be initialized")
@@ -109,7 +116,7 @@ func WebhookDefaulting() {
 			configMapName := "existing-configmap"
 			obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
 				Name:       &configMapName,
-				EnvVarKeys: boolPtr(false),
+				EnvVarKeys: new(false),
 			}
 
 			By("Calling the Default method to apply defaults")
@@ -165,8 +172,8 @@ func WebhookDefaulting() {
 
 				// Set an existing ClientSecretRef
 				existingRef := keycloakv1alpha2.KeycloakClientSecret{
-					Name:            stringPtr("existing-secret"),
-					ClientSecretKey: stringPtr("existing-key"),
+					Name:            new("existing-secret"),
+					ClientSecretKey: new("existing-key"),
 					Create:          &create,
 				}
 				obj.Spec.Secret = &existingRef
@@ -189,8 +196,8 @@ func WebhookDefaulting() {
 
 				// Set a ClientSecretRef with empty name
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:            stringPtr(""),
-					ClientSecretKey: stringPtr("some-key"),
+					Name:            new(""),
+					ClientSecretKey: new("some-key"),
 				}
 
 				By("Calling the Default method to apply defaults")
@@ -210,8 +217,8 @@ func WebhookDefaulting() {
 
 				// Set a ClientSecretRef with empty key
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:            stringPtr("some-secret"),
-					ClientSecretKey: stringPtr(""),
+					Name:            new("some-secret"),
+					ClientSecretKey: new(""),
 				}
 
 				By("Calling the Default method to apply defaults")
@@ -230,8 +237,8 @@ func WebhookDefaulting() {
 				obj.Spec.Realm = &testRealm
 
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:        stringPtr("some-secret"),
-					ClientIdKey: stringPtr(""),
+					Name:        new("some-secret"),
+					ClientIdKey: new(""),
 				}
 
 				By("Calling the Default method to apply defaults")
@@ -250,8 +257,8 @@ func WebhookDefaulting() {
 				obj.Spec.Realm = &testRealm
 
 				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-					Name:         stringPtr("some-secret"),
-					IssuerUrlKey: stringPtr(""),
+					Name:         new("some-secret"),
+					IssuerUrlKey: new(""),
 				}
 
 				By("Calling the Default method to apply defaults")

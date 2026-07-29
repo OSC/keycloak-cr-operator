@@ -27,6 +27,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	testSecretNameForValidating = "test-secret"
+	testKeyForValidating        = "TEST_KEY"
+)
+
 func WebhookValidating() {
 	var (
 		obj              *keycloakv1alpha1.KeycloakClient
@@ -38,26 +43,26 @@ func WebhookValidating() {
 	BeforeEach(func() {
 		obj = &keycloakv1alpha1.KeycloakClient{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-keycloak-client",
-				Namespace: "test-namespace",
+				Name:      testKeycloakClient,
+				Namespace: testNamespace,
 			},
 		}
 		oldObj = &keycloakv1alpha1.KeycloakClient{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-keycloak-client",
-				Namespace: "test-namespace",
+				Name:      testKeycloakClient,
+				Namespace: testNamespace,
 			},
 		}
 		validator = KeycloakClientCustomValidator{
 			keycloakConfig: &models.KeycloakConfig{
-				DefaultRealm:   "master",
-				ClientIDPrefix: "kubernetes",
+				DefaultRealm:   masterRealm,
+				ClientIDPrefix: kubernetesPrefix,
 				AllowedRealms:  []string{},
 			},
 		}
 		defaultConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
 			Name:       &configMapName,
-			EnvVarKeys: boolPtr(true),
+			EnvVarKeys: new(true),
 		}
 		Expect(validator).NotTo(BeNil(), "Expected validator to be initialized")
 		Expect(oldObj).NotTo(BeNil(), "Expected oldObj to be initialized")
@@ -139,7 +144,7 @@ func WebhookValidating() {
 			validator.keycloakConfig.AllowedRealms = []string{"test-realm"}
 
 			By("Setting empty Realm")
-			obj.Spec.Realm = stringPtr("master")
+			obj.Spec.Realm = new("master")
 
 			By("Validating creation should fail")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -153,8 +158,8 @@ func WebhookValidating() {
 			obj.Spec.ClientID = &clientIDWithPrefix
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
-				Name:       stringPtr("test-keycloak-client-config"),
-				EnvVarKeys: boolPtr(true),
+				Name:       new("test-keycloak-client-config"),
+				EnvVarKeys: new(true),
 			}
 
 			By("Validating creation should succeed")
@@ -208,12 +213,12 @@ func WebhookValidating() {
 			secretRef := keycloakv1alpha1.KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretNameForValidating,
 					},
-					Key: "TEST_KEY",
+					Key: testKeyForValidating,
 				},
 				Create:     &create,
-				EnvVarKeys: boolPtr(true),
+				EnvVarKeys: new(true),
 			}
 			obj.Spec.ClientSecretRef = &secretRef
 
@@ -256,7 +261,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
 				Name:       nil,
-				EnvVarKeys: boolPtr(true),
+				EnvVarKeys: new(true),
 			}
 
 			By("Validating creation should fail")
@@ -320,12 +325,12 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
-						Key: "TEST_KEY",
+						Key: testKeyForValidating,
 					},
 					Create:     &create,
-					EnvVarKeys: boolPtr(true),
+					EnvVarKeys: new(true),
 				}
 				obj.Spec.ClientSecretRef = &secretRef
 
@@ -375,7 +380,7 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
 						Key: "",
 					},
@@ -405,12 +410,12 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
 						Key: "testKey", // Not upper snake case
 					},
 					Create:     &create,
-					EnvVarKeys: boolPtr(true), // EnvVarKeys is true
+					EnvVarKeys: new(true), // EnvVarKeys is true
 				}
 				obj.Spec.ClientSecretRef = &secretRef
 
@@ -435,12 +440,12 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
-						Key: "TEST_KEY", // Upper snake case
+						Key: testKeyForValidating, // Upper snake case
 					},
 					Create:     &create,
-					EnvVarKeys: boolPtr(true), // EnvVarKeys is true
+					EnvVarKeys: new(true), // EnvVarKeys is true
 				}
 				obj.Spec.ClientSecretRef = &secretRef
 
@@ -464,12 +469,12 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha1.KeycloakClientSecret{
 					SecretKeySelector: corev1.SecretKeySelector{
 						LocalObjectReference: corev1.LocalObjectReference{
-							Name: "test-secret",
+							Name: testSecretNameForValidating,
 						},
 						Key: "testKey", // Not upper snake case
 					},
 					Create:     &create,
-					EnvVarKeys: boolPtr(false), // EnvVarKeys is false
+					EnvVarKeys: new(false), // EnvVarKeys is false
 				}
 				obj.Spec.ClientSecretRef = &secretRef
 
@@ -517,8 +522,8 @@ func WebhookValidating() {
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
 					Name:     nil, // Missing name
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
-					Protocol: stringPtr("openid-connect"),
+					Type:     new("oidc-hardcoded-claim-mapper"),
+					Protocol: new("openid-connect"),
 				},
 			}
 
@@ -536,9 +541,9 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr(""), // Empty name
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
-					Protocol: stringPtr("openid-connect"),
+					Name:     new(""), // Empty name
+					Type:     new("oidc-hardcoded-claim-mapper"),
+					Protocol: new("openid-connect"),
 				},
 			}
 
@@ -556,9 +561,9 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("test-mapper"),
+					Name:     new("test-mapper"),
 					Type:     nil, // Missing type
-					Protocol: stringPtr("openid-connect"),
+					Protocol: new("openid-connect"),
 				},
 			}
 
@@ -576,9 +581,9 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("test-mapper"),
-					Type:     stringPtr(""), // Empty type
-					Protocol: stringPtr("openid-connect"),
+					Name:     new("test-mapper"),
+					Type:     new(""), // Empty type
+					Protocol: new("openid-connect"),
 				},
 			}
 
@@ -596,8 +601,8 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("test-mapper"),
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
+					Name:     new("test-mapper"),
+					Type:     new("oidc-hardcoded-claim-mapper"),
 					Protocol: nil, // Missing protocol
 				},
 			}
@@ -616,9 +621,9 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("test-mapper"),
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
-					Protocol: stringPtr(""), // Empty protocol
+					Name:     new("test-mapper"),
+					Type:     new("oidc-hardcoded-claim-mapper"),
+					Protocol: new(""), // Empty protocol
 				},
 			}
 
@@ -636,9 +641,9 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("test-mapper"),
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
-					Protocol: stringPtr("openid-connect"),
+					Name:     new("test-mapper"),
+					Type:     new("oidc-hardcoded-claim-mapper"),
+					Protocol: new("openid-connect"),
 				},
 			}
 
@@ -655,9 +660,9 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("audience-mapper"),
-					Type:     stringPtr("oidc-audience-mapper"),
-					Protocol: stringPtr("openid-connect"),
+					Name:     new("audience-mapper"),
+					Type:     new("oidc-audience-mapper"),
+					Protocol: new("openid-connect"),
 					// Missing includedClientAudience
 				},
 			}
@@ -676,10 +681,10 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:                   stringPtr("audience-mapper"),
-					Type:                   stringPtr("oidc-audience-mapper"),
-					Protocol:               stringPtr("openid-connect"),
-					IncludedClientAudience: stringPtr(""), // Empty includedClientAudience
+					Name:                   new("audience-mapper"),
+					Type:                   new("oidc-audience-mapper"),
+					Protocol:               new("openid-connect"),
+					IncludedClientAudience: new(""), // Empty includedClientAudience
 				},
 			}
 
@@ -697,10 +702,10 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:                   stringPtr("audience-mapper"),
-					Type:                   stringPtr("oidc-audience-mapper"),
-					Protocol:               stringPtr("openid-connect"),
-					IncludedClientAudience: stringPtr("test-client"),
+					Name:                   new("audience-mapper"),
+					Type:                   new("oidc-audience-mapper"),
+					Protocol:               new("openid-connect"),
+					IncludedClientAudience: new("test-client"),
 				},
 			}
 
@@ -717,15 +722,15 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("mapper1"),
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
-					Protocol: stringPtr("openid-connect"),
+					Name:     new("mapper1"),
+					Type:     new("oidc-hardcoded-claim-mapper"),
+					Protocol: new("openid-connect"),
 				},
 				{
-					Name:                   stringPtr("mapper2"),
-					Type:                   stringPtr("oidc-audience-mapper"),
-					Protocol:               stringPtr("openid-connect"),
-					IncludedClientAudience: stringPtr("test-client"),
+					Name:                   new("mapper2"),
+					Type:                   new("oidc-audience-mapper"),
+					Protocol:               new("openid-connect"),
+					IncludedClientAudience: new("test-client"),
 				},
 			}
 
@@ -742,9 +747,9 @@ func WebhookValidating() {
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
-					Name:     stringPtr("test-mapper"),
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
-					Protocol: stringPtr("openid-connect"),
+					Name:     new("test-mapper"),
+					Type:     new("oidc-hardcoded-claim-mapper"),
+					Protocol: new("openid-connect"),
 				},
 			}
 
@@ -762,8 +767,8 @@ func WebhookValidating() {
 			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{
 				{
 					Name:     nil, // Missing name
-					Type:     stringPtr("oidc-hardcoded-claim-mapper"),
-					Protocol: stringPtr("openid-connect"),
+					Type:     new("oidc-hardcoded-claim-mapper"),
+					Protocol: new("openid-connect"),
 				},
 			}
 

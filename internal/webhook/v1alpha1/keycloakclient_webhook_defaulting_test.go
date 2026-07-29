@@ -27,6 +27,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+const (
+	testKeycloakClient = "test-keycloak-client"
+	testNamespace      = "test-namespace"
+	masterRealm        = "master"
+	kubernetesPrefix   = "kubernetes"
+)
+
 func WebhookDefaulting() {
 	var (
 		obj       *keycloakv1alpha1.KeycloakClient
@@ -35,14 +42,14 @@ func WebhookDefaulting() {
 	BeforeEach(func() {
 		obj = &keycloakv1alpha1.KeycloakClient{
 			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-keycloak-client",
-				Namespace: "test-namespace",
+				Name:      testKeycloakClient,
+				Namespace: testNamespace,
 			},
 		}
 		defaulter = KeycloakClientCustomDefaulter{
 			keycloakConfig: &models.KeycloakConfig{
-				DefaultRealm:   "master",
-				ClientIDPrefix: "kubernetes",
+				DefaultRealm:   masterRealm,
+				ClientIDPrefix: kubernetesPrefix,
 			},
 		}
 		Expect(defaulter).NotTo(BeNil(), "Expected defaulter to be initialized")
@@ -106,10 +113,9 @@ func WebhookDefaulting() {
 
 		It("Should not override existing ConfigMap", func() {
 			By("Setting an explicit ConfigMap")
-			configMapName := "existing-configmap"
 			obj.Spec.ConfigMap = &keycloakv1alpha1.KeycloakClientConfigMap{
-				Name:       &configMapName,
-				EnvVarKeys: boolPtr(false),
+				Name:       new("existing-configmap"),
+				EnvVarKeys: new(false),
 			}
 
 			By("Calling the Default method to apply defaults")

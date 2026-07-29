@@ -25,6 +25,7 @@ import (
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -339,7 +340,10 @@ type KeycloakClientData struct {
 }
 
 func init() {
-	SchemeBuilder.Register(&KeycloakClient{}, &KeycloakClientList{})
+	SchemeBuilder.Register(func(s *runtime.Scheme) error {
+		s.AddKnownTypes(SchemeGroupVersion, &KeycloakClient{}, &KeycloakClientList{})
+		return nil
+	})
 }
 
 func (k *KeycloakClient) GetClient(config *models.KeycloakConfig) (*gocloak.Client, error) {

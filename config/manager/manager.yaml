@@ -68,10 +68,13 @@ spec:
           - --health-probe-bind-address=:8081
         image: controller:latest
         name: manager
+        ports:
+        - containerPort: 8081
+          name: health
+          protocol: TCP
         envFrom:
         - secretRef:
             name: keycloak-cr-operator
-        ports: []
         securityContext:
           readOnlyRootFilesystem: true
           allowPrivilegeEscalation: false

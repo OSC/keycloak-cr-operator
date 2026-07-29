@@ -33,7 +33,7 @@ jobs:
         uses: helm/chart-testing-action@v2.8.0
       - name: Install Kubebuilder
         run: |
-          curl -L -o kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v4.13.0/kubebuilder_$(go env GOOS)_$(go env GOARCH)"
+          curl -L -o kubebuilder "https://github.com/kubernetes-sigs/kubebuilder/releases/download/v4.15.0/kubebuilder_$(go env GOOS)_$(go env GOARCH)"
           chmod +x kubebuilder
           sudo mv kubebuilder /usr/local/bin/
 

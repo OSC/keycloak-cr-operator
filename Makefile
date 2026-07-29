@@ -1,5 +1,7 @@
 # Image URL to use all building/pushing image targets
 IMG ?= controller:latest
+# YEAR defines the year value used for substituting the YEAR placeholder in the boilerplate header.
+YEAR ?= $(shell date +%Y)
 
 # Get the currently used golang install path (in GOPATH/bin, unless GOBIN is set)
 ifeq (,$(shell go env GOBIN))
@@ -55,7 +57,7 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	"$(CONTROLLER_GEN)" object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	"$(CONTROLLER_GEN)" object paths="./..."
 
 .PHONY: helm-docs
 helm-docs: ## Generate helm docs
@@ -92,6 +94,8 @@ test: manifests generate unused style vet setup-envtest ## Run tests.
 
 # TODO(user): To use a different vendor for e2e tests, modify the setup under 'tests/e2e'.
 # The default setup assumes Kind is pre-installed and builds/loads the Manager Docker image locally.
+# kubectl kuberc is disabled by default for test isolation; enable with:
+# - KUBECTL_KUBERC=true
 # CertManager is installed by default; skip with:
 # - CERT_MANAGER_INSTALL_SKIP=true
 KIND_CLUSTER ?= keycloak-cr-operator-test-e2e
@@ -155,16 +159,16 @@ verify-helm-crds: build-helm yamlfmt ## Verify Helm CRDs match Kustomize
 		--api-versions "cert-manager.io/v1" -n keycloak-cr-operator-system \
 		-s templates/crd/*.yaml | grep -E -v "^#" | grep -v "helm.sh" | grep -v '\-\-\-' ) \
 		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "CustomResourceDefinition")' | $(YAMLFMT) -in -formatter indentless_arrays=true,max_line_length=80 )
-	@git diff --quiet --exit-code charts
+	@git diff --exit-code charts
 
 .PHONY: verify-helm-role
 verify-helm-role: manifests generate kustomize ## Verify Helm role for this operator matches Kustomize
 	@diff -uw <( helm template keycloak-cr-operator charts/keycloak-cr-operator \
 		-f charts/keycloak-cr-operator/ci/test-values.yaml \
 		--api-versions "cert-manager.io/v1" \
-		-s templates/rbac/keycloak-cr-operator-manager-role.yaml | grep -E -v "^#" | yq --no-doc '.' ) \
+		-s templates/rbac/manager-role.yaml | grep -E -v "^#" | yq --no-doc 'del(.metadata.labels)' ) \
 		<( $(KUSTOMIZE) build config/default | yq eval 'select(.kind == "ClusterRole" and .metadata.name == "keycloak-cr-operator-manager-role")' )
-	@git diff --quiet --exit-code charts
+	@git diff --exit-code charts
 
 ##@ Build
 
@@ -216,17 +220,16 @@ build-helm:
 	cp -f dist/chart/templates/crd/keycloakclients.keycloak.osc.edu.yaml charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml
 	cp -f dist/chart/templates/webhook/validating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/validating-webhook-configuration.yaml
 	cp -f dist/chart/templates/webhook/mutating-webhook-configuration.yaml charts/keycloak-cr-operator/templates/webhook/mutating-webhook-configuration.yaml
-	$(SED) -i 's/.Release.Namespace/include "keycloak-cr-operator.namespaceName" ./g' \
-		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
-		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 	$(SED) -i 's/9443/{{ .Values.webhook.port }}/g' \
 		charts/keycloak-cr-operator/templates/crd/keycloakclients.keycloak.osc.edu.yaml \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 	$(SED) -i 's/name: webhook-service/name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "webhook-service" "context" $$) }}/g' \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
-	$(SED) -i 's/namespace: system/namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}/g' \
+	$(SED) -i 's/namespace: system/namespace: {{ .Release.Namespace }}/g' \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 	$(SED) -i -r 's/cert-manager.io\/inject-ca-from: \{\{ (.+) \}\}/cert-manager.io\/inject-ca-from: "\{\{ \1 \}\}"/g' \
+		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
+	$(SED) -i -r 's/metadata:/metadata:\n  labels: {{ include "keycloak-cr-operator.labels" . | nindent 4 }}/g' \
 		charts/keycloak-cr-operator/templates/webhook/*-webhook-configuration.yaml
 
 ##@ Deployment
@@ -273,19 +276,19 @@ YAMLFMT_VERSION ?= v0.21.0
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.8.1
-CONTROLLER_TOOLS_VERSION ?= v0.20.1
+CONTROLLER_TOOLS_VERSION ?= v0.21.0
 
-#ENVTEST_VERSION is the version of controller-runtime release branch to fetch the envtest setup script (i.e. release-0.20)
+#ENVTEST_VERSION is the controller-runtime version to use for setup-envtest, derived from go.mod
 ENVTEST_VERSION ?= $(shell v='$(call gomodver,sigs.k8s.io/controller-runtime)'; \
   [ -n "$$v" ] || { echo "Set ENVTEST_VERSION manually (controller-runtime replace has no tag)" >&2; exit 1; }; \
-  printf '%s\n' "$$v" | sed -E 's/^v?([0-9]+)\.([0-9]+).*/release-\1.\2/')
+  printf '%s\n' "$$v")
 
 #ENVTEST_K8S_VERSION is the version of Kubernetes to use for setting up ENVTEST binaries (i.e. 1.31)
 ENVTEST_K8S_VERSION ?= $(shell v='$(call gomodver,k8s.io/api)'; \
   [ -n "$$v" ] || { echo "Set ENVTEST_K8S_VERSION manually (k8s.io/api replace has no tag)" >&2; exit 1; }; \
   printf '%s\n' "$$v" | sed -E 's/^v?[0-9]+\.([0-9]+).*/1.\1/')
 
-GOLANGCI_LINT_VERSION ?= v2.8.0
+GOLANGCI_LINT_VERSION ?= v2.12.2
 .PHONY: kustomize
 kustomize: $(KUSTOMIZE) ## Download kustomize locally if necessary.
 $(KUSTOMIZE): $(LOCALBIN)

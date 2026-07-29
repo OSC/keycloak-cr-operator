@@ -51,21 +51,6 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end }}
 
 {{/*
-Create the name of the service account to use
-*/}}
-{{- define "keycloak-cr-operator.serviceAccountName" -}}
-{{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" $) }}
-{{- end }}
-
-{{/*
-Namespace for generated references.
-Always uses the Helm release namespace.
-*/}}
-{{- define "keycloak-cr-operator.namespaceName" -}}
-{{- .Release.Namespace }}
-{{- end }}
-
-{{/*
 Resource name with proper truncation for Kubernetes 63-character limit.
 Takes a dict with:
   - .suffix: Resource name suffix (e.g., "metrics", "webhook")
@@ -83,7 +68,23 @@ Dynamically calculates safe truncation to ensure total name length <= 63 chars.
 {{- end }}
 {{- end }}
 
-{{- define "keycloak-cr-operator.imagePullSecret" }}
+{{/*
+ServiceAccount name to use.
+If serviceAccount.enabled is false and serviceAccount.name is set, use that name.
+Otherwise, use the standard resourceName helper with "controller-manager" suffix.
+*/}}
+{{- define "keycloak-cr-operator.serviceAccountName" -}}
+{{- if and (not (.Values.serviceAccount.enabled | default true)) .Values.serviceAccount.name }}
+{{- .Values.serviceAccount.name }}
+{{- else }}
+{{- include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" .) }}
+{{- end }}
+{{- end }}
+
+{{/*
+Create the image pull secret value
+*/}}
+{{- define "keycloak-cr-operator.imagePullSecret" -}}
 {{- with .Values.imagePullSecret }}
 {{- $registry := (required "imagePullSecret registry is required" .registry) }}
 {{- $username := (required "imagePullSecret username is required" .username) }}

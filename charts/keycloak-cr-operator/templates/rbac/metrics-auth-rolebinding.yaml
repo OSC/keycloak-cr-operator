@@ -1,4 +1,4 @@
-{{- if .Values.metrics.enable }}
+{{- if .Values.metrics.enabled }}
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
@@ -12,5 +12,5 @@ roleRef:
 subjects:
 - kind: ServiceAccount
   name: {{ include "keycloak-cr-operator.serviceAccountName" . }}
-  namespace: {{ include "keycloak-cr-operator.namespaceName" . | quote }}
+  namespace: {{ .Release.Namespace }}
 {{- end }}

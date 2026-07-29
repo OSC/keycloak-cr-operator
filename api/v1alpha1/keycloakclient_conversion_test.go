@@ -26,6 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 )
 
+const (
+	testNamespace   = "default"
+	testSecretName  = "test-secret"
+	clientSecretKey = "client-secret"
+)
+
 var _ = Describe("KeycloakClient Conversion", func() {
 	Context("ConvertTo", func() {
 		It("should convert v1alpha1 KeycloakClient to v1alpha2 correctly", func() {
@@ -33,76 +39,69 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
-					ClientID:                     stringPtr("test-client-id"),
-					Realm:                        stringPtr("master"),
-					Description:                  stringPtr("Test client"),
-					Enabled:                      boolPtr(true),
-					PublicClient:                 boolPtr(false),
-					Protocol:                     stringPtr("openid-connect"),
-					StandardFlowEnabled:          boolPtr(true),
-					DirectAccessGrantsEnabled:    boolPtr(true),
+					ClientID:                     new("test-client-id"),
+					Realm:                        new("master"),
+					Description:                  new("Test client"),
+					Enabled:                      new(true),
+					PublicClient:                 new(false),
+					Protocol:                     new("openid-connect"),
+					StandardFlowEnabled:          new(true),
+					DirectAccessGrantsEnabled:    new(true),
 					WebOrigins:                   &[]string{"https://example.com"},
 					RedirectURIs:                 &[]string{"https://example.com/*"},
 					DefaultClientScopes:          &[]string{"profile", "email"},
-					LoginTheme:                   stringPtr("keycloak"),
-					AdminURL:                     stringPtr("https://admin.example.com"),
-					BaseURL:                      stringPtr("https://example.com"),
-					RootURL:                      stringPtr("https://root.example.com"),
-					ConsentRequired:              boolPtr(false),
-					FullScopeAllowed:             boolPtr(true),
-					AuthorizationServicesEnabled: boolPtr(false),
-					FrontChannelLogout:           boolPtr(true),
-					ImplicitFlowEnabled:          boolPtr(false),
-					Name:                         stringPtr("Test Client"),
-					NodeReRegistrationTimeout:    int32Ptr(300),
-					NotBefore:                    int32Ptr(0),
+					LoginTheme:                   new("keycloak"),
+					AdminURL:                     new("https://admin.example.com"),
+					BaseURL:                      new("https://example.com"),
+					RootURL:                      new("https://root.example.com"),
+					ConsentRequired:              new(false),
+					FullScopeAllowed:             new(true),
+					AuthorizationServicesEnabled: new(false),
+					FrontChannelLogout:           new(true),
+					ImplicitFlowEnabled:          new(false),
+					Name:                         new("Test Client"),
+					NodeReRegistrationTimeout:    new(int32(300)),
+					NotBefore:                    new(int32(0)),
 					OptionalClientScopes:         &[]string{"phone"},
-					Origin:                       stringPtr("https://example.com"),
-					RegistrationAccessToken:      stringPtr("reg-token"),
-					ServiceAccountsEnabled:       boolPtr(false),
-					SurrogateAuthRequired:        boolPtr(false),
+					Origin:                       new("https://example.com"),
+					RegistrationAccessToken:      new("reg-token"),
+					ServiceAccountsEnabled:       new(false),
+					SurrogateAuthRequired:        new(false),
 				},
 			}
 
 			// Set up ClientSecretRef with envVarKeys=true
-			clientSecretKey := "client-secret"
-			create := true
-			envVarKeys := true
-			keyPrefix := ""
 			src.Spec.ClientSecretRef = &KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretName,
 					},
 					Key: clientSecretKey,
 				},
-				Create:     &create,
-				EnvVarKeys: &envVarKeys,
-				KeyPrefix:  &keyPrefix,
+				Create:     new(true),
+				EnvVarKeys: new(true),
+				KeyPrefix:  new(""),
 			}
 
 			// Set up ConfigMap
 			configMapName := "test-configmap"
 			src.Spec.ConfigMap = &KeycloakClientConfigMap{
 				Name:       &configMapName,
-				EnvVarKeys: &envVarKeys,
+				EnvVarKeys: new(true),
 			}
 
 			// Set up ProtocolMappers
-			idTokenClaim := true
-			accessTokenClaim := true
-			consentRequired := false
 			src.Spec.ProtocolMappers = []*KeycloakClientProtocolMapper{
 				{
-					Name:             stringPtr("client roles"),
-					Protocol:         stringPtr("openid-connect"),
-					Type:             stringPtr("client-roles"),
-					IDTokenClaim:     &idTokenClaim,
-					AccessTokenClaim: &accessTokenClaim,
-					ConsentRequired:  &consentRequired,
+					Name:             new("client roles"),
+					Protocol:         new("openid-connect"),
+					Type:             new("client-roles"),
+					IDTokenClaim:     new(true),
+					AccessTokenClaim: new(true),
+					ConsentRequired:  new(false),
 					Config:           &map[string]string{"claim.name": "roles", "jsonType.label": "String", "user.attribute": "foo", "multivalued": "true"},
 				},
 			}
@@ -179,11 +178,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 
@@ -197,11 +196,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 
@@ -215,11 +214,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-mappers",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 
@@ -230,27 +229,25 @@ var _ = Describe("KeycloakClient Conversion", func() {
 		})
 
 		It("should derive correct clientIdKey and issuerUrlKey based on EnvVarKeys=false", func() {
-			create := true
-			envVarKeysFalse := false
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-envvars",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 			src.Spec.ClientSecretRef = &KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretName,
 					},
 					Key: "client-secret",
 				},
-				Create:     &create,
-				EnvVarKeys: &envVarKeysFalse,
+				Create:     new(true),
+				EnvVarKeys: new(false),
 			}
 
 			dst := &keycloakv1alpha2.KeycloakClient{}
@@ -266,11 +263,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-nil-values",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 			// Create ClientSecretRef with all nil fields
@@ -296,76 +293,67 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
-					ClientID:                     stringPtr("test-client-id"),
-					Realm:                        stringPtr("master"),
-					Description:                  stringPtr("Test client"),
-					Enabled:                      boolPtr(true),
-					PublicClient:                 boolPtr(false),
-					Protocol:                     stringPtr("openid-connect"),
-					StandardFlowEnabled:          boolPtr(true),
-					DirectAccessGrantsEnabled:    boolPtr(true),
+					ClientID:                     new("test-client-id"),
+					Realm:                        new("master"),
+					Description:                  new("Test client"),
+					Enabled:                      new(true),
+					PublicClient:                 new(false),
+					Protocol:                     new("openid-connect"),
+					StandardFlowEnabled:          new(true),
+					DirectAccessGrantsEnabled:    new(true),
 					WebOrigins:                   &[]string{"https://example.com"},
 					RedirectURIs:                 &[]string{"https://example.com/*"},
 					DefaultClientScopes:          &[]string{"profile", "email"},
-					LoginTheme:                   stringPtr("keycloak"),
-					AdminURL:                     stringPtr("https://admin.example.com"),
-					BaseURL:                      stringPtr("https://example.com"),
-					RootURL:                      stringPtr("https://root.example.com"),
-					ConsentRequired:              boolPtr(false),
-					FullScopeAllowed:             boolPtr(true),
-					AuthorizationServicesEnabled: boolPtr(false),
-					FrontChannelLogout:           boolPtr(true),
-					ImplicitFlowEnabled:          boolPtr(false),
-					Name:                         stringPtr("Test Client"),
-					NodeReRegistrationTimeout:    int32Ptr(300),
-					NotBefore:                    int32Ptr(0),
+					LoginTheme:                   new("keycloak"),
+					AdminURL:                     new("https://admin.example.com"),
+					BaseURL:                      new("https://example.com"),
+					RootURL:                      new("https://root.example.com"),
+					ConsentRequired:              new(false),
+					FullScopeAllowed:             new(true),
+					AuthorizationServicesEnabled: new(false),
+					FrontChannelLogout:           new(true),
+					ImplicitFlowEnabled:          new(false),
+					Name:                         new("Test Client"),
+					NodeReRegistrationTimeout:    new(int32(300)),
+					NotBefore:                    new(int32(0)),
 					OptionalClientScopes:         &[]string{"phone"},
-					Origin:                       stringPtr("https://example.com"),
-					RegistrationAccessToken:      stringPtr("reg-token"),
-					ServiceAccountsEnabled:       boolPtr(false),
-					SurrogateAuthRequired:        boolPtr(false),
+					Origin:                       new("https://example.com"),
+					RegistrationAccessToken:      new("reg-token"),
+					ServiceAccountsEnabled:       new(false),
+					SurrogateAuthRequired:        new(false),
 				},
 			}
 
 			// Set up Secret
-			clientSecretKey := "CLIENT_SECRET"
-			clientIdKey := "CLIENT_ID"
-			issuerUrlKey := "ISSUER_URL"
-			create := true
-			envVarKeys := true
-			keyPrefix := ""
 			src.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-				Name:            stringPtr("test-secret"),
-				ClientSecretKey: stringPtr(clientSecretKey),
-				ClientIdKey:     stringPtr(clientIdKey),
-				IssuerUrlKey:    stringPtr(issuerUrlKey),
-				Create:          &create,
-				EnvVarKeys:      &envVarKeys,
-				KeyPrefix:       stringPtr(keyPrefix),
+				Name:            new("test-secret"),
+				ClientSecretKey: new("CLIENT_SECRET"),
+				ClientIdKey:     new("CLIENT_ID"),
+				IssuerUrlKey:    new("ISSUER_URL"),
+				Create:          new(true),
+				EnvVarKeys:      new(true),
+				KeyPrefix:       new(""),
 			}
 
 			// Set up ConfigMap
 			configMapName := "test-configmap"
 			src.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-				Name:       stringPtr(configMapName),
-				EnvVarKeys: &envVarKeys,
+				Name:       new(configMapName),
+				EnvVarKeys: new(true),
 			}
 
 			// Set up ProtocolMappers
-			idTokenClaim := true
-			accessTokenClaim := true
-			consentRequired := false
 			src.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
 				{
-					Name:             stringPtr("client roles"),
-					Protocol:         stringPtr("openid-connect"),
-					Type:             stringPtr("client-roles"),
-					IDTokenClaim:     &idTokenClaim,
-					AccessTokenClaim: &accessTokenClaim,
-					ConsentRequired:  &consentRequired,
+					Name:             new("client roles"),
+					Protocol:         new("openid-connect"),
+					Type:             new("client-roles"),
+					IDTokenClaim:     new(true),
+					AccessTokenClaim: new(true),
+					ConsentRequired:  new(false),
 					Config:           &map[string]string{"claim.name": "roles", "jsonType.label": "String", "user.attribute": "foo", "multivalued": "true"},
 				},
 			}
@@ -437,11 +425,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 
@@ -455,11 +443,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-configmap",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 
@@ -473,11 +461,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-mappers",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 
@@ -491,11 +479,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			src := &keycloakv1alpha2.KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-empty-secret",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: keycloakv1alpha2.KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 				},
 			}
 			// Create Secret with nil Name and Key
@@ -519,33 +507,30 @@ var _ = Describe("KeycloakClient Conversion", func() {
 	Context("Bidirectional conversion", func() {
 		It("should preserve data through ConvertTo and ConvertFrom", func() {
 			// Create a v1alpha1 KeycloakClient
-			create := true
-			envVarKeys := true
-			keyPrefix := "OIDC_"
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-bidirectional",
-					Namespace: "default",
+					Namespace: testNamespace,
 				},
 				Spec: KeycloakClientSpec{
-					ClientID: stringPtr("test-client-id"),
-					Realm:    stringPtr("master"),
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
 					ConfigMap: &KeycloakClientConfigMap{
-						Name:       stringPtr("test-configmap"),
-						EnvVarKeys: &envVarKeys,
+						Name:       new("test-configmap"),
+						EnvVarKeys: new(true),
 					},
 				},
 			}
 			src.Spec.ClientSecretRef = &KeycloakClientSecret{
 				SecretKeySelector: corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: "test-secret",
+						Name: testSecretName,
 					},
 					Key: "client-secret",
 				},
-				Create:     &create,
-				EnvVarKeys: &envVarKeys,
-				KeyPrefix:  stringPtr(keyPrefix),
+				Create:     new(true),
+				EnvVarKeys: new(true),
+				KeyPrefix:  new("OIDC_"),
 			}
 
 			// Convert to v1alpha2
@@ -579,16 +564,4 @@ func dstRaw(dst conversion.Hub) *keycloakv1alpha2.KeycloakClient {
 
 func srcRaw(src conversion.Hub) *keycloakv1alpha2.KeycloakClient {
 	return src.(*keycloakv1alpha2.KeycloakClient)
-}
-
-func stringPtr(s string) *string {
-	return &s
-}
-
-func boolPtr(b bool) *bool {
-	return &b
-}
-
-func int32Ptr(i int32) *int32 {
-	return &i
 }

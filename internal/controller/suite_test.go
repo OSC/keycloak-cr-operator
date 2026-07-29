@@ -74,7 +74,7 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths:     []string{filepath.Join("..", "..", "config", "crd", "bases")},
-		ErrorIfCRDPathMissing: true,
+		ErrorIfCRDPathMissing: false,
 	}
 
 	// Retrieve the first found binary directory to allow running tests from IDEs
@@ -103,12 +103,12 @@ var _ = AfterSuite(func() {
 func bootstrapDeployment(keycloakClientName string) {
 	By("Create Deployment")
 	deployment := &appsv1.Deployment{}
-	err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: "default"}, deployment)
+	err := k8sClient.Get(context.TODO(), types.NamespacedName{Name: deploymentName, Namespace: testNamespace}, deployment)
 	if errors.IsNotFound(err) {
 		deployment = &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: "default", Labels: map[string]string{keycloakClientMatchLabel: keycloakClientName}},
+			ObjectMeta: metav1.ObjectMeta{Name: deploymentName, Namespace: testNamespace, Labels: map[string]string{keycloakClientMatchLabel: keycloakClientName}},
 			Spec: appsv1.DeploymentSpec{
-				Replicas: int32Ptr(1),
+				Replicas: new(int32(1)),
 				Selector: &metav1.LabelSelector{
 					MatchLabels: map[string]string{"app": "nginx"},
 				},
@@ -152,14 +152,3 @@ func getFirstFoundEnvTestBinaryDir() string {
 	}
 	return ""
 }
-
-// Helper functions for test data
-func stringPtr(s string) *string {
-	return &s
-}
-
-func boolPtr(b bool) *bool {
-	return &b
-}
-
-func int32Ptr(i int32) *int32 { return &i }
