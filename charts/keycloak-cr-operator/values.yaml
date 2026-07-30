@@ -44,8 +44,6 @@ manager:
 
   # @ignored
   args:
-    - --keycloak-admin-username=$(KEYCLOAK_ADMIN_USERNAME)
-    - --keycloak-admin-password=$(KEYCLOAK_ADMIN_PASSWORD)
     - --leader-elect
   # -- Extra arguments to pass to the manager
   extraArgs: []
