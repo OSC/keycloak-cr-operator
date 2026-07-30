@@ -61,9 +61,6 @@ spec:
       - command:
         - /manager
         args:
-          - --keycloak-url=http://keycloak.keycloak.svc.cluster.local
-          - --keycloak-admin-username=$(KEYCLOAK_ADMIN_USERNAME)
-          - --keycloak-admin-password=$(KEYCLOAK_ADMIN_PASSWORD)
           - --leader-elect
           - --health-probe-bind-address=:8081
         image: controller:latest
@@ -74,6 +71,8 @@ spec:
           protocol: TCP
         envFrom:
         - secretRef:
+            name: keycloak-cr-operator
+        - configMapRef:
             name: keycloak-cr-operator
         securityContext:
           readOnlyRootFilesystem: true

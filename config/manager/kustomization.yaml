@@ -2,9 +2,18 @@ resources:
 - manager.yaml
 secretGenerator:
 - literals:
-  - KEYCLOAK_ADMIN_USERNAME=admin
-  - KEYCLOAK_ADMIN_PASSWORD=secret
-  name: keycloak-cr-operator
+  - CONFIG_KEYCLOAK_ADMIN_USERNAME=admin
+  - CONFIG_KEYCLOAK_ADMIN_PASSWORD=secret
+  name: manager-secret
+configMapGenerator:
+- literals:
+  - CONFIG_KEYCLOAK_URL=http://keycloak.keycloak.svc.cluster.local
+  - CONFIG_KEYCLOAK_ADMIN_REALM=master
+  - CONFIG_KEYCLOAK_DEFAULT_REALM=
+  - CONFIG_KEYCLOAK_ALLOWED_REALMS=
+  - CONFIG_KEYCLOAK_CLIENT_ID_PREFIX=kubernetes
+  - CONFIG_KEYCLOAK_CLIENT_ID_REQUIRED=
+  name: manager-config
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 images:
