@@ -80,41 +80,58 @@ func main() {
 	var secureMetrics bool
 	var enableHTTP2 bool
 	var tlsOpts []func(*tls.Config)
-	flag.StringVar(&keycloakUrl, "keycloak-url", "", "The Keycloak instance base URL")
-	flag.StringVar(&keycloakAdminUsername, "keycloak-admin-username", "admin", "The Keycloak admin username")
-	flag.StringVar(&keycloakAdminPassword, "keycloak-admin-password", "", "The Keycloak admin password")
-	flag.StringVar(&keycloakAdminRealm, "keycloak-admin-realm", "master", "The Keycloak admin realm")
-	flag.StringVar(&keycloakDefaultRealm, "keycloak-default-realm", "", "The Keycloak default realm")
+	flag.StringVar(&keycloakUrl, "keycloak-url", "",
+		"The Keycloak instance base URL (env: CONFIG_KEYCLOAK_URL)")
+	flag.StringVar(&keycloakAdminUsername, "keycloak-admin-username", "admin",
+		"The Keycloak admin username (env: CONFIG_KEYCLOAK_ADMIN_USERNAME)")
+	flag.StringVar(&keycloakAdminPassword, "keycloak-admin-password", "",
+		"The Keycloak admin password (env: CONFIG_KEYCLOAK_ADMIN_PASSWORD)")
+	flag.StringVar(&keycloakAdminRealm, "keycloak-admin-realm", "master",
+		"The Keycloak admin realm (env: CONFIG_KEYCLOAK_ADMIN_REALM)")
+	flag.StringVar(&keycloakDefaultRealm, "keycloak-default-realm", "",
+		"The Keycloak default realm (env: CONFIG_KEYCLOAK_DEFAULT_REALM)")
 	flag.StringVar(&keycloakAllowedRealms, "keycloak-allowed-realms", "",
-		"The Keycloak allowed realm. Comma separated for multiple realms.")
+		"The Keycloak allowed realm. Comma separated for multiple realms (env: CONFIG_KEYCLOAK_ALLOWED_REALMS)")
 	flag.StringVar(&keycloakClientIDPrefix, "keycloak-client-id-prefix", "kubernetes",
-		"The prefix used when creating Keycloak client ID")
+		"The prefix used when creating Keycloak client ID (env: CONFIG_KEYCLOAK_CLIENT_ID_PREFIX)")
 	flag.StringVar(&keycloakClientIDRequired, "keycloak-client-id-required", "",
-		"The Go template used to enforce the ClientID using the defaulting and validating webhooks")
+		"The Go template used to enforce the ClientID using the "+
+			"defaulting and validating webhooks (env: CONFIG_KEYCLOAK_CLIENT_ID_REQUIRED)")
 	flag.StringVar(&secretWaitTimeout, "secret-wait-timeout", "10s",
-		"The time to wait for secrets to be available when needed for a custom resource")
+		"The time to wait for secrets to be available when needed for a custom resource (env: CONFIG_SECRET_WAIT_TIMEOUT)")
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "0", "The address the metrics endpoint binds to. "+
-		"Use :8443 for HTTPS or :8080 for HTTP, or leave as 0 to disable the metrics service.")
-	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081", "The address the probe endpoint binds to.")
+		"Use :8443 for HTTPS or :8080 for HTTP, or "+
+		"leave as 0 to disable the metrics service (env: CONFIG_METRICS_BIND_ADDRESS)")
+	flag.StringVar(&probeAddr, "health-probe-bind-address", ":8081",
+		"The address the probe endpoint binds to (env: CONFIG_HEALTH_PROBE_BIND_ADDRESS)")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
-			"Enabling this will ensure there is only one active controller manager.")
+			"Enabling this will ensure there is only one active controller manager (env: CONFIG_LEADER_ELECT)")
 	flag.BoolVar(&secureMetrics, "metrics-secure", true,
-		"If set, the metrics endpoint is served securely via HTTPS. Use --metrics-secure=false to use HTTP instead.")
-	flag.StringVar(&webhookCertPath, "webhook-cert-path", "", "The directory that contains the webhook certificate.")
-	flag.StringVar(&webhookCertName, "webhook-cert-name", "tls.crt", "The name of the webhook certificate file.")
-	flag.StringVar(&webhookCertKey, "webhook-cert-key", "tls.key", "The name of the webhook key file.")
+		"If set, the metrics endpoint is served securely via HTTPS."+
+			"Use --metrics-secure=false to use HTTP instead (env: CONFIG_METRICS_SECURE)")
+	flag.StringVar(&webhookCertPath, "webhook-cert-path", "",
+		"The directory that contains the webhook certificate (env: CONFIG_WEBHOOK_CERT_PATH)")
+	flag.StringVar(&webhookCertName, "webhook-cert-name", "tls.crt",
+		"The name of the webhook certificate file (env: CONFIG_WEBHOOK_CERT_NAME)")
+	flag.StringVar(&webhookCertKey, "webhook-cert-key", "tls.key",
+		"The name of the webhook key file (env: CONFIG_WEBHOOK_CERT_KEY)")
 	flag.StringVar(&metricsCertPath, "metrics-cert-path", "",
-		"The directory that contains the metrics server certificate.")
-	flag.StringVar(&metricsCertName, "metrics-cert-name", "tls.crt", "The name of the metrics server certificate file.")
-	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key", "The name of the metrics server key file.")
+		"The directory that contains the metrics server certificate (env: CONFIG_METRICS_CERT_PATH)")
+	flag.StringVar(&metricsCertName, "metrics-cert-name", "tls.crt",
+		"The name of the metrics server certificate file (env: CONFIG_METRICS_CERT_NAME)")
+	flag.StringVar(&metricsCertKey, "metrics-cert-key", "tls.key",
+		"The name of the metrics server key file (env: CONFIG_METRICS_CERT_KEY)")
 	flag.BoolVar(&enableHTTP2, "enable-http2", false,
-		"If set, HTTP/2 will be enabled for the metrics and webhook servers")
+		"If set, HTTP/2 will be enabled for the metrics and webhook servers (env: CONFIG_ENABLE_HTTP2)")
 	opts := zap.Options{
 		Development: false,
 	}
 	opts.BindFlags(flag.CommandLine)
-	err := flagutil.SetFlagsFromEnv(flag.CommandLine, "")
+	// Set flags from environment variables with "CONFIG" prefix.
+	// The function automatically maps flags to env vars by uppercasing and replacing dashes with underscores:
+	// keycloak-url => CONFIG_KEYCLOAK_URL, leader-elect => CONFIG_LEADER_ELECT, etc.
+	err := flagutil.SetFlagsFromEnv(flag.CommandLine, "CONFIG")
 	if err != nil {
 		ctrl.SetLogger(klog.NewKlogr())
 		setupLog.Error(err, "Failed to set flags from environment variables")

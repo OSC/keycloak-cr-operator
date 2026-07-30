@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
+  name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager-config" "context" $) }}
+  namespace: {{ .Release.Namespace }}
+data:
+  CONFIG_KEYCLOAK_URL: {{ required "Keycloak URL is required" (tpl .Values.manager.config.keycloakURL .) | quote }}
+  CONFIG_KEYCLOAK_ADMIN_REALM: {{ .Values.manager.config.adminRealm | quote }}
+  CONFIG_KEYCLOAK_DEFAULT_REALM: {{ .Values.manager.config.defaultRealm | default "" | quote }}
+  CONFIG_KEYCLOAK_ALLOWED_REALMS: {{ .Values.manager.config.allowedRealms | default list | join "," | quote }}
+  CONFIG_KEYCLOAK_CLIENT_ID_PREFIX: {{ .Values.manager.config.clientIdPrefix | default "kubernetes" | quote }}
+  CONFIG_KEYCLOAK_CLIENT_ID_REQUIRED: {{ .Values.manager.config.clientIdRequired | default "" | quote }}
