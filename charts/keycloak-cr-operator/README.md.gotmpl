@@ -42,6 +42,8 @@ The metrics configuration has been simplified back to a single `port` and `secur
 This chart can no longer create an image pull secret with `imagePullSecret.*` settings.
 Image pull secrets can be configured with `manager.imagePullSecrets`.
 
+`networkPolicy.allowMetricsFromPods` is now `true`.
+
 {{ template "chart.requirementsSection" . }}
 
 {{ template "chart.valuesSection" . }}

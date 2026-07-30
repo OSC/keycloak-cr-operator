@@ -132,6 +132,12 @@ manager:
   # -- Termination grace period seconds
   terminationGracePeriodSeconds: 10
 
+  # -- Additional manager volume mounts
+  extraVolumeMounts: []
+
+  # -- Additional manager volumes
+  extraVolumes: []
+
 # RBAC configuration
 rbac:
   # -- RBAC resource scope
@@ -202,7 +208,7 @@ networkPolicy:
   # -- Enable NetworkPolicy resources for this operator
   enabled: true
   # -- Allow all pods in operator's namespace to access the operator's metrics
-  allowMetricsFromPods: false
+  allowMetricsFromPods: true
   # --  The Prometheus namespace to allow access
   prometheusLabels:
     app.kubernetes.io/name: prometheus
@@ -217,11 +223,11 @@ hooks:
   enabled: true
   image:
     # -- hook image registry
-    registry: registry.k8s.io
+    registry: docker.io
     # -- hook image repository
-    repository: kubectl
+    repository: portainer/kubectl-shell
     # -- hook image tag
-    tag: 'v1.36.0'
+    tag: '2.39.0'
     # -- hook image pull policy
     pullPolicy: IfNotPresent
   # -- Use the imagePullSecret resource created by this chart

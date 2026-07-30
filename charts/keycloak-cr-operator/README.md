@@ -41,6 +41,8 @@ The metrics configuration has been simplified back to a single `port` and `secur
 This chart can no longer create an image pull secret with `imagePullSecret.*` settings.
 Image pull secrets can be configured with `manager.imagePullSecrets`.
 
+`networkPolicy.allowMetricsFromPods` is now `true`.
+
 ## Values
 
 | Key | Type | Default | Description |
@@ -83,6 +85,8 @@ Image pull secrets can be configured with `manager.imagePullSecrets`.
 | manager.priorityClassName | string | `""` | Priority class name |
 | manager.topologySpreadConstraints | list | `[]` | Topology spread constraints |
 | manager.terminationGracePeriodSeconds | int | `10` | Termination grace period seconds |
+| manager.extraVolumeMounts | list | `[]` | Additional manager volume mounts |
+| manager.extraVolumes | list | `[]` | Additional manager volumes |
 | rbac.namespaced | bool | `false` | RBAC resource scope - false (default): ClusterRole/ClusterRoleBinding (all namespaces) - true: Role/RoleBinding (release namespace only) |
 | rbac.helpers | object | `{"enabled":false}` | Helper roles for CRD management (admin/editor/viewer) |
 | rbac.helpers.enabled | bool | `false` | Install convenience admin/editor/viewer roles for CRDs |
@@ -102,14 +106,14 @@ Image pull secrets can be configured with `manager.imagePullSecrets`.
 | webhook.annotations | object | `{}` | Annotations to add to webhook server |
 | prometheus.enabled | bool | `false` | Enable Prometheus ServiceMonitor. Requires prometheus-operator to be installed in the cluster |
 | networkPolicy.enabled | bool | `true` | Enable NetworkPolicy resources for this operator |
-| networkPolicy.allowMetricsFromPods | bool | `false` | Allow all pods in operator's namespace to access the operator's metrics |
+| networkPolicy.allowMetricsFromPods | bool | `true` | Allow all pods in operator's namespace to access the operator's metrics |
 | networkPolicy.prometheusLabels | object | `{"app.kubernetes.io/name":"prometheus"}` | The Prometheus namespace to allow access |
 | networkPolicy.apiServerNamespace | string | `"kube-system"` | The API server namespace name |
 | networkPolicy.apiServerPodLabels | object | `{"tier":"control-plane"}` | The API server pod labels to allow |
 | hooks.enabled | bool | `true` | Enable post-install hooks |
-| hooks.image.registry | string | `"registry.k8s.io"` | hook image registry |
-| hooks.image.repository | string | `"kubectl"` | hook image repository |
-| hooks.image.tag | string | `"v1.36.0"` | hook image tag |
+| hooks.image.registry | string | `"docker.io"` | hook image registry |
+| hooks.image.repository | string | `"portainer/kubectl-shell"` | hook image repository |
+| hooks.image.tag | string | `"2.39.0"` | hook image tag |
 | hooks.image.pullPolicy | string | `"IfNotPresent"` | hook image pull policy |
 | hooks.useImagePullSecret | bool | `false` | Use the imagePullSecret resource created by this chart |
 | hooks.imagePullSecrets | list | `[]` | imagePullSecrets to use for existing secrets |

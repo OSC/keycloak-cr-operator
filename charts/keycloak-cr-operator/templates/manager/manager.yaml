@@ -2,10 +2,6 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  {{- with .Values.manager.annotations }}
-  annotations:
-    {{- toYaml . | nindent 4 }}
-  {{- end }}
   labels:
     {{- include "keycloak-cr-operator.labels" . | nindent 4 }}
     control-plane: controller-manager
@@ -14,6 +10,10 @@ metadata:
     {{- end }}
   name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" $) }}
   namespace: {{ .Release.Namespace }}
+  {{- with .Values.manager.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   {{- with .Values.manager.strategy }}
   strategy: {{ toYaml . | nindent 4 }}
@@ -97,12 +97,6 @@ spec:
             port: {{ .Values.manager.healthPort }}
           initialDelaySeconds: 15
           periodSeconds: 20
-        readinessProbe:
-          httpGet:
-            path: /readyz
-            port: {{ .Values.manager.healthPort }}
-          initialDelaySeconds: 5
-          periodSeconds: 10
         name: manager
         ports:
         - containerPort: {{ .Values.manager.healthPort }}
@@ -111,6 +105,12 @@ spec:
         - containerPort: {{ .Values.webhook.port }}
           name: webhook-server
           protocol: TCP
+        readinessProbe:
+          httpGet:
+            path: /readyz
+            port: {{ .Values.manager.healthPort }}
+          initialDelaySeconds: 5
+          periodSeconds: 10
         resources:
           {{- if .Values.manager.resources }}
           {{- toYaml .Values.manager.resources | nindent 10 }}
@@ -124,16 +124,19 @@ spec:
           {}
           {{- end }}
         volumeMounts:
-        {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
-        - mountPath: /tmp/k8s-metrics-server/metrics-certs
-          name: metrics-certs
-          readOnly: true
-        {{- end }}
-        {{- if .Values.certManager.enabled }}
-        - mountPath: /tmp/k8s-webhook-server/serving-certs
-          name: webhook-certs
-          readOnly: true
-        {{- end }}
+          {{- if .Values.manager.extraVolumeMounts }}
+          {{- toYaml .Values.manager.extraVolumeMounts | nindent 10 }}
+          {{- end }}
+          {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
+          - mountPath: /tmp/k8s-metrics-server/metrics-certs
+            name: metrics-certs
+            readOnly: true
+          {{- end }}
+          {{- if .Values.certManager.enabled }}
+          - mountPath: /tmp/k8s-webhook-server/serving-certs
+            name: webhook-certs
+            readOnly: true
+          {{- end }}
       securityContext:
         {{- if .Values.manager.podSecurityContext }}
         {{- toYaml .Values.manager.podSecurityContext | nindent 8 }}
@@ -143,22 +146,25 @@ spec:
       serviceAccountName: {{ include "keycloak-cr-operator.serviceAccountName" . }}
       terminationGracePeriodSeconds: {{ .Values.manager.terminationGracePeriodSeconds }}
       volumes:
-      {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
-      - name: metrics-certs
-        secret:
-          items:
-          - key: ca.crt
-            path: ca.crt
-          - key: tls.crt
-            path: tls.crt
-          - key: tls.key
-            path: tls.key
-          optional: false
-          secretName: metrics-server-cert
-      {{- end }}
-      {{- if .Values.certManager.enabled }}
-      - name: webhook-certs
-        secret:
-          secretName: webhook-server-cert
-      {{- end }}
+        {{- if .Values.manager.extraVolumes }}
+        {{- toYaml .Values.manager.extraVolumes | nindent 8 }}
+        {{- end }}
+        {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
+        - name: metrics-certs
+          secret:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            - key: tls.crt
+              path: tls.crt
+            - key: tls.key
+              path: tls.key
+            optional: false
+            secretName: metrics-server-cert
+        {{- end }}
+        {{- if .Values.certManager.enabled }}
+        - name: webhook-certs
+          secret:
+            secretName: webhook-server-cert
+        {{- end }}
 {{- end }}
