@@ -9,16 +9,16 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   endpoints:
-    - path: /metrics
-      port: {{ .Values.metrics.protocol }}
-      scheme: {{ .Values.metrics.protocol }}
-      {{- if eq .Values.metrics.protocol "https" }}
+    - {{- if .Values.metrics.secure }}
       bearerTokenFile: /var/run/secrets/kubernetes.io/serviceaccount/token
+      {{- end }}
+      path: /metrics
+      port: {{ if .Values.metrics.secure }}https{{ else }}http{{ end }}
+      scheme: {{ if .Values.metrics.secure }}https{{ else }}http{{ end }}
+      {{- if .Values.metrics.secure }}
       tlsConfig:
-        {{- if .Values.certManager.enabled }}
         serverName: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "metrics-service" "context" $) }}.{{ .Release.Namespace }}.svc
-        # Apply secure TLS configuration with cert-manager
-        insecureSkipVerify: false
+        {{- if .Values.certManager.enabled }}
         ca:
           secret:
             name: metrics-server-cert
@@ -30,8 +30,8 @@ spec:
         keySecret:
           name: metrics-server-cert
           key: tls.key
+        insecureSkipVerify: false
         {{- else }}
-        # Development/Test mode (insecure configuration)
         insecureSkipVerify: true
         {{- end }}
       {{- end }}

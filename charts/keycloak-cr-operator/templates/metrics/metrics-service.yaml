@@ -13,10 +13,10 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   ports:
-  - name: {{ .Values.metrics.protocol }}
-    port: {{ get .Values.metrics.ports .Values.metrics.protocol }}
+  - name: {{ if .Values.metrics.secure }}https{{ else }}http{{ end }}
+    port: {{ .Values.metrics.port }}
     protocol: TCP
-    targetPort: {{ get .Values.metrics.ports .Values.metrics.protocol }}
+    targetPort: {{ .Values.metrics.port }}
   selector:
     {{- include "keycloak-cr-operator.selectorLabels" . | nindent 4 }}
     control-plane: controller-manager

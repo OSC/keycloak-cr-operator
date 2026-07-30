@@ -27,14 +27,9 @@ spec:
         {{- include "keycloak-cr-operator.selectorLabels" . | nindent 8 }}
       name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "hooks-webhook-wait" "context" $) }}
     spec:
-      {{- if .Values.hooks.imagePullSecrets }}
-      {{- with .Values.hooks.imagePullSecrets }}
+      {{- with (.Values.global.imagePullSecrets | default .Values.hooks.imagePullSecrets) }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      {{- else if and .Values.hooks.useImagePullSecret .Values.imagePullSecret.create }}
-      imagePullSecrets:
-        - name: {{ include "keycloak-cr-operator.resourceName" (dict "suffix" "imagepullsecret" "context" $) }}
       {{- end }}
       restartPolicy: Never
       serviceAccountName: {{ printf "%s-hooks" (include "keycloak-cr-operator.serviceAccountName" .) }}

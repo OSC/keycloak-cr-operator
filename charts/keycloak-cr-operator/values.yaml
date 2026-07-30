@@ -4,6 +4,10 @@ nameOverride: ""
 # -- String to fully override chart.fullname template
 fullnameOverride: ""
 
+global:
+  # -- Global image pull secrets applied to all images if configured
+  imagePullSecrets: []
+
 manager:
   # -- Set to false to skip manager installation
   enabled: true
@@ -64,8 +68,6 @@ manager:
   # -- Environment variables to add to manager pods
   env: []
 
-  # -- Use the imagePullSecret resource created by this chart
-  useImagePullSecret: false
   # -- imagePullSecrets to use for existing secrets
   imagePullSecrets: []
 
@@ -168,14 +170,10 @@ crd:
 metrics:
   # -- Enable to expose /metrics endpoint with RBAC protection
   enabled: true
-  # -- Metrics protocol (http or https)
-  protocol: https
-  # -- Metrics server ports.  Only supports http and https keys
-  ports:
-    # -- HTTP port
-    http: 8080
-    # -- HTTPS port
-    https: 8443
+  # -- Metrics server port.
+  port: 8443
+  # -- Enable secure metrics: HTTPS with certs/auth (true) or HTTP (false).
+  secure: true
   # -- Annotations to add to metrics endpoint
   annotations: {}
 
@@ -214,26 +212,16 @@ networkPolicy:
   apiServerPodLabels:
     tier: control-plane
 
-imagePullSecret:
-  # -- Create the image pull secret
-  create: false
-  # -- imagePullSecret registry
-  registry: ""
-  # -- imagePullSecret username
-  username: ""
-  # -- imagePullSecret password
-  password: ""
-
 hooks:
   # -- Enable post-install hooks
   enabled: true
   image:
     # -- hook image registry
-    registry: docker.io
+    registry: registry.k8s.io
     # -- hook image repository
-    repository: portainer/kubectl-shell
+    repository: kubectl
     # -- hook image tag
-    tag: '2.39.0'
+    tag: 'v1.36.0'
     # -- hook image pull policy
     pullPolicy: IfNotPresent
   # -- Use the imagePullSecret resource created by this chart

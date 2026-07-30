@@ -26,11 +26,20 @@ The following values have been renamed for consistency:
 | `rbacHelpers.enable` | `rbac.helpers.enabled` |
 | `crd.enable` | `crd.enabled` |
 | `metrics.enable` | `metrics.enabled` |
+| `metrics.protocol` | N/A (removed) |
+| `metrics.ports.http` / `metrics.ports.https` | `metrics.port` |
+| `manager.useImagePullSecret` | N/A (removed) |
+| `imagePullSecret.*` | N/A (removed) |
 | `certManager.enable` | `certManager.enabled` |
 | `webhook.enable` | `webhook.enabled` |
 | `networkPolicy.enable` | `networkPolicy.enabled` |
 | `hooks.enable` | `hooks.enabled` |
 | `prometheus.enable` | `prometheus.enabled` |
+
+The metrics configuration has been simplified back to a single `port` and `secure` boolean.
+
+This chart can no longer create an image pull secret with `imagePullSecret.*` settings.
+Image pull secrets can be configured with `manager.imagePullSecrets`.
 
 ## Values
 
@@ -38,6 +47,7 @@ The following values have been renamed for consistency:
 |-----|------|---------|-------------|
 | nameOverride | string | `""` | String to partially override chart.fullname template (will maintain the release name) |
 | fullnameOverride | string | `""` | String to fully override chart.fullname template |
+| global.imagePullSecrets | list | `[]` | Global image pull secrets applied to all images if configured |
 | manager.enabled | bool | `true` | Set to false to skip manager installation |
 | manager.replicas | int | `1` | Number of manager replicas |
 | manager.image.registry | string | `"quay.io"` | Image registry |
@@ -59,7 +69,6 @@ The following values have been renamed for consistency:
 | manager.podLabels | object | `{}` | Pod labels to add to manager pods |
 | manager.healthPort | int | `8081` | Health check port |
 | manager.env | list | `[]` | Environment variables to add to manager pods |
-| manager.useImagePullSecret | bool | `false` | Use the imagePullSecret resource created by this chart |
 | manager.imagePullSecrets | list | `[]` | imagePullSecrets to use for existing secrets |
 | manager.podSecurityContext | object | unprivileged | Pod-level security settings |
 | manager.securityContext | object | unprivileged | Container-level security settings |
@@ -84,10 +93,8 @@ The following values have been renamed for consistency:
 | crd.enabled | bool | `true` | Install CRDs with the chart |
 | crd.keep | bool | `true` | Keep CRDs when uninstalling |
 | metrics.enabled | bool | `true` | Enable to expose /metrics endpoint with RBAC protection |
-| metrics.protocol | string | `"https"` | Metrics protocol (http or https) |
-| metrics.ports | object | `{"http":8080,"https":8443}` | Metrics server ports.  Only supports http and https keys |
-| metrics.ports.http | int | `8080` | HTTP port |
-| metrics.ports.https | int | `8443` | HTTPS port |
+| metrics.port | int | `8443` | Metrics server port. |
+| metrics.secure | bool | `true` | Enable secure metrics: HTTPS with certs/auth (true) or HTTP (false). |
 | metrics.annotations | object | `{}` | Annotations to add to metrics endpoint |
 | certManager.enabled | bool | `true` | Enable cert-manager integration. Required for webhook certificates and metrics endpoint certificates |
 | webhook.enabled | bool | `true` | Enable webhook server |
@@ -99,14 +106,10 @@ The following values have been renamed for consistency:
 | networkPolicy.prometheusLabels | object | `{"app.kubernetes.io/name":"prometheus"}` | The Prometheus namespace to allow access |
 | networkPolicy.apiServerNamespace | string | `"kube-system"` | The API server namespace name |
 | networkPolicy.apiServerPodLabels | object | `{"tier":"control-plane"}` | The API server pod labels to allow |
-| imagePullSecret.create | bool | `false` | Create the image pull secret |
-| imagePullSecret.registry | string | `""` | imagePullSecret registry |
-| imagePullSecret.username | string | `""` | imagePullSecret username |
-| imagePullSecret.password | string | `""` | imagePullSecret password |
 | hooks.enabled | bool | `true` | Enable post-install hooks |
-| hooks.image.registry | string | `"docker.io"` | hook image registry |
-| hooks.image.repository | string | `"portainer/kubectl-shell"` | hook image repository |
-| hooks.image.tag | string | `"2.39.0"` | hook image tag |
+| hooks.image.registry | string | `"registry.k8s.io"` | hook image registry |
+| hooks.image.repository | string | `"kubectl"` | hook image repository |
+| hooks.image.tag | string | `"v1.36.0"` | hook image tag |
 | hooks.image.pullPolicy | string | `"IfNotPresent"` | hook image pull policy |
 | hooks.useImagePullSecret | bool | `false` | Use the imagePullSecret resource created by this chart |
 | hooks.imagePullSecrets | list | `[]` | imagePullSecrets to use for existing secrets |
