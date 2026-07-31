@@ -38,7 +38,7 @@ helm repo add keycloak-cr-operator https://osc.github.io/keycloak-cr-operator
 2. Install the operator with required configuration:
 ```bash
 helm install keycloak-cr-operator keycloak-cr-operator/keycloak-cr-operator \
-  --namespace keycloak-cr-operator-system \
+  --namespace keycloak-cr-operator \
   --create-namespace \
   --set manager.config.keycloakURL="https://keycloak.example.com" \
   --set manager.config.adminPassword="your-admin-password"
@@ -60,12 +60,12 @@ The operator can be configured with additional parameters:
 The operator requires cert-manager for metric and webhook certificate management. Cert-manager is enabled by default. If you're not using cert-manager, you can disable it:
 ```bash
 helm install keycloak-cr-operator osc/keycloak-cr-operator \
-  --namespace keycloak-cr-operator-system \
+  --namespace keycloak-cr-operator \
   --create-namespace \
   --set manager.config.keycloakURL="https://keycloak.example.com" \
   --set manager.config.adminPassword="your-admin-password" \
-  --set certManager.enable=false \
-  --set metrics.protocol=http
+  --set certManager.enabled=false \
+  --set metrics.secure=false
 ```
 
 ## Usage
