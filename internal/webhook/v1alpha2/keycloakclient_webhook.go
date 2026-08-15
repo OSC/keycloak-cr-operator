@@ -92,37 +92,7 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		obj.Spec.Realm = &defaultRealm
 	}
 
-	if obj.Spec.Secret == nil {
-		obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{}
-	}
-	if obj.Spec.Secret.Name == nil || *obj.Spec.Secret.Name == "" {
-		defaultSecretName := obj.SecretName()
-		obj.Spec.Secret.Name = &defaultSecretName
-	}
-	if obj.Spec.Secret.ClientSecretKey == nil || *obj.Spec.Secret.ClientSecretKey == "" {
-		defaultClientSecretKey := obj.SecretClientSecretKey()
-		obj.Spec.Secret.ClientSecretKey = &defaultClientSecretKey
-	}
-	if obj.Spec.Secret.ClientIdKey == nil || *obj.Spec.Secret.ClientIdKey == "" {
-		defaultClientIdKey := obj.SecretClientIdKey()
-		obj.Spec.Secret.ClientIdKey = &defaultClientIdKey
-	}
-	if obj.Spec.Secret.IssuerUrlKey == nil || *obj.Spec.Secret.IssuerUrlKey == "" {
-		defaultIssuerUrlKey := obj.SecretIssuerUrlKey()
-		obj.Spec.Secret.IssuerUrlKey = &defaultIssuerUrlKey
-	}
-	if obj.Spec.Secret.CookieSecretKey == nil || *obj.Spec.Secret.CookieSecretKey == "" {
-		defaultCookieSecretKey := obj.SecretCookieSecretKey()
-		obj.Spec.Secret.CookieSecretKey = &defaultCookieSecretKey
-	}
-	if obj.Spec.Secret.Create == nil {
-		create := true
-		obj.Spec.Secret.Create = &create
-	}
-	if obj.Spec.Secret.EnvVarKeys == nil {
-		envVarKeys := obj.SecretEnvVarKeys()
-		obj.Spec.Secret.EnvVarKeys = &envVarKeys
-	}
+	d.defaultSecret(obj)
 
 	// Handle ConfigMap structure
 	defaultConfigMapName := fmt.Sprintf("%s-config", obj.Name)
@@ -174,6 +144,40 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 	}
 
 	return nil
+}
+
+func (d *KeycloakClientCustomDefaulter) defaultSecret(obj *keycloakv1alpha2.KeycloakClient) {
+	if obj.Spec.Secret == nil {
+		obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{}
+	}
+	if obj.Spec.Secret.Name == nil || *obj.Spec.Secret.Name == "" {
+		defaultSecretName := obj.SecretName()
+		obj.Spec.Secret.Name = &defaultSecretName
+	}
+	if obj.Spec.Secret.ClientSecretKey == nil || *obj.Spec.Secret.ClientSecretKey == "" {
+		defaultClientSecretKey := obj.SecretClientSecretKey()
+		obj.Spec.Secret.ClientSecretKey = &defaultClientSecretKey
+	}
+	if obj.Spec.Secret.ClientIdKey == nil || *obj.Spec.Secret.ClientIdKey == "" {
+		defaultClientIdKey := obj.SecretClientIdKey()
+		obj.Spec.Secret.ClientIdKey = &defaultClientIdKey
+	}
+	if obj.Spec.Secret.IssuerUrlKey == nil || *obj.Spec.Secret.IssuerUrlKey == "" {
+		defaultIssuerUrlKey := obj.SecretIssuerUrlKey()
+		obj.Spec.Secret.IssuerUrlKey = &defaultIssuerUrlKey
+	}
+	if obj.Spec.Secret.CookieSecretKey == nil || *obj.Spec.Secret.CookieSecretKey == "" {
+		defaultCookieSecretKey := obj.SecretCookieSecretKey()
+		obj.Spec.Secret.CookieSecretKey = &defaultCookieSecretKey
+	}
+	if obj.Spec.Secret.Create == nil {
+		create := true
+		obj.Spec.Secret.Create = &create
+	}
+	if obj.Spec.Secret.EnvVarKeys == nil {
+		envVarKeys := obj.SecretEnvVarKeys()
+		obj.Spec.Secret.EnvVarKeys = &envVarKeys
+	}
 }
 
 // +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha2-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha2,name=vkeycloakclient-v1alpha2.kb.io,admissionReviewVersions=v1,servicePort=9443
