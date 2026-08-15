@@ -80,15 +80,3 @@ Otherwise, use the standard resourceName helper with "controller-manager" suffix
 {{- include "keycloak-cr-operator.resourceName" (dict "suffix" "manager" "context" .) }}
 {{- end }}
 {{- end }}
-
-{{/*
-Create the image pull secret value
-*/}}
-{{- define "keycloak-cr-operator.imagePullSecret" -}}
-{{- with .Values.imagePullSecret }}
-{{- $registry := (required "imagePullSecret registry is required" .registry) }}
-{{- $username := (required "imagePullSecret username is required" .username) }}
-{{- $password := (required "imagePullSecret password is required" .password) }}
-{{- printf "{\"auths\":{\"%s\":{\"auth\":\"%s\"}}}" $registry (printf "%s:%s" $username $password | b64enc) | b64enc }}
-{{- end }}
-{{- end }}

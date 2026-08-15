@@ -4,6 +4,10 @@ nameOverride: ""
 # -- String to fully override chart.fullname template
 fullnameOverride: ""
 
+global:
+  # -- Global image pull secrets applied to all images if configured
+  imagePullSecrets: []
+
 manager:
   # -- Set to false to skip manager installation
   enabled: true
@@ -64,8 +68,6 @@ manager:
   # -- Environment variables to add to manager pods
   env: []
 
-  # -- Use the imagePullSecret resource created by this chart
-  useImagePullSecret: false
   # -- imagePullSecrets to use for existing secrets
   imagePullSecrets: []
 
@@ -130,6 +132,12 @@ manager:
   # -- Termination grace period seconds
   terminationGracePeriodSeconds: 10
 
+  # -- Additional manager volume mounts
+  extraVolumeMounts: []
+
+  # -- Additional manager volumes
+  extraVolumes: []
+
 # RBAC configuration
 rbac:
   # -- RBAC resource scope
@@ -168,14 +176,10 @@ crd:
 metrics:
   # -- Enable to expose /metrics endpoint with RBAC protection
   enabled: true
-  # -- Metrics protocol (http or https)
-  protocol: https
-  # -- Metrics server ports.  Only supports http and https keys
-  ports:
-    # -- HTTP port
-    http: 8080
-    # -- HTTPS port
-    https: 8443
+  # -- Metrics server port.
+  port: 8443
+  # -- Enable secure metrics: HTTPS with certs/auth (true) or HTTP (false).
+  secure: true
   # -- Annotations to add to metrics endpoint
   annotations: {}
 
@@ -204,7 +208,7 @@ networkPolicy:
   # -- Enable NetworkPolicy resources for this operator
   enabled: true
   # -- Allow all pods in operator's namespace to access the operator's metrics
-  allowMetricsFromPods: false
+  allowMetricsFromPods: true
   # --  The Prometheus namespace to allow access
   prometheusLabels:
     app.kubernetes.io/name: prometheus
@@ -213,16 +217,6 @@ networkPolicy:
   # -- The API server pod labels to allow
   apiServerPodLabels:
     tier: control-plane
-
-imagePullSecret:
-  # -- Create the image pull secret
-  create: false
-  # -- imagePullSecret registry
-  registry: ""
-  # -- imagePullSecret username
-  username: ""
-  # -- imagePullSecret password
-  password: ""
 
 hooks:
   # -- Enable post-install hooks

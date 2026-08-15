@@ -18,7 +18,7 @@ spec:
           {{- toYaml . | nindent 10 }}
         {{- end }}
     ports:
-    - port: {{ get .Values.metrics.ports .Values.metrics.protocol }}
+    - port: {{ .Values.metrics.port }}
       protocol: TCP
   podSelector:
     matchLabels:

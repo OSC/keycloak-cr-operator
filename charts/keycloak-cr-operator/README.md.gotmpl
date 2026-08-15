@@ -27,11 +27,22 @@ The following values have been renamed for consistency:
 | `rbacHelpers.enable` | `rbac.helpers.enabled` |
 | `crd.enable` | `crd.enabled` |
 | `metrics.enable` | `metrics.enabled` |
+| `metrics.protocol` | `metrics.secure` |
+| `metrics.ports.http` / `metrics.ports.https` | `metrics.port` |
+| `manager.useImagePullSecret` | N/A (removed) |
+| `imagePullSecret.*` | N/A (removed) |
 | `certManager.enable` | `certManager.enabled` |
 | `webhook.enable` | `webhook.enabled` |
 | `networkPolicy.enable` | `networkPolicy.enabled` |
 | `hooks.enable` | `hooks.enabled` |
 | `prometheus.enable` | `prometheus.enabled` |
+
+The metrics configuration has been simplified back to a single `port` and `secure` boolean.
+
+This chart can no longer create an image pull secret with `imagePullSecret.*` settings.
+Image pull secrets can be configured with `manager.imagePullSecrets`.
+
+`networkPolicy.allowMetricsFromPods` is now `true`.
 
 {{ template "chart.requirementsSection" . }}
 
