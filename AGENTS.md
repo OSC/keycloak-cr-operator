@@ -66,7 +66,7 @@ make generate   # Regenerate DeepCopy methods
 
 **After editing `*.go` files:**
 ```
-make lint-fix   # Auto-fix code style
+make fmt        # Auto-fix code style
 make test       # Run unit tests
 ```
 

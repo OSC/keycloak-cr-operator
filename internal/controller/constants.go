@@ -22,8 +22,6 @@ const (
 	typeAvailableKeycloakClient = "Available"
 	keycloakClientMatchLabel    = "keycloak.osc.edu/keycloakclient"
 	clientSecretVal             = "client-secret"
-	cookieSecretKey             = "cookie-secret"
-	cookieSecretEnvKey          = "COOKIE_SECRET"
 	configmapChecksumAnnotation = "keycloak.osc.edu/configmap-checksum"
 	secretChecksumAnnotation    = "keycloak.osc.edu/secret-checksum"
 )

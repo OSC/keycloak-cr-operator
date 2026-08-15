@@ -565,6 +565,11 @@ spec:
                       The Client Secret key
                       defaults to "client-secret" or "CLIENT_SECRET" based on envVarKeys
                     type: string
+                  cookieSecretKey:
+                    description: |-
+                      The cookie secret key
+                      Defaults to "cookie-secret" or "COOKIE_SECRET" based on envVarKeys
+                    type: string
                   create:
                     default: true
                     type: boolean

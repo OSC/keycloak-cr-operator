@@ -111,6 +111,10 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 		defaultIssuerUrlKey := obj.SecretIssuerUrlKey()
 		obj.Spec.Secret.IssuerUrlKey = &defaultIssuerUrlKey
 	}
+	if obj.Spec.Secret.CookieSecretKey == nil || *obj.Spec.Secret.CookieSecretKey == "" {
+		defaultCookieSecretKey := obj.SecretCookieSecretKey()
+		obj.Spec.Secret.CookieSecretKey = &defaultCookieSecretKey
+	}
 	if obj.Spec.Secret.Create == nil {
 		create := true
 		obj.Spec.Secret.Create = &create
@@ -285,6 +289,14 @@ func (v *KeycloakClientCustomValidator) validateSecret(obj *keycloakv1alpha2.Key
 			envIssuerUrlKey := strcase.UpperSnakeCase(*obj.Spec.Secret.IssuerUrlKey)
 			if envIssuerUrlKey != *obj.Spec.Secret.IssuerUrlKey {
 				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "issuerUrlKey"), obj.Spec.Secret.IssuerUrlKey, fmt.Sprintf("secret issuerUrlKey must be upper snake case when envVarKeys is true, expected: %s", envIssuerUrlKey)))
+			}
+		}
+		if obj.Spec.Secret.CookieSecretKey == nil || *obj.Spec.Secret.CookieSecretKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "cookieSecretKey"), "secret cookieSecretKey must be set"))
+		} else if obj.SecretEnvVarKeys() {
+			envCookieSecretKey := strcase.UpperSnakeCase(*obj.Spec.Secret.CookieSecretKey)
+			if envCookieSecretKey != *obj.Spec.Secret.CookieSecretKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "cookieSecretKey"), obj.Spec.Secret.CookieSecretKey, fmt.Sprintf("secret cookieSecretKey must be upper snake case when envVarKeys is true, expected: %s", envCookieSecretKey)))
 			}
 		}
 		if obj.Spec.Secret.Create == nil {

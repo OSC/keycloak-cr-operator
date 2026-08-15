@@ -64,6 +64,7 @@ func WebhookValidating() {
 			ClientSecretKey: new("TEST_KEY"),
 			ClientIdKey:     new("TEST_KEY"),
 			IssuerUrlKey:    new("TEST_KEY"),
+			CookieSecretKey: new("COOKIE_SECRET"),
 			Create:          new(true),
 			EnvVarKeys:      new(true),
 		}
@@ -320,6 +321,7 @@ func WebhookValidating() {
 					ClientSecretKey: new(""),
 					ClientIdKey:     new(""),
 					IssuerUrlKey:    new(""),
+					CookieSecretKey: new(""),
 				}
 				obj.Spec.Secret = &secretRef
 
@@ -330,11 +332,12 @@ func WebhookValidating() {
 				Expect(err.Error()).To(ContainSubstring("secret clientSecretKey must be set"))
 				Expect(err.Error()).To(ContainSubstring("secret clientIdKey must be set"))
 				Expect(err.Error()).To(ContainSubstring("secret issuerUrlKey must be set"))
+				Expect(err.Error()).To(ContainSubstring("secret cookieSecretKey must be set"))
 				Expect(err.Error()).To(ContainSubstring("secret create must be set"))
 				Expect(err.Error()).To(ContainSubstring("secret envVarKeys must be set"))
 			})
 
-			It("Should deny creation if Secret clientSecretKey is not upper snake case when EnvVarKeys is true", func() {
+			It("Should deny creation if Secret keys are not upper snake case when EnvVarKeys is true", func() {
 				By("Setting up client with Secret with non-upper-snake-case clientSecretKey")
 				obj.Spec.ClientID = &clientIDWithPrefix
 				obj.Spec.Realm = &testRealm
@@ -343,6 +346,9 @@ func WebhookValidating() {
 				secretRef := keycloakv1alpha2.KeycloakClientSecret{
 					Name:            new(""),
 					ClientSecretKey: new("testKey"),
+					ClientIdKey:     new("testKey"),
+					IssuerUrlKey:    new("testKey"),
+					CookieSecretKey: new("testKey"),
 					Create:          new(true),
 					EnvVarKeys:      new(true),
 				}
@@ -353,9 +359,12 @@ func WebhookValidating() {
 				Expect(warnings).To(BeNil())
 				Expect(err).To(HaveOccurred())
 				Expect(err.Error()).To(ContainSubstring("secret clientSecretKey must be upper snake case when envVarKeys is true"))
+				Expect(err.Error()).To(ContainSubstring("secret clientIdKey must be upper snake case when envVarKeys is true"))
+				Expect(err.Error()).To(ContainSubstring("secret issuerUrlKey must be upper snake case when envVarKeys is true"))
+				Expect(err.Error()).To(ContainSubstring("secret cookieSecretKey must be upper snake case when envVarKeys is true"))
 			})
 
-			It("Should allow creation if Secret clientSecretKey is upper snake case when EnvVarKeys is true", func() {
+			It("Should allow creation if Secret keys are upper snake case when EnvVarKeys is true", func() {
 				By("Setting up client with Secret with upper snake case clientSecretKey")
 				obj.Spec.ClientID = &clientIDWithPrefix
 				obj.Spec.Realm = &testRealm
@@ -366,6 +375,7 @@ func WebhookValidating() {
 					ClientSecretKey: new("TEST_KEY"),
 					ClientIdKey:     new("TEST_KEY"),
 					IssuerUrlKey:    new("TEST_KEY"),
+					CookieSecretKey: new("COOKIE_SECRET"),
 					Create:          new(true),
 					EnvVarKeys:      new(true),
 				}
@@ -388,6 +398,7 @@ func WebhookValidating() {
 					ClientSecretKey: new("testKey"),
 					ClientIdKey:     new("testKey"),
 					IssuerUrlKey:    new("testKey"),
+					CookieSecretKey: new("testKey"),
 					Create:          new(true),
 					EnvVarKeys:      new(false),
 				}

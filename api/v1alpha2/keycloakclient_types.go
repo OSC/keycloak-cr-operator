@@ -264,6 +264,10 @@ type KeycloakClientSecret struct {
 	// Defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys
 	// +optional
 	IssuerUrlKey *string `json:"issuerUrlKey,omitempty"`
+	// The cookie secret key
+	// Defaults to "cookie-secret" or "COOKIE_SECRET" based on envVarKeys
+	// +optional
+	CookieSecretKey *string `json:"cookieSecretKey,omitempty"`
 	// Whether to use envVar keys
 	// +kubebuilder:default=true
 	// +optional

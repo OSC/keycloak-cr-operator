@@ -149,9 +149,10 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(dst.Spec.Secret).NotTo(BeNil())
 			Expect(*dst.Spec.Secret.Name).To(Equal("test-secret"))
 			Expect(*dst.Spec.Secret.ClientSecretKey).To(Equal("client-secret"))
-			// clientIdKey and issuerUrlKey should be upper snake case when envVarKeys=true
+			// clientIdKey, issuerUrlKey, and cookieSecretKey should be upper snake case when envVarKeys=true
 			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("CLIENT_ID"))
 			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("ISSUER_URL"))
+			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("COOKIE_SECRET"))
 			Expect(*dst.Spec.Secret.Create).To(BeTrue())
 			Expect(*dst.Spec.Secret.EnvVarKeys).To(BeTrue())
 			Expect(*dst.Spec.Secret.KeyPrefix).To(Equal(""))
@@ -257,6 +258,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(dst.Spec.Secret).NotTo(BeNil())
 			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("client-id"))
 			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("issuer-url"))
+			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("cookie-secret"))
 		})
 
 		It("should handle nil values in ClientSecretRef", func() {
@@ -281,9 +283,10 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			// Name should be empty string since source was empty struct
 			Expect(*dst.Spec.Secret.Name).To(Equal(""))
 			Expect(*dst.Spec.Secret.ClientSecretKey).To(Equal(""))
-			// clientIdKey and issuerUrlKey should have default values (upper snake case)
+			// clientIdKey, issuerUrlKey, and cookieSecretKey should have default values (upper snake case)
 			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("CLIENT_ID"))
 			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("ISSUER_URL"))
+			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("COOKIE_SECRET"))
 		})
 	})
 
@@ -333,6 +336,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 				ClientSecretKey: new("CLIENT_SECRET"),
 				ClientIdKey:     new("CLIENT_ID"),
 				IssuerUrlKey:    new("ISSUER_URL"),
+				CookieSecretKey: new("COOKIE_SECRET"),
 				Create:          new(true),
 				EnvVarKeys:      new(true),
 				KeyPrefix:       new(""),
