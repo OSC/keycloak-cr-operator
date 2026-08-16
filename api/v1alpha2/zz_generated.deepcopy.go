@@ -182,6 +182,11 @@ func (in *KeycloakClientSecret) DeepCopyInto(out *KeycloakClientSecret) {
 		*out = new(string)
 		**out = **in
 	}
+	if in.CookieSecretKey != nil {
+		in, out := &in.CookieSecretKey, &out.CookieSecretKey
+		*out = new(string)
+		**out = **in
+	}
 	if in.EnvVarKeys != nil {
 		in, out := &in.EnvVarKeys, &out.EnvVarKeys
 		*out = new(bool)

@@ -160,6 +160,7 @@ func WebhookDefaulting() {
 				Expect(obj.Spec.Secret.ClientSecretKey).To(PointTo(Equal("CLIENT_SECRET")))
 				Expect(obj.Spec.Secret.ClientIdKey).To(PointTo(Equal("CLIENT_ID")))
 				Expect(obj.Spec.Secret.IssuerUrlKey).To(PointTo(Equal("ISSUER_URL")))
+				Expect(obj.Spec.Secret.CookieSecretKey).To(PointTo(Equal("COOKIE_SECRET")))
 				Expect(obj.Spec.Secret.Create).To(PointTo(BeTrue()))
 				Expect(obj.Spec.Secret.EnvVarKeys).To(PointTo(BeTrue()))
 			})
@@ -268,6 +269,26 @@ func WebhookDefaulting() {
 				By("Checking that default key is set")
 				Expect(obj.Spec.Secret).NotTo(BeNil())
 				Expect(obj.Spec.Secret.IssuerUrlKey).To(PointTo(Equal("ISSUER_URL")))
+				Expect(*obj.Spec.Secret.Create).To(BeTrue())
+			})
+
+			It("Should set default key when Secret.CookieSecretKey is empty", func() {
+				By("Setting up client with empty Secret.CookieSecretKey")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+
+				obj.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
+					Name:            new("some-secret"),
+					CookieSecretKey: new(""),
+				}
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that default key is set")
+				Expect(obj.Spec.Secret).NotTo(BeNil())
+				Expect(obj.Spec.Secret.CookieSecretKey).To(PointTo(Equal("COOKIE_SECRET")))
 				Expect(*obj.Spec.Secret.Create).To(BeTrue())
 			})
 		})

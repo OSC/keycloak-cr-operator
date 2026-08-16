@@ -75,15 +75,18 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 		}
 		clientIdKey := "client-id"
 		issuerUrlKey := "issuer-url"
+		cookieSecretKey := "cookie-secret"
 		if envVarKeys {
 			clientIdKey = strcase.UpperSnakeCase(clientIdKey)
 			issuerUrlKey = strcase.UpperSnakeCase(issuerUrlKey)
+			cookieSecretKey = strcase.UpperSnakeCase(cookieSecretKey)
 		}
 		dst.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
 			Name:            &src.Spec.ClientSecretRef.Name,
 			ClientSecretKey: &src.Spec.ClientSecretRef.Key,
 			ClientIdKey:     &clientIdKey,
 			IssuerUrlKey:    &issuerUrlKey,
+			CookieSecretKey: &cookieSecretKey,
 			Create:          src.Spec.ClientSecretRef.Create,
 			EnvVarKeys:      src.Spec.ClientSecretRef.EnvVarKeys,
 			KeyPrefix:       src.Spec.ClientSecretRef.KeyPrefix,

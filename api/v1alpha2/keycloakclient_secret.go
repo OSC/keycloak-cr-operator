@@ -157,6 +157,20 @@ func (k *KeycloakClient) SecretIssuerUrlKey() string {
 	return key
 }
 
+func (k *KeycloakClient) SecretCookieSecretKey() string {
+	key := "cookie-secret"
+	envVarKeys := k.SecretEnvVarKeys()
+	if k.Spec.Secret != nil {
+		if k.Spec.Secret.CookieSecretKey != nil && *k.Spec.Secret.CookieSecretKey != "" {
+			key = *k.Spec.Secret.CookieSecretKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
+}
+
 func (k *KeycloakClient) SecretKeyPrefix() string {
 	var keyPrefix string
 	if k.Spec.Secret != nil {

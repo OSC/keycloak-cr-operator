@@ -131,7 +131,6 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 		log.Error(err, "Unable to get Keycloak Client", "clientID", *keycloakClient.Spec.ClientID, "realm", *keycloakClient.Spec.Realm)
 		return err
 	}
-	envVarKeys := keycloakClient.SecretEnvVarKeys()
 	keyPrefix := keycloakClient.SecretKeyPrefix()
 	gocloakClient.Secret = client.Secret
 
@@ -155,11 +154,8 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 			log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 			return err
 		}
-		if envVarKeys {
-			secret.Data[fmt.Sprintf("%s%s", keyPrefix, cookieSecretEnvKey)] = []byte(cookieSecret)
-		} else {
-			secret.Data[fmt.Sprintf("%s%s", keyPrefix, cookieSecretKey)] = []byte(cookieSecret)
-		}
+		cookieKey := keycloakClient.SecretCookieSecretKey()
+		secret.Data[fmt.Sprintf("%s%s", keyPrefix, cookieKey)] = []byte(cookieSecret)
 
 		err = ctrl.SetControllerReference(keycloakClient, secret, r.Scheme)
 		if err != nil {
@@ -200,12 +196,7 @@ func (r *KeycloakClientReconciler) handleSecret(ctx context.Context, keycloakCli
 				log.Error(err, "Failed to generate cookie-secret", "secret.Namespace", secret.Namespace, "secret.Name", secret.Name)
 				return err
 			}
-			var cookieKey string
-			if envVarKeys {
-				cookieKey = cookieSecretEnvKey
-			} else {
-				cookieKey = cookieSecretKey
-			}
+			cookieKey := keycloakClient.SecretCookieSecretKey()
 			// Add cookie-secret back if it was removed.
 			if _, ok := found.Data[fmt.Sprintf("%s%s", keyPrefix, cookieKey)]; !ok {
 				found.Data[fmt.Sprintf("%s%s", keyPrefix, cookieKey)] = []byte(cookieSecret)

@@ -1184,6 +1184,14 @@ defaults to "client-secret" or "CLIENT_SECRET" based on envVarKeys<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>cookieSecretKey</b></td>
+        <td>string</td>
+        <td>
+          The cookie secret key
+Defaults to "cookie-secret" or "COOKIE_SECRET" based on envVarKeys<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>create</b></td>
         <td>boolean</td>
         <td>
