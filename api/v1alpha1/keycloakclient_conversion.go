@@ -120,6 +120,7 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 			KeycloakHostKey: &keycloakHostKey,
 			IssuerUrlKey:    &issuerUrlKey,
 			ProviderUrlKey:  &providerUrlKey,
+			KeyPrefix:       new(""),
 		}
 	} else {
 		dst.Spec.ConfigMap = nil

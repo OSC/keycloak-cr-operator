@@ -166,6 +166,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("KEYCLOAK_HOST"))
 			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("ISSUER_URL"))
 			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("PROVIDER_URL"))
+			Expect(*dst.Spec.ConfigMap.KeyPrefix).To(Equal(""))
 
 			// Verify ProtocolMappers conversion
 			Expect(dst.Spec.ProtocolMappers).NotTo(BeNil())

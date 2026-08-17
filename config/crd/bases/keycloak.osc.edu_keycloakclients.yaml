@@ -425,6 +425,10 @@ spec:
                       The key for the Issuer URL
                       defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys
                     type: string
+                  keyPrefix:
+                    default: ""
+                    description: The prefix for configmap keys
+                    type: string
                   keycloakHostKey:
                     description: |-
                       The key for the Keycloak host

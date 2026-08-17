@@ -30,6 +30,7 @@ import (
 // and KeycloakConfig.
 func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.ConfigMap {
 	name := k.ConfigMapName()
+	keyPrefix := k.ConfigMapKeyPrefix()
 	realm := config.DefaultRealm
 	if k.Spec.Realm != nil && *k.Spec.Realm != "" {
 		realm = *k.Spec.Realm
@@ -41,10 +42,10 @@ func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.Con
 	providerUrl := issuerUrl.JoinPath(".well-known/openid-configuration")
 
 	data := make(map[string]string)
-	data[k.ConfigMapKeycloakUrlKey()] = url
-	data[k.ConfigMapKeycloakHostKey()] = host
-	data[k.ConfigMapIssuerUrlKey()] = issuerUrl.String()
-	data[k.ConfigMapProviderUrlKey()] = providerUrl.String()
+	data[fmt.Sprintf("%s%s", keyPrefix, k.ConfigMapKeycloakUrlKey())] = url
+	data[fmt.Sprintf("%s%s", keyPrefix, k.ConfigMapKeycloakHostKey())] = host
+	data[fmt.Sprintf("%s%s", keyPrefix, k.ConfigMapIssuerUrlKey())] = issuerUrl.String()
+	data[fmt.Sprintf("%s%s", keyPrefix, k.ConfigMapProviderUrlKey())] = providerUrl.String()
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -129,4 +130,14 @@ func (k *KeycloakClient) ConfigMapProviderUrlKey() string {
 		key = strcase.UpperSnakeCase(key)
 	}
 	return key
+}
+
+func (k *KeycloakClient) ConfigMapKeyPrefix() string {
+	var keyPrefix string
+	if k.Spec.ConfigMap != nil {
+		if k.Spec.ConfigMap.KeyPrefix != nil {
+			keyPrefix = *k.Spec.ConfigMap.KeyPrefix
+		}
+	}
+	return keyPrefix
 }

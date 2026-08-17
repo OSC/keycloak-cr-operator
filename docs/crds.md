@@ -1064,6 +1064,15 @@ defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys<br/>
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>keyPrefix</b></td>
+        <td>string</td>
+        <td>
+          The prefix for configmap keys<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>keycloakHostKey</b></td>
         <td>string</td>
         <td>

@@ -308,6 +308,10 @@ type KeycloakClientConfigMap struct {
 	// defaults to "provider-url" or "PROVIDER_URL" based on envVarKeys
 	// +optional
 	ProviderUrlKey *string `json:"providerUrlKey,omitempty"`
+	// The prefix for configmap keys
+	// +kubebuilder:default=""
+	// +optional
+	KeyPrefix *string `json:"keyPrefix,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.
