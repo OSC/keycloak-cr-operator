@@ -288,6 +288,26 @@ type KeycloakClientConfigMap struct {
 	// +kubebuilder:default=true
 	// +optional
 	EnvVarKeys *bool `json:"envVarKeys,omitempty"`
+
+	// The key for the Keycloak URL
+	// defaults to "keycloak-url" or "KEYCLOAK_URL" based on envVarKeys
+	// +optional
+	KeycloakUrlKey *string `json:"keycloakUrlKey,omitempty"`
+
+	// The key for the Keycloak host
+	// defaults to "keycloak-host" or "KEYCLOAK_HOST" based on envVarKeys
+	// +optional
+	KeycloakHostKey *string `json:"keycloakHostKey,omitempty"`
+
+	// The key for the Issuer URL
+	// defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys
+	// +optional
+	IssuerUrlKey *string `json:"issuerUrlKey,omitempty"`
+
+	// The key for the Provider URL
+	// defaults to "provider-url" or "PROVIDER_URL" based on envVarKeys
+	// +optional
+	ProviderUrlKey *string `json:"providerUrlKey,omitempty"`
 }
 
 // KeycloakClientStatus defines the observed state of KeycloakClient.

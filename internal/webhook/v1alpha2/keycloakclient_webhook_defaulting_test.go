@@ -109,14 +109,26 @@ func WebhookDefaulting() {
 			Expect(*obj.Spec.ConfigMap.Name).To(Equal("test-keycloak-client-config"))
 			Expect(obj.Spec.ConfigMap.EnvVarKeys).NotTo(BeNil())
 			Expect(*obj.Spec.ConfigMap.EnvVarKeys).To(BeTrue())
+			Expect(obj.Spec.ConfigMap.KeycloakUrlKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.KeycloakUrlKey).To(Equal("KEYCLOAK_URL"))
+			Expect(obj.Spec.ConfigMap.KeycloakHostKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.KeycloakHostKey).To(Equal("KEYCLOAK_HOST"))
+			Expect(obj.Spec.ConfigMap.IssuerUrlKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.IssuerUrlKey).To(Equal("ISSUER_URL"))
+			Expect(obj.Spec.ConfigMap.ProviderUrlKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.ProviderUrlKey).To(Equal("PROVIDER_URL"))
 		})
 
 		It("Should not override existing ConfigMap", func() {
 			By("Setting an explicit ConfigMap")
 			configMapName := "existing-configmap"
 			obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-				Name:       &configMapName,
-				EnvVarKeys: new(false),
+				Name:            &configMapName,
+				EnvVarKeys:      new(false),
+				KeycloakUrlKey:  new("custom-keycloak-url"),
+				KeycloakHostKey: new("custom-keycloak-host"),
+				IssuerUrlKey:    new("custom-issuer-url"),
+				ProviderUrlKey:  new("custom-provider-url"),
 			}
 
 			By("Calling the Default method to apply defaults")
@@ -129,6 +141,14 @@ func WebhookDefaulting() {
 			Expect(*obj.Spec.ConfigMap.Name).To(Equal("existing-configmap"))
 			Expect(obj.Spec.ConfigMap.EnvVarKeys).NotTo(BeNil())
 			Expect(*obj.Spec.ConfigMap.EnvVarKeys).To(BeFalse())
+			Expect(obj.Spec.ConfigMap.KeycloakUrlKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.KeycloakUrlKey).To(Equal("custom-keycloak-url"))
+			Expect(obj.Spec.ConfigMap.KeycloakHostKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.KeycloakHostKey).To(Equal("custom-keycloak-host"))
+			Expect(obj.Spec.ConfigMap.IssuerUrlKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.IssuerUrlKey).To(Equal("custom-issuer-url"))
+			Expect(obj.Spec.ConfigMap.ProviderUrlKey).NotTo(BeNil())
+			Expect(*obj.Spec.ConfigMap.ProviderUrlKey).To(Equal("custom-provider-url"))
 		})
 
 		It("Should handle empty ClientIDPrefix", func() {
@@ -290,6 +310,84 @@ func WebhookDefaulting() {
 				Expect(obj.Spec.Secret).NotTo(BeNil())
 				Expect(obj.Spec.Secret.CookieSecretKey).To(PointTo(Equal("COOKIE_SECRET")))
 				Expect(*obj.Spec.Secret.Create).To(BeTrue())
+			})
+		})
+
+		Context("When creating KeycloakClient under Defaulting Webhook - ConfigMap Defaulting", func() {
+			It("Should set default key when ConfigMap.KeycloakUrlKey is empty", func() {
+				By("Setting up client with empty ConfigMap.KeycloakUrlKey")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+
+				obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:           new("some-config"),
+					KeycloakUrlKey: new(""),
+				}
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that default key is set")
+				Expect(obj.Spec.ConfigMap).NotTo(BeNil())
+				Expect(*obj.Spec.ConfigMap.KeycloakUrlKey).To(Equal("KEYCLOAK_URL"))
+			})
+
+			It("Should set default key when ConfigMap.KeycloakHostKey is empty", func() {
+				By("Setting up client with empty ConfigMap.KeycloakHostKey")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+
+				obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:            new("some-config"),
+					KeycloakHostKey: new(""),
+				}
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that default key is set")
+				Expect(obj.Spec.ConfigMap).NotTo(BeNil())
+				Expect(*obj.Spec.ConfigMap.KeycloakHostKey).To(Equal("KEYCLOAK_HOST"))
+			})
+
+			It("Should set default key when ConfigMap.IssuerUrlKey is empty", func() {
+				By("Setting up client with empty ConfigMap.IssuerUrlKey")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+
+				obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:         new("some-config"),
+					IssuerUrlKey: new(""),
+				}
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that default key is set")
+				Expect(obj.Spec.ConfigMap).NotTo(BeNil())
+				Expect(*obj.Spec.ConfigMap.IssuerUrlKey).To(Equal("ISSUER_URL"))
+			})
+
+			It("Should set default key when ConfigMap.ProviderUrlKey is empty", func() {
+				By("Setting up client with empty ConfigMap.ProviderUrlKey")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+
+				obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:           new("some-config"),
+					ProviderUrlKey: new(""),
+				}
+
+				By("Calling the Default method to apply defaults")
+				err := defaulter.Default(ctx, obj)
+				Expect(err).ToNot(HaveOccurred())
+
+				By("Checking that default key is set")
+				Expect(obj.Spec.ConfigMap).NotTo(BeNil())
+				Expect(*obj.Spec.ConfigMap.ProviderUrlKey).To(Equal("PROVIDER_URL"))
 			})
 		})
 

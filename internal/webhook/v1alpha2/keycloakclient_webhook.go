@@ -93,25 +93,7 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 	}
 
 	d.defaultSecret(obj)
-
-	// Handle ConfigMap structure
-	defaultConfigMapName := fmt.Sprintf("%s-config", obj.Name)
-	if obj.Spec.ConfigMap != nil {
-		// Set default ConfigMap.Name if not set
-		if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
-			obj.Spec.ConfigMap.Name = &defaultConfigMapName
-		}
-		// Set default EnvVarKeys to true if not set
-		if obj.Spec.ConfigMap.EnvVarKeys == nil {
-			obj.Spec.ConfigMap.EnvVarKeys = &defaultEnvVarKeys
-		}
-	} else {
-		// If ConfigMap is nil, create a new one with defaults
-		obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-			Name:       &defaultConfigMapName,
-			EnvVarKeys: &defaultEnvVarKeys,
-		}
-	}
+	d.defaultConfigMap(obj)
 
 	// Apply defaulting to ProtocolMappers
 	if obj.Spec.ProtocolMappers != nil {
@@ -180,6 +162,35 @@ func (d *KeycloakClientCustomDefaulter) defaultSecret(obj *keycloakv1alpha2.Keyc
 	}
 }
 
+func (d *KeycloakClientCustomDefaulter) defaultConfigMap(obj *keycloakv1alpha2.KeycloakClient) {
+	if obj.Spec.ConfigMap == nil {
+		obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{}
+	}
+	if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
+		defaultConfigMapName := obj.ConfigMapName()
+		obj.Spec.ConfigMap.Name = &defaultConfigMapName
+	}
+	if obj.Spec.ConfigMap.EnvVarKeys == nil {
+		obj.Spec.ConfigMap.EnvVarKeys = &defaultEnvVarKeys
+	}
+	if obj.Spec.ConfigMap.KeycloakUrlKey == nil || *obj.Spec.ConfigMap.KeycloakUrlKey == "" {
+		defaultKeycloakUrlKey := obj.ConfigMapKeycloakUrlKey()
+		obj.Spec.ConfigMap.KeycloakUrlKey = &defaultKeycloakUrlKey
+	}
+	if obj.Spec.ConfigMap.KeycloakHostKey == nil || *obj.Spec.ConfigMap.KeycloakHostKey == "" {
+		defaultKeycloakHostKey := obj.ConfigMapKeycloakHostKey()
+		obj.Spec.ConfigMap.KeycloakHostKey = &defaultKeycloakHostKey
+	}
+	if obj.Spec.ConfigMap.IssuerUrlKey == nil || *obj.Spec.ConfigMap.IssuerUrlKey == "" {
+		defaultIssuerUrlKey := obj.ConfigMapIssuerUrlKey()
+		obj.Spec.ConfigMap.IssuerUrlKey = &defaultIssuerUrlKey
+	}
+	if obj.Spec.ConfigMap.ProviderUrlKey == nil || *obj.Spec.ConfigMap.ProviderUrlKey == "" {
+		defaultProviderUrlKey := obj.ConfigMapProviderUrlKey()
+		obj.Spec.ConfigMap.ProviderUrlKey = &defaultProviderUrlKey
+	}
+}
+
 // +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha2-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha2,name=vkeycloakclient-v1alpha2.kb.io,admissionReviewVersions=v1,servicePort=9443
 
 // KeycloakClientCustomValidator struct is responsible for validating the KeycloakClient resource
@@ -234,21 +245,14 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 		}
 	}
 
-	clientSecretErrs := v.validateSecret(obj)
-	if clientSecretErrs != nil {
-		allErrs = append(allErrs, clientSecretErrs...)
+	secretErrs := v.validateSecret(obj)
+	if secretErrs != nil {
+		allErrs = append(allErrs, secretErrs...)
 	}
 
-	// Validate ConfigMap structure
-	if obj.Spec.ConfigMap != nil {
-		if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
-			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "name"), "configMap.name must be set"))
-		}
-		if obj.Spec.ConfigMap.EnvVarKeys == nil {
-			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "envVarKeys"), "configMap.envVarKeys must be set"))
-		}
-	} else {
-		allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap"), "configMap data must be provided"))
+	configMapErrs := v.validateConfigMap(obj)
+	if configMapErrs != nil {
+		allErrs = append(allErrs, configMapErrs...)
 	}
 
 	protocolMapperErrs := v.validateProtocolMappers(obj)
@@ -308,6 +312,53 @@ func (v *KeycloakClientCustomValidator) validateSecret(obj *keycloakv1alpha2.Key
 		}
 		if obj.Spec.Secret.EnvVarKeys == nil {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "envVarKeys"), "secret envVarKeys must be set"))
+		}
+	}
+	return allErrs
+}
+
+func (v *KeycloakClientCustomValidator) validateConfigMap(obj *keycloakv1alpha2.KeycloakClient) field.ErrorList {
+	var allErrs field.ErrorList
+	if obj.Spec.ConfigMap == nil {
+		allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap"), "configMap data must be provided"))
+	} else {
+		if obj.Spec.ConfigMap.Name == nil || *obj.Spec.ConfigMap.Name == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "name"), "configMap.name must be set"))
+		}
+		if obj.Spec.ConfigMap.EnvVarKeys == nil {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "envVarKeys"), "configMap.envVarKeys must be set"))
+		}
+		if obj.Spec.ConfigMap.KeycloakUrlKey == nil || *obj.Spec.ConfigMap.KeycloakUrlKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "keycloakUrlKey"), "configMap keycloakUrlKey must be set"))
+		} else if obj.ConfigMapEnvVarKeys() {
+			envKeycloakUrlKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.KeycloakUrlKey)
+			if envKeycloakUrlKey != *obj.Spec.ConfigMap.KeycloakUrlKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "keycloakUrlKey"), obj.Spec.ConfigMap.KeycloakUrlKey, fmt.Sprintf("configMap keycloakUrlKey must be upper snake case when envVarKeys is true, expected: %s", envKeycloakUrlKey)))
+			}
+		}
+		if obj.Spec.ConfigMap.KeycloakHostKey == nil || *obj.Spec.ConfigMap.KeycloakHostKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "keycloakHostKey"), "configMap keycloakHostKey must be set"))
+		} else if obj.ConfigMapEnvVarKeys() {
+			envKeycloakHostKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.KeycloakHostKey)
+			if envKeycloakHostKey != *obj.Spec.ConfigMap.KeycloakHostKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "keycloakHostKey"), obj.Spec.ConfigMap.KeycloakHostKey, fmt.Sprintf("configMap keycloakHostKey must be upper snake case when envVarKeys is true, expected: %s", envKeycloakHostKey)))
+			}
+		}
+		if obj.Spec.ConfigMap.IssuerUrlKey == nil || *obj.Spec.ConfigMap.IssuerUrlKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "issuerUrlKey"), "configMap issuerUrlKey must be set"))
+		} else if obj.ConfigMapEnvVarKeys() {
+			envIssuerUrlKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.IssuerUrlKey)
+			if envIssuerUrlKey != *obj.Spec.ConfigMap.IssuerUrlKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "issuerUrlKey"), obj.Spec.ConfigMap.IssuerUrlKey, fmt.Sprintf("configMap issuerUrlKey must be upper snake case when envVarKeys is true, expected: %s", envIssuerUrlKey)))
+			}
+		}
+		if obj.Spec.ConfigMap.ProviderUrlKey == nil || *obj.Spec.ConfigMap.ProviderUrlKey == "" {
+			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "providerUrlKey"), "configMap providerUrlKey must be set"))
+		} else if obj.ConfigMapEnvVarKeys() {
+			envProviderUrlKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.ProviderUrlKey)
+			if envProviderUrlKey != *obj.Spec.ConfigMap.ProviderUrlKey {
+				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "providerUrlKey"), obj.Spec.ConfigMap.ProviderUrlKey, fmt.Sprintf("configMap providerUrlKey must be upper snake case when envVarKeys is true, expected: %s", envProviderUrlKey)))
+			}
 		}
 	}
 	return allErrs

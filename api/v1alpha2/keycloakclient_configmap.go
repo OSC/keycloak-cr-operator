@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/OSC/keycloak-cr-operator/internal/models"
+	"github.com/stoewer/go-strcase"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,45 +29,22 @@ import (
 // and the provided KeycloakConfig for host information. It sets data based on the client information
 // and KeycloakConfig.
 func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.ConfigMap {
-	var name string
-	var configMap *KeycloakClientConfigMap
-	defaultName := fmt.Sprintf("%s-config", k.Name)
-	if k.Spec.ConfigMap == nil {
-		envVarKeys := true
-		configMap = &KeycloakClientConfigMap{
-			Name:       &defaultName,
-			EnvVarKeys: &envVarKeys,
-		}
-	} else {
-		configMap = k.Spec.ConfigMap
-	}
-	if configMap.Name == nil || *configMap.Name == "" {
-		name = defaultName
-	} else {
-		name = *configMap.Name
-	}
+	name := k.ConfigMapName()
 	realm := config.DefaultRealm
 	if k.Spec.Realm != nil && *k.Spec.Realm != "" {
 		realm = *k.Spec.Realm
 	}
 
-	// Create data map for ConfigMap
 	url := config.KeycloakURL.String()
 	host := config.KeycloakURL.Host
 	issuerUrl := config.KeycloakURL.JoinPath("realms", realm)
 	providerUrl := issuerUrl.JoinPath(".well-known/openid-configuration")
+
 	data := make(map[string]string)
-	if configMap.EnvVarKeys == nil || *configMap.EnvVarKeys {
-		data["KEYCLOAK_URL"] = url
-		data["KEYCLOAK_HOST"] = host
-		data["ISSUER_URL"] = issuerUrl.String()
-		data["PROVIDER_URL"] = providerUrl.String()
-	} else {
-		data["keycloak-url"] = url
-		data["keycloak-host"] = host
-		data["issuer-url"] = issuerUrl.String()
-		data["provider-url"] = providerUrl.String()
-	}
+	data[k.ConfigMapKeycloakUrlKey()] = url
+	data[k.ConfigMapKeycloakHostKey()] = host
+	data[k.ConfigMapIssuerUrlKey()] = issuerUrl.String()
+	data[k.ConfigMapProviderUrlKey()] = providerUrl.String()
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
@@ -75,4 +53,80 @@ func (k *KeycloakClient) GetConfigMap(config *models.KeycloakConfig) *corev1.Con
 		},
 		Data: data,
 	}
+}
+
+func (k *KeycloakClient) ConfigMapName() string {
+	name := fmt.Sprintf("%s-config", k.Name)
+	if k.Spec.ConfigMap != nil {
+		if k.Spec.ConfigMap.Name != nil && *k.Spec.ConfigMap.Name != "" {
+			name = *k.Spec.ConfigMap.Name
+		}
+	}
+	return name
+}
+
+func (k *KeycloakClient) ConfigMapEnvVarKeys() bool {
+	envVarKeys := true
+	if k.Spec.ConfigMap != nil {
+		if k.Spec.ConfigMap.EnvVarKeys != nil {
+			envVarKeys = *k.Spec.ConfigMap.EnvVarKeys
+		}
+	}
+	return envVarKeys
+}
+
+func (k *KeycloakClient) ConfigMapKeycloakUrlKey() string {
+	key := "keycloak-url"
+	envVarKeys := k.ConfigMapEnvVarKeys()
+	if k.Spec.ConfigMap != nil {
+		if k.Spec.ConfigMap.KeycloakUrlKey != nil && *k.Spec.ConfigMap.KeycloakUrlKey != "" {
+			key = *k.Spec.ConfigMap.KeycloakUrlKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
+}
+
+func (k *KeycloakClient) ConfigMapKeycloakHostKey() string {
+	key := "keycloak-host"
+	envVarKeys := k.ConfigMapEnvVarKeys()
+	if k.Spec.ConfigMap != nil {
+		if k.Spec.ConfigMap.KeycloakHostKey != nil && *k.Spec.ConfigMap.KeycloakHostKey != "" {
+			key = *k.Spec.ConfigMap.KeycloakHostKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
+}
+
+func (k *KeycloakClient) ConfigMapIssuerUrlKey() string {
+	key := "issuer-url"
+	envVarKeys := k.ConfigMapEnvVarKeys()
+	if k.Spec.ConfigMap != nil {
+		if k.Spec.ConfigMap.IssuerUrlKey != nil && *k.Spec.ConfigMap.IssuerUrlKey != "" {
+			key = *k.Spec.ConfigMap.IssuerUrlKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
+}
+
+func (k *KeycloakClient) ConfigMapProviderUrlKey() string {
+	key := "provider-url"
+	envVarKeys := k.ConfigMapEnvVarKeys()
+	if k.Spec.ConfigMap != nil {
+		if k.Spec.ConfigMap.ProviderUrlKey != nil && *k.Spec.ConfigMap.ProviderUrlKey != "" {
+			key = *k.Spec.ConfigMap.ProviderUrlKey
+		}
+	}
+	if envVarKeys {
+		key = strcase.UpperSnakeCase(key)
+	}
+	return key
 }
