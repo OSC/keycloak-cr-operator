@@ -297,8 +297,8 @@ var _ = Describe("KeycloakClient Controller", func() {
 			mockServer.AssertExpectations(GinkgoT())
 		})
 
-		It("should handle secret creation when ClientSecretRef is configured and keyPrefix=OIDC_", func() {
-			By("Creating a KeycloakClient with ClientSecretRef")
+		It("should handle secret and configmap creation when keyPrefix=OIDC_", func() {
+			By("Creating a KeycloakClient with Secret and ConfigMap")
 
 			// Create a KeycloakClient with ClientSecretRef configuration
 			clientID := "test-client-with-key-prefix"
@@ -318,6 +318,11 @@ var _ = Describe("KeycloakClient Controller", func() {
 						Create:          new(true),
 						EnvVarKeys:      new(true),
 						KeyPrefix:       new("OIDC_"),
+					},
+					ConfigMap: &keycloakv1alpha2.KeycloakClientConfigMap{
+						Name:       new("test-config-key-prefix"),
+						EnvVarKeys: new(true),
+						KeyPrefix:  new("OIDC_"),
 					},
 				},
 			}
@@ -400,6 +405,30 @@ var _ = Describe("KeycloakClient Controller", func() {
 			issuerUrl, ok := secret.Data["OIDC_ISSUER_URL"]
 			Expect(ok).To(BeTrue())
 			Expect(string(issuerUrl)).To(Equal("http://keycloak.keycloak.svc/realms/master"))
+
+			// Verify that the config map was created
+			configMap := &corev1.ConfigMap{}
+			err = k8sClient.Get(ctx, types.NamespacedName{
+				Name:      "test-config-key-prefix",
+				Namespace: testNamespace,
+			}, configMap)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Verify ConfigMap data
+			Expect(configMap.Data).NotTo(HaveKey("keycloak-url"))
+			Expect(configMap.Data).To(HaveKey("OIDC_KEYCLOAK_URL"))
+			Expect(configMap.Data).NotTo(HaveKey("keycloak-host"))
+			Expect(configMap.Data).To(HaveKey("OIDC_KEYCLOAK_HOST"))
+			Expect(configMap.Data).NotTo(HaveKey("issuer-url"))
+			Expect(configMap.Data).To(HaveKey("OIDC_ISSUER_URL"))
+			Expect(configMap.Data).NotTo(HaveKey("provider-url"))
+			Expect(configMap.Data).To(HaveKey("OIDC_PROVIDER_URL"))
+
+			// Verify the values are correct
+			Expect(configMap.Data["OIDC_KEYCLOAK_URL"]).To(Equal("http://keycloak.keycloak.svc"))
+			Expect(configMap.Data["OIDC_KEYCLOAK_HOST"]).To(Equal("keycloak.keycloak.svc"))
+			Expect(configMap.Data["OIDC_ISSUER_URL"]).To(Equal("http://keycloak.keycloak.svc/realms/master"))
+			Expect(configMap.Data["OIDC_PROVIDER_URL"]).To(Equal("http://keycloak.keycloak.svc/realms/master/.well-known/openid-configuration"))
 
 			// Verify the secret has the correct owner reference
 			controllerRefs := secret.GetOwnerReferences()

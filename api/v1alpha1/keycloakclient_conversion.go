@@ -97,9 +97,30 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Handle ConfigMap conversion
 	if src.Spec.ConfigMap != nil {
+		envVarKeys := true
+		if src.Spec.ConfigMap.EnvVarKeys != nil {
+			envVarKeys = *src.Spec.ConfigMap.EnvVarKeys
+		}
+
+		keycloakUrlKey := "keycloak-url"
+		keycloakHostKey := "keycloak-host"
+		issuerUrlKey := "issuer-url"
+		providerUrlKey := "provider-url"
+		if envVarKeys {
+			keycloakUrlKey = strcase.UpperSnakeCase(keycloakUrlKey)
+			keycloakHostKey = strcase.UpperSnakeCase(keycloakHostKey)
+			issuerUrlKey = strcase.UpperSnakeCase(issuerUrlKey)
+			providerUrlKey = strcase.UpperSnakeCase(providerUrlKey)
+		}
+
 		dst.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-			Name:       src.Spec.ConfigMap.Name,
-			EnvVarKeys: src.Spec.ConfigMap.EnvVarKeys,
+			Name:            src.Spec.ConfigMap.Name,
+			EnvVarKeys:      src.Spec.ConfigMap.EnvVarKeys,
+			KeycloakUrlKey:  &keycloakUrlKey,
+			KeycloakHostKey: &keycloakHostKey,
+			IssuerUrlKey:    &issuerUrlKey,
+			ProviderUrlKey:  &providerUrlKey,
+			KeyPrefix:       new(""),
 		}
 	} else {
 		dst.Spec.ConfigMap = nil

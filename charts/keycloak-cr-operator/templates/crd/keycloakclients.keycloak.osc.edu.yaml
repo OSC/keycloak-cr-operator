@@ -435,8 +435,32 @@ spec:
                     default: true
                     description: Whether to use envVar keys
                     type: boolean
+                  issuerUrlKey:
+                    description: |-
+                      The key for the Issuer URL
+                      defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys
+                    type: string
+                  keyPrefix:
+                    default: ""
+                    description: The prefix for configmap keys
+                    type: string
+                  keycloakHostKey:
+                    description: |-
+                      The key for the Keycloak host
+                      defaults to "keycloak-host" or "KEYCLOAK_HOST" based on envVarKeys
+                    type: string
+                  keycloakUrlKey:
+                    description: |-
+                      The key for the Keycloak URL
+                      defaults to "keycloak-url" or "KEYCLOAK_URL" based on envVarKeys
+                    type: string
                   name:
                     description: The ConfigMap name, will default to "<name>-config"
+                    type: string
+                  providerUrlKey:
+                    description: |-
+                      The key for the Provider URL
+                      defaults to "provider-url" or "PROVIDER_URL" based on envVarKeys
                     type: string
                 type: object
               consentRequired:

@@ -1056,10 +1056,51 @@ The ConfigMap configuration
         </td>
         <td>false</td>
       </tr><tr>
+        <td><b>issuerUrlKey</b></td>
+        <td>string</td>
+        <td>
+          The key for the Issuer URL
+defaults to "issuer-url" or "ISSUER_URL" based on envVarKeys<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>keyPrefix</b></td>
+        <td>string</td>
+        <td>
+          The prefix for configmap keys<br/>
+          <br/>
+            <i>Default</i>: <br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>keycloakHostKey</b></td>
+        <td>string</td>
+        <td>
+          The key for the Keycloak host
+defaults to "keycloak-host" or "KEYCLOAK_HOST" based on envVarKeys<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>keycloakUrlKey</b></td>
+        <td>string</td>
+        <td>
+          The key for the Keycloak URL
+defaults to "keycloak-url" or "KEYCLOAK_URL" based on envVarKeys<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
         <td><b>name</b></td>
         <td>string</td>
         <td>
           The ConfigMap name, will default to "<name>-config"<br/>
+        </td>
+        <td>false</td>
+      </tr><tr>
+        <td><b>providerUrlKey</b></td>
+        <td>string</td>
+        <td>
+          The key for the Provider URL
+defaults to "provider-url" or "PROVIDER_URL" based on envVarKeys<br/>
         </td>
         <td>false</td>
       </tr></tbody>
