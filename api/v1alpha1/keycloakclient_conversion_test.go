@@ -161,6 +161,12 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(dst.Spec.ConfigMap).NotTo(BeNil())
 			Expect(*dst.Spec.ConfigMap.Name).To(Equal("test-configmap"))
 			Expect(*dst.Spec.ConfigMap.EnvVarKeys).To(BeTrue())
+			// KeycloakUrlKey, KeycloakHostKey, IssuerUrlKey, and ProviderUrlKey should be upper snake case when envVarKeys=true
+			Expect(*dst.Spec.ConfigMap.KeycloakUrlKey).To(Equal("KEYCLOAK_URL"))
+			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("KEYCLOAK_HOST"))
+			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("ISSUER_URL"))
+			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("PROVIDER_URL"))
+			Expect(*dst.Spec.ConfigMap.KeyPrefix).To(Equal(""))
 
 			// Verify ProtocolMappers conversion
 			Expect(dst.Spec.ProtocolMappers).NotTo(BeNil())
@@ -261,6 +267,33 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("cookie-secret"))
 		})
 
+		It("should derive correct keycloakUrlKey, keycloakHostKey, issuerUrlKey, and providerUrlKey based on EnvVarKeys=false", func() {
+			src := &KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-client-no-envvars-configmap",
+					Namespace: testNamespace,
+				},
+				Spec: KeycloakClientSpec{
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
+				},
+			}
+			src.Spec.ConfigMap = &KeycloakClientConfigMap{
+				Name:       new("test-configmap"),
+				EnvVarKeys: new(false),
+			}
+
+			dst := &keycloakv1alpha2.KeycloakClient{}
+			err := src.ConvertTo(dstRaw(dst))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(dst.Spec.ConfigMap).NotTo(BeNil())
+			Expect(*dst.Spec.ConfigMap.KeycloakUrlKey).To(Equal("keycloak-url"))
+			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("keycloak-host"))
+			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("issuer-url"))
+			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("provider-url"))
+		})
+
 		It("should handle nil values in ClientSecretRef", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
@@ -287,6 +320,34 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("CLIENT_ID"))
 			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("ISSUER_URL"))
 			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("COOKIE_SECRET"))
+		})
+
+		It("should handle nil values in ConfigMap", func() {
+			src := &KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-client-nil-configmap-values",
+					Namespace: testNamespace,
+				},
+				Spec: KeycloakClientSpec{
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
+				},
+			}
+			// Create ConfigMap with nil fields
+			src.Spec.ConfigMap = &KeycloakClientConfigMap{}
+
+			dst := &keycloakv1alpha2.KeycloakClient{}
+			err := src.ConvertTo(dstRaw(dst))
+			Expect(err).NotTo(HaveOccurred())
+
+			Expect(dst.Spec.ConfigMap).NotTo(BeNil())
+			// Name should be nil since source was empty struct
+			Expect(dst.Spec.ConfigMap.Name).To(BeNil())
+			// KeycloakUrlKey, KeycloakHostKey, IssuerUrlKey, and ProviderUrlKey should have default values (upper snake case)
+			Expect(*dst.Spec.ConfigMap.KeycloakUrlKey).To(Equal("KEYCLOAK_URL"))
+			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("KEYCLOAK_HOST"))
+			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("ISSUER_URL"))
+			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("PROVIDER_URL"))
 		})
 	})
 

@@ -56,8 +56,12 @@ func WebhookValidating() {
 			},
 		}
 		defaultConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-			Name:       &configMapName,
-			EnvVarKeys: new(true),
+			Name:            &configMapName,
+			EnvVarKeys:      new(true),
+			KeycloakUrlKey:  new("KEYCLOAK_URL"),
+			KeycloakHostKey: new("KEYCLOAK_HOST"),
+			IssuerUrlKey:    new("ISSUER_URL"),
+			ProviderUrlKey:  new("PROVIDER_URL"),
 		}
 		defaultSecret = &keycloakv1alpha2.KeycloakClientSecret{
 			Name:            new("test-secret"),
@@ -164,8 +168,12 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.Secret = defaultSecret
 			obj.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-				Name:       new("test-keycloak-client-config"),
-				EnvVarKeys: new(true),
+				Name:            new("test-keycloak-client-config"),
+				EnvVarKeys:      new(true),
+				KeycloakUrlKey:  new("KEYCLOAK_URL"),
+				KeycloakHostKey: new("KEYCLOAK_HOST"),
+				IssuerUrlKey:    new("ISSUER_URL"),
+				ProviderUrlKey:  new("PROVIDER_URL"),
 			}
 
 			By("Validating creation should succeed")
@@ -262,6 +270,104 @@ func WebhookValidating() {
 			Expect(warnings).To(BeNil())
 			Expect(err).To(HaveOccurred())
 			Expect(err.Error()).To(ContainSubstring("configMap.envVarKeys must be set"))
+		})
+
+		Context("When creating or updating KeycloakClient under Validating Webhook - ConfigMap Validation", func() {
+			It("Should deny creation if ConfigMap keys are empty", func() {
+				By("Setting up client with ConfigMap with empty keys")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.Secret = defaultSecret
+
+				configMap := &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:            new("test-config"),
+					EnvVarKeys:      new(true),
+					KeycloakUrlKey:  new(""),
+					KeycloakHostKey: new(""),
+					IssuerUrlKey:    new(""),
+					ProviderUrlKey:  new(""),
+				}
+				obj.Spec.ConfigMap = configMap
+
+				By("Validating creation should fail due to empty keys")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("configMap keycloakUrlKey must be set"))
+				Expect(err.Error()).To(ContainSubstring("configMap keycloakHostKey must be set"))
+				Expect(err.Error()).To(ContainSubstring("configMap issuerUrlKey must be set"))
+				Expect(err.Error()).To(ContainSubstring("configMap providerUrlKey must be set"))
+			})
+
+			It("Should deny creation if ConfigMap keys are not upper snake case when EnvVarKeys is true", func() {
+				By("Setting up client with ConfigMap with non-upper-snake-case keys")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.Secret = defaultSecret
+
+				configMap := &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:            new("test-config"),
+					EnvVarKeys:      new(true),
+					KeycloakUrlKey:  new("keycloakUrl"),
+					KeycloakHostKey: new("keycloakHost"),
+					IssuerUrlKey:    new("issuerUrl"),
+					ProviderUrlKey:  new("providerUrl"),
+				}
+				obj.Spec.ConfigMap = configMap
+
+				By("Validating creation should fail due to non-upper-snake-case keys")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("configMap keycloakUrlKey must be upper snake case when envVarKeys is true"))
+				Expect(err.Error()).To(ContainSubstring("configMap keycloakHostKey must be upper snake case when envVarKeys is true"))
+				Expect(err.Error()).To(ContainSubstring("configMap issuerUrlKey must be upper snake case when envVarKeys is true"))
+				Expect(err.Error()).To(ContainSubstring("configMap providerUrlKey must be upper snake case when envVarKeys is true"))
+			})
+
+			It("Should allow creation if ConfigMap keys are upper snake case when EnvVarKeys is true", func() {
+				By("Setting up client with ConfigMap with upper snake case keys")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.Secret = defaultSecret
+
+				configMap := &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:            new("test-config"),
+					EnvVarKeys:      new(true),
+					KeycloakUrlKey:  new("KEYCLOAK_URL"),
+					KeycloakHostKey: new("KEYCLOAK_HOST"),
+					IssuerUrlKey:    new("ISSUER_URL"),
+					ProviderUrlKey:  new("PROVIDER_URL"),
+				}
+				obj.Spec.ConfigMap = configMap
+
+				By("Validating creation should succeed")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
+			})
+
+			It("Should allow creation if ConfigMap keys are not upper snake case when EnvVarKeys is false", func() {
+				By("Setting up client with ConfigMap with non-upper-snake-case keys")
+				obj.Spec.ClientID = &clientIDWithPrefix
+				obj.Spec.Realm = &testRealm
+				obj.Spec.Secret = defaultSecret
+
+				configMap := &keycloakv1alpha2.KeycloakClientConfigMap{
+					Name:            new("test-config"),
+					EnvVarKeys:      new(false),
+					KeycloakUrlKey:  new("keycloakUrl"),
+					KeycloakHostKey: new("keycloakHost"),
+					IssuerUrlKey:    new("issuerUrl"),
+					ProviderUrlKey:  new("providerUrl"),
+				}
+				obj.Spec.ConfigMap = configMap
+
+				By("Validating creation should succeed")
+				warnings, err := validator.ValidateCreate(ctx, obj)
+				Expect(warnings).To(BeNil())
+				Expect(err).ToNot(HaveOccurred())
+			})
 		})
 
 		It("Should validate updates correctly", func() {
