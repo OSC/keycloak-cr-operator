@@ -42,24 +42,24 @@ var (
 // SetupKeycloakClientWebhookWithManager registers the webhook for KeycloakClient in the manager.
 func SetupKeycloakClientWebhookWithManager(mgr ctrl.Manager, keycloakConfig *models.KeycloakConfig) error {
 	return ctrl.NewWebhookManagedBy(mgr, &keycloakv1alpha1.KeycloakClient{}).
-		WithValidator(&KeycloakClientCustomValidator{keycloakConfig: keycloakConfig}).
-		WithDefaulter(&KeycloakClientCustomDefaulter{keycloakConfig: keycloakConfig}).
+		WithValidator(&KeycloakClientValidator{keycloakConfig: keycloakConfig}).
+		WithDefaulter(&KeycloakClientDefaulter{keycloakConfig: keycloakConfig}).
 		Complete()
 }
 
 // +kubebuilder:webhook:path=/mutate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=true,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=mkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1,servicePort=9443
 
-// KeycloakClientCustomDefaulter struct is responsible for setting default values on the custom resource of the
+// KeycloakClientDefaulter struct is responsible for setting default values on the custom resource of the
 // Kind KeycloakClient when those are created or updated.
 //
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as it is used only for temporary operations and does not need to be deeply copied.
-type KeycloakClientCustomDefaulter struct {
+type KeycloakClientDefaulter struct {
 	keycloakConfig *models.KeycloakConfig
 }
 
 // Default implements webhook.CustomDefaulter so a webhook will be registered for the Kind KeycloakClient.
-func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) error {
+func (d *KeycloakClientDefaulter) Default(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) error {
 	keycloakclientlog.Info("Defaulting for KeycloakClient", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
 	// Set default ClientID if not set
@@ -168,17 +168,17 @@ func (d *KeycloakClientCustomDefaulter) Default(_ context.Context, obj *keycloak
 
 // +kubebuilder:webhook:path=/validate-keycloak-osc-edu-v1alpha1-keycloakclient,mutating=false,failurePolicy=fail,sideEffects=None,groups=keycloak.osc.edu,resources=keycloakclients,verbs=create;update;delete,versions=v1alpha1,name=vkeycloakclient-v1alpha1.kb.io,admissionReviewVersions=v1,servicePort=9443
 
-// KeycloakClientCustomValidator struct is responsible for validating the KeycloakClient resource
+// KeycloakClientValidator struct is responsible for validating the KeycloakClient resource
 // when it is created, updated, or deleted.
 //
 // NOTE: The +kubebuilder:object:generate=false marker prevents controller-gen from generating DeepCopy methods,
 // as this struct is used only for temporary operations and does not need to be deeply copied.
-type KeycloakClientCustomValidator struct {
+type KeycloakClientValidator struct {
 	keycloakConfig *models.KeycloakConfig
 }
 
 // validateKeycloakClient validates a KeycloakClient resource based on the specified rules.
-func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1alpha1.KeycloakClient) error {
+func (v *KeycloakClientValidator) validateKeycloakClient(obj *keycloakv1alpha1.KeycloakClient) error {
 	var allErrs field.ErrorList
 
 	// ClientID must be set
@@ -250,7 +250,7 @@ func (v *KeycloakClientCustomValidator) validateKeycloakClient(obj *keycloakv1al
 	return nil
 }
 
-func (v *KeycloakClientCustomValidator) validateClientSecretRef(obj *keycloakv1alpha1.KeycloakClient) field.ErrorList {
+func (v *KeycloakClientValidator) validateClientSecretRef(obj *keycloakv1alpha1.KeycloakClient) field.ErrorList {
 	var allErrs field.ErrorList
 	if (obj.Spec.ClientAuthenticatorType != nil && *obj.Spec.ClientAuthenticatorType == clientSecretType) && (obj.Spec.PublicClient == nil || !*obj.Spec.PublicClient) {
 		if obj.Spec.ClientSecretRef == nil {
@@ -284,7 +284,7 @@ func (v *KeycloakClientCustomValidator) validateClientSecretRef(obj *keycloakv1a
 }
 
 // validateProtocolMappers validates the ProtocolMappers field of KeycloakClient
-func (v *KeycloakClientCustomValidator) validateProtocolMappers(obj *keycloakv1alpha1.KeycloakClient) field.ErrorList {
+func (v *KeycloakClientValidator) validateProtocolMappers(obj *keycloakv1alpha1.KeycloakClient) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// Validate ProtocolMappers if they exist
@@ -320,7 +320,7 @@ func (v *KeycloakClientCustomValidator) validateProtocolMappers(obj *keycloakv1a
 }
 
 // ValidateCreate implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
-func (v *KeycloakClientCustomValidator) ValidateCreate(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
+func (v *KeycloakClientValidator) ValidateCreate(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
 	keycloakclientlog.Info("Validation for KeycloakClient upon creation", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
 	// Validate the KeycloakClient resource
@@ -332,7 +332,7 @@ func (v *KeycloakClientCustomValidator) ValidateCreate(_ context.Context, obj *k
 }
 
 // ValidateUpdate implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
-func (v *KeycloakClientCustomValidator) ValidateUpdate(_ context.Context, oldObj, newObj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
+func (v *KeycloakClientValidator) ValidateUpdate(_ context.Context, oldObj, newObj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
 	keycloakclientlog.Info("Validation for KeycloakClient upon update", "name", newObj.GetName(), "namespace", newObj.GetNamespace())
 
 	// Validate the KeycloakClient resource
@@ -344,7 +344,7 @@ func (v *KeycloakClientCustomValidator) ValidateUpdate(_ context.Context, oldObj
 }
 
 // ValidateDelete implements webhook.CustomValidator so a webhook will be registered for the type KeycloakClient.
-func (v *KeycloakClientCustomValidator) ValidateDelete(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
+func (v *KeycloakClientValidator) ValidateDelete(_ context.Context, obj *keycloakv1alpha1.KeycloakClient) (admission.Warnings, error) {
 	keycloakclientlog.Info("Validation for KeycloakClient upon deletion", "name", obj.GetName(), "namespace", obj.GetNamespace())
 
 	// For deletion, we don't perform any validation as the resource is being deleted

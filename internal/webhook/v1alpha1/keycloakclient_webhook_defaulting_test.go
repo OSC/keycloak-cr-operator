@@ -37,7 +37,7 @@ const (
 func WebhookDefaulting() {
 	var (
 		obj       *keycloakv1alpha1.KeycloakClient
-		defaulter KeycloakClientCustomDefaulter
+		defaulter KeycloakClientDefaulter
 	)
 	BeforeEach(func() {
 		obj = &keycloakv1alpha1.KeycloakClient{
@@ -46,7 +46,7 @@ func WebhookDefaulting() {
 				Namespace: testNamespace,
 			},
 		}
-		defaulter = KeycloakClientCustomDefaulter{
+		defaulter = KeycloakClientDefaulter{
 			keycloakConfig: &models.KeycloakConfig{
 				DefaultRealm:   masterRealm,
 				ClientIDPrefix: kubernetesPrefix,

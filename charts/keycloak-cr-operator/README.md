@@ -35,6 +35,7 @@ The following values have been renamed for consistency:
 | `networkPolicy.enable` | `networkPolicy.enabled` |
 | `hooks.enable` | `hooks.enabled` |
 | `prometheus.enable` | `prometheus.enabled` |
+| `manager.healthPort` | `manager.healthProbe.port` |
 
 The metrics configuration has been simplified back to a single `port` and `secure` boolean.
 
@@ -65,11 +66,11 @@ Image pull secrets can be configured with `manager.imagePullSecrets`.
 | manager.config.clientIdPrefix | string | `"kubernetes"` | Prefix for generated client IDs |
 | manager.config.clientIdRequired | string | `""` | Required ClientID template |
 | manager.extraArgs | list | `[]` | Extra arguments to pass to the manager |
+| manager.healthProbe.port | int | `8081` | Health probe server port |
 | manager.annotations | object | `{}` | Annotations to add to manager Deployment |
 | manager.labels | object | `{}` | Custom Deployment labels |
 | manager.podAnnotations | object | `{"kubectl.kubernetes.io/default-container":"manager"}` | Pod annotations to add to manager pods |
 | manager.podLabels | object | `{}` | Pod labels to add to manager pods |
-| manager.healthPort | int | `8081` | Health check port |
 | manager.env | list | `[]` | Environment variables to add to manager pods |
 | manager.imagePullSecrets | list | `[]` | imagePullSecrets to use for existing secrets |
 | manager.podSecurityContext | object | unprivileged | Pod-level security settings |
@@ -91,7 +92,7 @@ Image pull secrets can be configured with `manager.imagePullSecrets`.
 | rbac.helpers | object | `{"enabled":false}` | Helper roles for CRD management (admin/editor/viewer) |
 | rbac.helpers.enabled | bool | `false` | Install convenience admin/editor/viewer roles for CRDs |
 | serviceAccount.enabled | bool | `true` | Install default ServiceAccount provided |
-| serviceAccount.name | string | `""` | Existing ServiceAccount name (only when enabled=false) Note: When enabled=true, respects nameOverride/fullnameOverride |
+| serviceAccount.name | string | `""` | Existing ServiceAccount name (required when enabled=false) Set to "default" to use the namespace default ServiceAccount |
 | serviceAccount.annotations | object | `{}` | Custom ServiceAccount annotations |
 | serviceAccount.labels | object | `{}` | Custom ServiceAccount labels |
 | crd.enabled | bool | `true` | Install CRDs with the chart |
