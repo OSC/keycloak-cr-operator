@@ -65,12 +65,18 @@ spec:
         # Bind to :0 to disable the controller-runtime managed metrics server
         - --metrics-bind-address=0
         {{- end }}
-        - --health-probe-bind-address=:{{ .Values.manager.healthPort }}
+        - --health-probe-bind-address=:{{ .Values.manager.healthProbe.port }}
+        {{- if .Values.webhook.enabled }}
+        - --webhook-port={{ .Values.webhook.port }}
+        {{- else }}
+        # Set -1 to disable the webhook server
+        - --webhook-port=-1
+        {{- end }}
         {{- range .Values.manager.args }}
-        - {{ . }}
+        - {{ tpl . $ }}
         {{- end }}
         {{- range .Values.manager.extraArgs }}
-        - {{ . }}
+        - {{ tpl . $ }}
         {{- end }}
         {{- if and .Values.certManager.enabled .Values.metrics.enabled .Values.metrics.secure }}
         - --metrics-cert-path=/tmp/k8s-metrics-server/metrics-certs
@@ -94,12 +100,12 @@ spec:
         livenessProbe:
           httpGet:
             path: /healthz
-            port: {{ .Values.manager.healthPort }}
+            port: {{ .Values.manager.healthProbe.port }}
           initialDelaySeconds: 15
           periodSeconds: 20
         name: manager
         ports:
-        - containerPort: {{ .Values.manager.healthPort }}
+        - containerPort: {{ .Values.manager.healthProbe.port }}
           name: health
           protocol: TCP
         - containerPort: {{ .Values.webhook.port }}
@@ -108,7 +114,7 @@ spec:
         readinessProbe:
           httpGet:
             path: /readyz
-            port: {{ .Values.manager.healthPort }}
+            port: {{ .Values.manager.healthProbe.port }}
           initialDelaySeconds: 5
           periodSeconds: 10
         resources:
