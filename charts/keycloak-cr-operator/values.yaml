@@ -52,6 +52,13 @@ manager:
   # -- Extra arguments to pass to the manager
   extraArgs: []
 
+  ## Health probes.
+  ## The manager serves the liveness (/healthz) and readiness (/readyz) endpoints on this port.
+  ##
+  healthProbe:
+    # -- Health probe server port
+    port: 8081
+
   # -- Annotations to add to manager Deployment
   annotations: {}
   # -- Custom Deployment labels
@@ -61,9 +68,6 @@ manager:
     kubectl.kubernetes.io/default-container: manager
   # -- Pod labels to add to manager pods
   podLabels: {}
-
-  # -- Health check port
-  healthPort: 8081
 
   # -- Environment variables to add to manager pods
   env: []
@@ -155,8 +159,8 @@ serviceAccount:
   # -- Install default ServiceAccount provided
   enabled: true
 
-  # -- Existing ServiceAccount name (only when enabled=false)
-  # Note: When enabled=true, respects nameOverride/fullnameOverride
+  # -- Existing ServiceAccount name (required when enabled=false)
+  # Set to "default" to use the namespace default ServiceAccount
   name: ""
 
   # -- Custom ServiceAccount annotations

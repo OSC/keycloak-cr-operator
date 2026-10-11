@@ -36,7 +36,7 @@ func WebhookValidating() {
 	var (
 		obj              *keycloakv1alpha1.KeycloakClient
 		oldObj           *keycloakv1alpha1.KeycloakClient
-		validator        KeycloakClientCustomValidator
+		validator        KeycloakClientValidator
 		defaultConfigMap *keycloakv1alpha1.KeycloakClientConfigMap
 	)
 
@@ -53,7 +53,7 @@ func WebhookValidating() {
 				Namespace: testNamespace,
 			},
 		}
-		validator = KeycloakClientCustomValidator{
+		validator = KeycloakClientValidator{
 			keycloakConfig: &models.KeycloakConfig{
 				DefaultRealm:   masterRealm,
 				ClientIDPrefix: kubernetesPrefix,
