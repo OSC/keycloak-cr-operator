@@ -1,3 +1,19 @@
+## v0.1.0 - 2026-11-13
+
+* Implement v1alpha2 (#46)
+* chore(kubebuilder): update scaffold v4.15.0 -> v4.16.0 (#65)
+* Helm changes to more align with kubebuilder Helm chart (#59)
+* Kubebuilder update from v4.13.0 to v4.15.0 (#54)
+* Support configs using environment variables (#58)
+* Allow configmap keys to be customized (#61)
+* Make cookie secret key configurable (#60)
+* Bump go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc (#64)
+* Bump google.golang.org/grpc in the go_modules group across 1 directory (#63)
+* Bump google.golang.org/grpc in the go_modules group across 1 directory (#62)
+* Bump the go_modules group across 1 directory with 2 updates (#57)
+* Bump google.golang.org/grpc in the go_modules group across 1 directory (#56)
+* Support automatic kubebuilder upgrades (#51)
+
 ## v0.0.12 - 2026-06-08
 
 * Support adding managed configmap and secret checksums to Deployment and StatefulSet (#35)
