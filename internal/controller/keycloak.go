@@ -35,14 +35,14 @@ var (
 type KeycloakToken struct {
 	gocloak.JWT
 	lock      sync.RWMutex
-	CreatedAt *time.Time
+	CreatedAt time.Time
 }
 
 func KeycloakLogin(ctx context.Context, server GoCloakServer, config *models.KeycloakConfig) error {
 	log := logf.FromContext(ctx)
 	Token.lock.Lock()
 	defer Token.lock.Unlock()
-	if Token != nil && Token.ExpiresIn != 0 && Token.CreatedAt != nil {
+	if Token != nil && Token.ExpiresIn != 0 && !Token.CreatedAt.IsZero() {
 		expirationTime := Token.CreatedAt.Add(time.Duration(Token.ExpiresIn) * time.Second)
 		if time.Now().Before(expirationTime) {
 			log.V(1).Info("admin token still valid", "expiresIn", Token.ExpiresIn, "createdAt", Token.CreatedAt)
@@ -60,7 +60,7 @@ func KeycloakLogin(ctx context.Context, server GoCloakServer, config *models.Key
 	Token.AccessToken = t.AccessToken
 	Token.IDToken = t.IDToken
 	Token.ExpiresIn = t.ExpiresIn
-	Token.CreatedAt = &now
+	Token.CreatedAt = now
 
 	return nil
 }

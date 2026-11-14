@@ -83,7 +83,7 @@ func (r *KeycloakClientReconciler) getSecret(ctx context.Context, keycloakClient
 	log.V(1).Info("Get secret", "secret", name, "key", clientSecretKey)
 
 	// Set up retry logic with timeout
-	ctxWithTimeout, cancel := context.WithTimeout(ctx, *r.SecretWaitTimeout)
+	ctxWithTimeout, cancel := context.WithTimeout(ctx, r.SecretWaitTimeout)
 	defer cancel()
 
 	// Retry until the secret is found or timeout occurs

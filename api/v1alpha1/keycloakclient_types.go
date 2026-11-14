@@ -303,6 +303,7 @@ type KeycloakClientStatus struct {
 
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
+// +kubebuilder:deprecatedversion:warning="v1alpha1 is deprecated and will be removed in a future release; migrate to v1alpha2"
 // +kubebuilder:printcolumn:name="ClientID",type=string,JSONPath=`.spec.clientID`,description="The Keycloak Client ClientID",priority=10
 // +kubebuilder:printcolumn:name="Realm",type=string,JSONPath=`.spec.realm`,description="The Keycloak Client Realm",priority=10
 // +kubebuilder:printcolumn:name="Available",type=string,JSONPath=`.status.conditions[?(@.type=="Available")].status`,description="The availability status of the resource",priority=0

@@ -289,7 +289,7 @@ func main() {
 		Client:            mgr.GetClient(),
 		Scheme:            mgr.GetScheme(),
 		Recorder:          mgr.GetEventRecorder("keycloakclient-controller"),
-		SecretWaitTimeout: &secretWaitDuration,
+		SecretWaitTimeout: secretWaitDuration,
 		Config:            keycloakConfig,
 		Server:            gocloak.NewClient(keycloakUrl),
 	}).SetupWithManager(mgr); err != nil {
