@@ -260,6 +260,20 @@ data:
   PROVIDER_URL: "https://keycloak.example.com/realms/my-realm/.well-known/openid-configuration"
 ```
 
+### ConfigMap Configuration Options
+
+The `configMap` field has the following configurable properties:
+
+| Property | Description | Default |
+|----------|-------------|---------|
+| `name` | The ConfigMap name | `<name>-config` |
+| `envVarKeys` | Whether to use environment variable-style keys (uppercase with underscores) | `true` |
+| `keycloakUrlKey` | The key for the Keycloak URL in the ConfigMap | `keycloak-url` or `KEYCLOAK_URL` (based on `envVarKeys`) |
+| `keycloakHostKey` | The key for the Keycloak host in the ConfigMap | `keycloak-host` or `KEYCLOAK_HOST` (based on `envVarKeys`) |
+| `issuerUrlKey` | The key for the issuer URL in the ConfigMap | `issuer-url` or `ISSUER_URL` (based on `envVarKeys`) |
+| `providerUrlKey` | The key for the provider URL in the ConfigMap | `provider-url` or `PROVIDER_URL` (based on `envVarKeys`) |
+| `keyPrefix` | A prefix to add to all ConfigMap keys | `` (empty) |
+
 ## ClientID Template Enforcement
 The operator supports enforcing client ID format using Go templates via the `--keycloak-client-id-required` flag. When this flag is set, all KeycloakClient resources must have a client ID that matches the provided template.
 
