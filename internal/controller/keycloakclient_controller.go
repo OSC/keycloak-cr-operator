@@ -65,7 +65,7 @@ type KeycloakClientReconciler struct {
 	Scheme            *runtime.Scheme
 	Recorder          events.EventRecorder
 	Server            GoCloakServer
-	SecretWaitTimeout *time.Duration
+	SecretWaitTimeout time.Duration
 	Config            *models.KeycloakConfig
 }
 
