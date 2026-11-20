@@ -20,6 +20,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
+	keycloakcommon "github.com/OSC/keycloak-cr-operator/api/common"
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -87,14 +88,13 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			}
 
 			// Set up ConfigMap
-			configMapName := "test-configmap"
 			src.Spec.ConfigMap = &KeycloakClientConfigMap{
-				Name:       &configMapName,
+				Name:       new("test-configmap"),
 				EnvVarKeys: new(true),
 			}
 
 			// Set up ProtocolMappers
-			src.Spec.ProtocolMappers = []*KeycloakClientProtocolMapper{
+			src.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:             new("client roles"),
 					Protocol:         new("openid-connect"),
@@ -149,10 +149,11 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(dst.Spec.Secret).NotTo(BeNil())
 			Expect(*dst.Spec.Secret.Name).To(Equal("test-secret"))
 			Expect(*dst.Spec.Secret.ClientSecretKey).To(Equal("client-secret"))
-			// clientIdKey, issuerUrlKey, and cookieSecretKey should be upper snake case when envVarKeys=true
-			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("CLIENT_ID"))
-			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("ISSUER_URL"))
-			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("COOKIE_SECRET"))
+			// clientIdKey, issuerUrlKey, and cookieSecretKey are preserved via annotation (UnmarshalData)
+			// They should be nil since we're not setting them in v1alpha1
+			Expect(dst.Spec.Secret.ClientIdKey).To(BeNil())
+			Expect(dst.Spec.Secret.IssuerUrlKey).To(BeNil())
+			Expect(dst.Spec.Secret.CookieSecretKey).To(BeNil())
 			Expect(*dst.Spec.Secret.Create).To(BeTrue())
 			Expect(*dst.Spec.Secret.EnvVarKeys).To(BeTrue())
 			Expect(*dst.Spec.Secret.KeyPrefix).To(Equal(""))
@@ -161,12 +162,13 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(dst.Spec.ConfigMap).NotTo(BeNil())
 			Expect(*dst.Spec.ConfigMap.Name).To(Equal("test-configmap"))
 			Expect(*dst.Spec.ConfigMap.EnvVarKeys).To(BeTrue())
-			// KeycloakUrlKey, KeycloakHostKey, IssuerUrlKey, and ProviderUrlKey should be upper snake case when envVarKeys=true
-			Expect(*dst.Spec.ConfigMap.KeycloakUrlKey).To(Equal("KEYCLOAK_URL"))
-			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("KEYCLOAK_HOST"))
-			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("ISSUER_URL"))
-			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("PROVIDER_URL"))
-			Expect(*dst.Spec.ConfigMap.KeyPrefix).To(Equal(""))
+			// KeycloakUrlKey, KeycloakHostKey, IssuerUrlKey, ProviderUrlKey, and KeyPrefix are preserved via annotation (UnmarshalData)
+			// They should be nil since we're not setting them in v1alpha1
+			Expect(dst.Spec.ConfigMap.KeycloakUrlKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.KeycloakHostKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.IssuerUrlKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.ProviderUrlKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.KeyPrefix).To(BeNil())
 
 			// Verify ProtocolMappers conversion
 			Expect(dst.Spec.ProtocolMappers).NotTo(BeNil())
@@ -235,7 +237,7 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(dst.Spec.ProtocolMappers).To(BeNil())
 		})
 
-		It("should derive correct clientIdKey and issuerUrlKey based on EnvVarKeys=false", func() {
+		It("should preserve ClientSecretRef fields without deriving clientIdKey and issuerUrlKey", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-envvars",
@@ -262,12 +264,14 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(dst.Spec.Secret).NotTo(BeNil())
-			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("client-id"))
-			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("issuer-url"))
-			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("cookie-secret"))
+			// clientIdKey, issuerUrlKey, and cookieSecretKey are preserved via annotation (UnmarshalData)
+			// They should be nil since we're not setting them in v1alpha1
+			Expect(dst.Spec.Secret.ClientIdKey).To(BeNil())
+			Expect(dst.Spec.Secret.IssuerUrlKey).To(BeNil())
+			Expect(dst.Spec.Secret.CookieSecretKey).To(BeNil())
 		})
 
-		It("should derive correct keycloakUrlKey, keycloakHostKey, issuerUrlKey, and providerUrlKey based on EnvVarKeys=false", func() {
+		It("should preserve ConfigMap fields without deriving keycloakUrlKey, keycloakHostKey, issuerUrlKey, and providerUrlKey", func() {
 			src := &KeycloakClient{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "test-client-no-envvars-configmap",
@@ -288,10 +292,12 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(err).NotTo(HaveOccurred())
 
 			Expect(dst.Spec.ConfigMap).NotTo(BeNil())
-			Expect(*dst.Spec.ConfigMap.KeycloakUrlKey).To(Equal("keycloak-url"))
-			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("keycloak-host"))
-			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("issuer-url"))
-			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("provider-url"))
+			// KeycloakUrlKey, KeycloakHostKey, IssuerUrlKey, ProviderUrlKey, and KeyPrefix are preserved via annotation (UnmarshalData)
+			// They should be nil since we're not setting them in v1alpha1
+			Expect(dst.Spec.ConfigMap.KeycloakUrlKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.KeycloakHostKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.IssuerUrlKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.ProviderUrlKey).To(BeNil())
 		})
 
 		It("should handle nil values in ClientSecretRef", func() {
@@ -314,12 +320,13 @@ var _ = Describe("KeycloakClient Conversion", func() {
 
 			Expect(dst.Spec.Secret).NotTo(BeNil())
 			// Name should be empty string since source was empty struct
-			Expect(*dst.Spec.Secret.Name).To(Equal(""))
-			Expect(*dst.Spec.Secret.ClientSecretKey).To(Equal(""))
-			// clientIdKey, issuerUrlKey, and cookieSecretKey should have default values (upper snake case)
-			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("CLIENT_ID"))
-			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("ISSUER_URL"))
-			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("COOKIE_SECRET"))
+			Expect(dst.Spec.Secret.Name).To(BeNil())
+			Expect(dst.Spec.Secret.ClientSecretKey).To(BeNil())
+			// clientIdKey, issuerUrlKey, and cookieSecretKey are preserved via annotation (UnmarshalData)
+			// They should be nil since we're not setting them in v1alpha1
+			Expect(dst.Spec.Secret.ClientIdKey).To(BeNil())
+			Expect(dst.Spec.Secret.IssuerUrlKey).To(BeNil())
+			Expect(dst.Spec.Secret.CookieSecretKey).To(BeNil())
 		})
 
 		It("should handle nil values in ConfigMap", func() {
@@ -343,11 +350,12 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(dst.Spec.ConfigMap).NotTo(BeNil())
 			// Name should be nil since source was empty struct
 			Expect(dst.Spec.ConfigMap.Name).To(BeNil())
-			// KeycloakUrlKey, KeycloakHostKey, IssuerUrlKey, and ProviderUrlKey should have default values (upper snake case)
-			Expect(*dst.Spec.ConfigMap.KeycloakUrlKey).To(Equal("KEYCLOAK_URL"))
-			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("KEYCLOAK_HOST"))
-			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("ISSUER_URL"))
-			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("PROVIDER_URL"))
+			// KeycloakUrlKey, KeycloakHostKey, IssuerUrlKey, ProviderUrlKey, and KeyPrefix are preserved via annotation (UnmarshalData)
+			// They should be nil since we're not setting them in v1alpha1
+			Expect(dst.Spec.ConfigMap.KeycloakUrlKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.KeycloakHostKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.IssuerUrlKey).To(BeNil())
+			Expect(dst.Spec.ConfigMap.ProviderUrlKey).To(BeNil())
 		})
 	})
 
@@ -404,14 +412,13 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			}
 
 			// Set up ConfigMap
-			configMapName := "test-configmap"
 			src.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-				Name:       new(configMapName),
+				Name:       new("test-configmap"),
 				EnvVarKeys: new(true),
 			}
 
 			// Set up ProtocolMappers
-			src.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			src.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:             new("client roles"),
 					Protocol:         new("openid-connect"),
@@ -618,6 +625,73 @@ var _ = Describe("KeycloakClient Conversion", func() {
 			Expect(*dst.Spec.ClientSecretRef.Create).To(Equal(*src.Spec.ClientSecretRef.Create))
 			Expect(*dst.Spec.ClientSecretRef.EnvVarKeys).To(Equal(*src.Spec.ClientSecretRef.EnvVarKeys))
 			Expect(*dst.Spec.ClientSecretRef.KeyPrefix).To(Equal(*src.Spec.ClientSecretRef.KeyPrefix))
+		})
+
+		It("should preserve Hub-only fields through Hub -> Spoke -> Hub round trip", func() {
+			// Create a v1alpha2 KeycloakClient with Hub-only fields (new fields not in v1alpha1)
+			src := &keycloakv1alpha2.KeycloakClient{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-hub-roundtrip",
+					Namespace: testNamespace,
+				},
+				Spec: keycloakv1alpha2.KeycloakClientSpec{
+					ClientID: new("test-client-id"),
+					Realm:    new("master"),
+				},
+			}
+			// Set Hub-only Secret fields
+			src.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
+				Name:            new("test-secret"),
+				ClientSecretKey: new("OIDC_CLIENT_SECRET"),
+				ClientIdKey:     new("OIDC_CLIENT_ID"),
+				IssuerUrlKey:    new("OIDC_ISSUER_URL"),
+				CookieSecretKey: new("OIDC_COOKIE_SECRET"),
+				Create:          new(true),
+				EnvVarKeys:      new(true),
+				KeyPrefix:       new("KC_"),
+			}
+			// Set Hub-only ConfigMap fields with specific non-default key names
+			src.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
+				Name:            new("test-configmap"),
+				EnvVarKeys:      new(true),
+				KeycloakUrlKey:  new("OIDC_KEYCLOAK_URL"),
+				KeycloakHostKey: new("OIDC_KEYCLOAK_HOST"),
+				IssuerUrlKey:    new("OIDC_ISSUER_URL"),
+				ProviderUrlKey:  new("OIDC_DISCOVERY_URL"),
+				KeyPrefix:       new("KC_"),
+			}
+
+			// Convert to v1alpha1 (Spoke)
+			spoke := &KeycloakClient{}
+			err := spoke.ConvertFrom(srcRaw(src))
+			Expect(err).NotTo(HaveOccurred())
+
+			// Convert back to v1alpha2 (Hub)
+			dst := &keycloakv1alpha2.KeycloakClient{}
+			err = spoke.ConvertTo(dstRaw(dst))
+			Expect(err).NotTo(HaveOccurred())
+			Expect(dst.Annotations).To(BeNil())
+
+			// Verify Hub-only Secret fields are preserved through the round trip
+			Expect(dst.Spec.Secret).NotTo(BeNil())
+			Expect(*dst.Spec.Secret.Name).To(Equal("test-secret"))
+			Expect(*dst.Spec.Secret.ClientSecretKey).To(Equal("OIDC_CLIENT_SECRET"))
+			Expect(*dst.Spec.Secret.ClientIdKey).To(Equal("OIDC_CLIENT_ID"))
+			Expect(*dst.Spec.Secret.IssuerUrlKey).To(Equal("OIDC_ISSUER_URL"))
+			Expect(*dst.Spec.Secret.CookieSecretKey).To(Equal("OIDC_COOKIE_SECRET"))
+			Expect(*dst.Spec.Secret.Create).To(BeTrue())
+			Expect(*dst.Spec.Secret.EnvVarKeys).To(BeTrue())
+			Expect(*dst.Spec.Secret.KeyPrefix).To(Equal("KC_"))
+
+			// Verify Hub-only ConfigMap fields are preserved through the round trip
+			Expect(dst.Spec.ConfigMap).NotTo(BeNil())
+			Expect(*dst.Spec.ConfigMap.Name).To(Equal("test-configmap"))
+			Expect(*dst.Spec.ConfigMap.EnvVarKeys).To(BeTrue())
+			Expect(*dst.Spec.ConfigMap.KeycloakUrlKey).To(Equal("OIDC_KEYCLOAK_URL"))
+			Expect(*dst.Spec.ConfigMap.KeycloakHostKey).To(Equal("OIDC_KEYCLOAK_HOST"))
+			Expect(*dst.Spec.ConfigMap.IssuerUrlKey).To(Equal("OIDC_ISSUER_URL"))
+			Expect(*dst.Spec.ConfigMap.ProviderUrlKey).To(Equal("OIDC_DISCOVERY_URL"))
+			Expect(*dst.Spec.ConfigMap.KeyPrefix).To(Equal("KC_"))
 		})
 	})
 })

@@ -20,10 +20,12 @@ import (
 	"log"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	utilconversion "sigs.k8s.io/cluster-api/util/conversion"
 	"sigs.k8s.io/controller-runtime/pkg/conversion"
 
+	keycloakcommon "github.com/OSC/keycloak-cr-operator/api/common"
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
-	"github.com/stoewer/go-strcase"
 )
 
 // ConvertTo converts this KeycloakClient (v1alpha1) to the Hub version (v1alpha2).
@@ -69,24 +71,16 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Handle ClientSecretRef conversion
 	if src.Spec.ClientSecretRef != nil {
-		envVarKeys := true
-		if src.Spec.ClientSecretRef.EnvVarKeys != nil {
-			envVarKeys = *src.Spec.ClientSecretRef.EnvVarKeys
+		var name, key *string
+		if src.Spec.ClientSecretRef.Name != "" {
+			name = new(src.Spec.ClientSecretRef.Name)
 		}
-		clientIdKey := "client-id"
-		issuerUrlKey := "issuer-url"
-		cookieSecretKey := "cookie-secret"
-		if envVarKeys {
-			clientIdKey = strcase.UpperSnakeCase(clientIdKey)
-			issuerUrlKey = strcase.UpperSnakeCase(issuerUrlKey)
-			cookieSecretKey = strcase.UpperSnakeCase(cookieSecretKey)
+		if src.Spec.ClientSecretRef.Key != "" {
+			key = new(src.Spec.ClientSecretRef.Key)
 		}
 		dst.Spec.Secret = &keycloakv1alpha2.KeycloakClientSecret{
-			Name:            &src.Spec.ClientSecretRef.Name,
-			ClientSecretKey: &src.Spec.ClientSecretRef.Key,
-			ClientIdKey:     &clientIdKey,
-			IssuerUrlKey:    &issuerUrlKey,
-			CookieSecretKey: &cookieSecretKey,
+			Name:            name,
+			ClientSecretKey: key,
 			Create:          src.Spec.ClientSecretRef.Create,
 			EnvVarKeys:      src.Spec.ClientSecretRef.EnvVarKeys,
 			KeyPrefix:       src.Spec.ClientSecretRef.KeyPrefix,
@@ -97,30 +91,9 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Handle ConfigMap conversion
 	if src.Spec.ConfigMap != nil {
-		envVarKeys := true
-		if src.Spec.ConfigMap.EnvVarKeys != nil {
-			envVarKeys = *src.Spec.ConfigMap.EnvVarKeys
-		}
-
-		keycloakUrlKey := "keycloak-url"
-		keycloakHostKey := "keycloak-host"
-		issuerUrlKey := "issuer-url"
-		providerUrlKey := "provider-url"
-		if envVarKeys {
-			keycloakUrlKey = strcase.UpperSnakeCase(keycloakUrlKey)
-			keycloakHostKey = strcase.UpperSnakeCase(keycloakHostKey)
-			issuerUrlKey = strcase.UpperSnakeCase(issuerUrlKey)
-			providerUrlKey = strcase.UpperSnakeCase(providerUrlKey)
-		}
-
 		dst.Spec.ConfigMap = &keycloakv1alpha2.KeycloakClientConfigMap{
-			Name:            src.Spec.ConfigMap.Name,
-			EnvVarKeys:      src.Spec.ConfigMap.EnvVarKeys,
-			KeycloakUrlKey:  &keycloakUrlKey,
-			KeycloakHostKey: &keycloakHostKey,
-			IssuerUrlKey:    &issuerUrlKey,
-			ProviderUrlKey:  &providerUrlKey,
-			KeyPrefix:       new(""),
+			Name:       src.Spec.ConfigMap.Name,
+			EnvVarKeys: src.Spec.ConfigMap.EnvVarKeys,
 		}
 	} else {
 		dst.Spec.ConfigMap = nil
@@ -128,25 +101,29 @@ func (src *KeycloakClient) ConvertTo(dstRaw conversion.Hub) error {
 
 	// Handle ProtocolMappers conversion
 	if src.Spec.ProtocolMappers != nil {
-		dst.Spec.ProtocolMappers = make([]*keycloakv1alpha2.KeycloakClientProtocolMapper, len(src.Spec.ProtocolMappers))
-		for i, mapper := range src.Spec.ProtocolMappers {
-			if mapper != nil {
-				dst.Spec.ProtocolMappers[i] = &keycloakv1alpha2.KeycloakClientProtocolMapper{
-					Name:                   mapper.Name,
-					Protocol:               mapper.Protocol,
-					Type:                   mapper.Type,
-					IDTokenClaim:           mapper.IDTokenClaim,
-					AccessTokenClaim:       mapper.AccessTokenClaim,
-					IncludedClientAudience: mapper.IncludedClientAudience,
-					ConsentRequired:        mapper.ConsentRequired,
-					Config:                 mapper.Config,
-				}
-			} else {
-				dst.Spec.ProtocolMappers[i] = nil
+		dst.Spec.ProtocolMappers = make([]*keycloakcommon.KeycloakClientProtocolMapper, len(src.Spec.ProtocolMappers))
+		for i := range src.Spec.ProtocolMappers {
+			if src.Spec.ProtocolMappers[i] != nil {
+				dst.Spec.ProtocolMappers[i] = src.Spec.ProtocolMappers[i].DeepCopy()
 			}
 		}
 	} else {
 		dst.Spec.ProtocolMappers = nil
+	}
+
+	if src.Status.Conditions != nil {
+		dst.Status.Conditions = make([]metav1.Condition, len(src.Status.Conditions))
+		copy(dst.Status.Conditions, src.Status.Conditions)
+	}
+	dst.Status.ID = src.Status.ID
+
+	// Restore dropped fields from the annotation into dst
+	if _, err := utilconversion.UnmarshalData(src, dst); err != nil {
+		return err
+	}
+
+	if len(dst.Annotations) == 0 {
+		dst.Annotations = nil
 	}
 
 	return nil
@@ -229,25 +206,24 @@ func (dst *KeycloakClient) ConvertFrom(srcRaw conversion.Hub) error {
 
 	// Handle ProtocolMappers conversion
 	if src.Spec.ProtocolMappers != nil {
-		dst.Spec.ProtocolMappers = make([]*KeycloakClientProtocolMapper, len(src.Spec.ProtocolMappers))
-		for i, mapper := range src.Spec.ProtocolMappers {
-			if mapper != nil {
-				dst.Spec.ProtocolMappers[i] = &KeycloakClientProtocolMapper{
-					Name:                   mapper.Name,
-					Protocol:               mapper.Protocol,
-					Type:                   mapper.Type,
-					IDTokenClaim:           mapper.IDTokenClaim,
-					AccessTokenClaim:       mapper.AccessTokenClaim,
-					IncludedClientAudience: mapper.IncludedClientAudience,
-					ConsentRequired:        mapper.ConsentRequired,
-					Config:                 mapper.Config,
-				}
-			} else {
-				dst.Spec.ProtocolMappers[i] = nil
+		dst.Spec.ProtocolMappers = make([]*keycloakcommon.KeycloakClientProtocolMapper, len(src.Spec.ProtocolMappers))
+		for i := range src.Spec.ProtocolMappers {
+			if src.Spec.ProtocolMappers[i] != nil {
+				dst.Spec.ProtocolMappers[i] = src.Spec.ProtocolMappers[i].DeepCopy()
 			}
 		}
 	} else {
 		dst.Spec.ProtocolMappers = nil
+	}
+
+	if src.Status.Conditions != nil {
+		dst.Status.Conditions = make([]metav1.Condition, len(src.Status.Conditions))
+		copy(dst.Status.Conditions, src.Status.Conditions)
+	}
+	dst.Status.ID = src.Status.ID
+
+	if err := utilconversion.MarshalData(src, dst); err != nil {
+		return err
 	}
 
 	return nil

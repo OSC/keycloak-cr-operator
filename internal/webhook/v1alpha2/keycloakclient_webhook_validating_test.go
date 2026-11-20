@@ -19,6 +19,7 @@ package v1alpha2
 import (
 	"text/template"
 
+	keycloakcommon "github.com/OSC/keycloak-cr-operator/api/common"
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	. "github.com/onsi/ginkgo/v2"
@@ -540,7 +541,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{}
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{}
 
 			By("Validating creation should succeed")
 			warnings, err := validator.ValidateCreate(ctx, obj)
@@ -554,7 +555,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     nil, // Missing name
 					Type:     new("oidc-hardcoded-claim-mapper"),
@@ -575,7 +576,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new(""), // Empty name
 					Type:     new("oidc-hardcoded-claim-mapper"),
@@ -596,7 +597,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("test-mapper"),
 					Type:     nil, // Missing type
@@ -617,7 +618,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("test-mapper"),
 					Type:     new(""), // Empty type
@@ -638,7 +639,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("test-mapper"),
 					Type:     new("oidc-hardcoded-claim-mapper"),
@@ -659,7 +660,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("test-mapper"),
 					Type:     new("oidc-hardcoded-claim-mapper"),
@@ -680,7 +681,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("test-mapper"),
 					Type:     new("oidc-hardcoded-claim-mapper"),
@@ -700,7 +701,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("audience-mapper"),
 					Type:     new("oidc-audience-mapper"),
@@ -722,7 +723,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:                   new("audience-mapper"),
 					Type:                   new("oidc-audience-mapper"),
@@ -744,7 +745,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:                   new("audience-mapper"),
 					Type:                   new("oidc-audience-mapper"),
@@ -765,7 +766,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("mapper1"),
 					Type:     new("oidc-hardcoded-claim-mapper"),
@@ -791,7 +792,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     new("test-mapper"),
 					Type:     new("oidc-hardcoded-claim-mapper"),
@@ -811,7 +812,7 @@ func WebhookValidating() {
 			obj.Spec.Realm = &testRealm
 			obj.Spec.ConfigMap = defaultConfigMap
 			obj.Spec.Secret = defaultSecret
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha2.KeycloakClientProtocolMapper{
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{
 				{
 					Name:     nil, // Missing name
 					Type:     new("oidc-hardcoded-claim-mapper"),

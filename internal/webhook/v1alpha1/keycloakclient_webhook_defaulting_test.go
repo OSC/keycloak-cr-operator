@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	"text/template"
 
+	keycloakcommon "github.com/OSC/keycloak-cr-operator/api/common"
 	keycloakv1alpha1 "github.com/OSC/keycloak-cr-operator/api/v1alpha1"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 	. "github.com/onsi/ginkgo/v2"
@@ -343,13 +344,13 @@ func WebhookDefaulting() {
 			obj.Spec.Realm = &testRealm
 
 			// Create a protocol mapper with nil values
-			protocolMapper := keycloakv1alpha1.KeycloakClientProtocolMapper{
+			protocolMapper := keycloakcommon.KeycloakClientProtocolMapper{
 				Name: &[]string{"test-mapper"}[0],
 				Type: &[]string{"oidc-hardcoded-claim-mapper"}[0],
 				// Leave Protocol, IDTokenClaim, AccessTokenClaim, ConsentRequired as nil
 			}
 
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{&protocolMapper}
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{&protocolMapper}
 
 			By("Calling the Default method to apply defaults")
 			err := defaulter.Default(ctx, obj)
@@ -384,7 +385,7 @@ func WebhookDefaulting() {
 			accessTokenClaim := false
 			consentRequired := true
 
-			protocolMapper := keycloakv1alpha1.KeycloakClientProtocolMapper{
+			protocolMapper := keycloakcommon.KeycloakClientProtocolMapper{
 				Name:             &[]string{"test-mapper"}[0],
 				Type:             &[]string{"saml-role-list-mapper"}[0],
 				Protocol:         &protocol,
@@ -393,7 +394,7 @@ func WebhookDefaulting() {
 				ConsentRequired:  &consentRequired,
 			}
 
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{&protocolMapper}
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{&protocolMapper}
 
 			By("Calling the Default method to apply defaults")
 			err := defaulter.Default(ctx, obj)
@@ -423,7 +424,7 @@ func WebhookDefaulting() {
 			obj.Spec.Realm = &testRealm
 
 			// Create empty protocol mappers array
-			obj.Spec.ProtocolMappers = []*keycloakv1alpha1.KeycloakClientProtocolMapper{}
+			obj.Spec.ProtocolMappers = []*keycloakcommon.KeycloakClientProtocolMapper{}
 
 			By("Calling the Default method to apply defaults")
 			err := defaulter.Default(ctx, obj)
