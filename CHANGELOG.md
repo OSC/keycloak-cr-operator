@@ -1,3 +1,10 @@
+## v0.1.1 - 2026-11-20
+
+* Fix conversion between v1alpha1 and v1alpha2 (#68)
+* Add docs for ConfigMap config options (#66)
+* Deprecate v1alpha1 (#67)
+* Bump the go_modules group across 1 directory with 2 updates (#69)
+
 ## v0.1.0 - 2026-11-13
 
 * Implement v1alpha2 (#46)
