@@ -22,3 +22,4 @@ spec:
     - email
   configMap:
     name: keycloak-config
+    providerUrlKey: OIDC_DISCOVERY_URL

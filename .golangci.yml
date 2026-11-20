@@ -25,6 +25,8 @@ linters:
     - unused
     - logcheck
   settings:
+    dupl:
+      threshold: 200
     custom:
       logcheck:
         type: "module"

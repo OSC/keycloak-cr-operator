@@ -25,6 +25,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
+	keycloakcommon "github.com/OSC/keycloak-cr-operator/api/common"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
 )
 
@@ -147,7 +148,7 @@ type KeycloakClientSpec struct {
 
 	// ProtocolMappers for the client
 	// +optional
-	ProtocolMappers []*KeycloakClientProtocolMapper `json:"protocolMappers,omitempty"`
+	ProtocolMappers []*keycloakcommon.KeycloakClientProtocolMapper `json:"protocolMappers,omitempty"`
 
 	// PublicClient indicates if the client is public
 	// +kubebuilder:default=false
@@ -208,40 +209,6 @@ type KeycloakClientSpec struct {
 	// The ConfigMap configuration
 	// +optional
 	ConfigMap *KeycloakClientConfigMap `json:"configMap,omitempty"`
-}
-
-// Defines a protocol mapper
-
-type KeycloakClientProtocolMapper struct {
-	// Name of the protocol mapper
-	// +required
-	Name *string `json:"name,omitempty"`
-	// The protocol mapper protocol
-	// +kubebuilder:default="openid-connect"
-	// +optional
-	Protocol *string `json:"protocol,omitempty"`
-	// The protocol mapper type
-	// +required
-	Type *string `json:"type,omitempty"`
-	// Is this ID claim token
-	// +kubebuilder:default=true
-	// +optional
-	IDTokenClaim *bool `json:"idTokenClaim,omitempty"`
-	// Is this access claim token
-	// +kubebuilder:default=true
-	// +optional
-	AccessTokenClaim *bool `json:"accessTokenClaim,omitempty"`
-	// Included client audience
-	// Required for type=oidc-audience-mapper
-	// +optional
-	IncludedClientAudience *string `json:"includedClientAudience,omitempty"`
-	// Consent required
-	// +kubebuilder:default=false
-	// +optional
-	ConsentRequired *bool `json:"consentRequired,omitempty"`
-	// Additional configs
-	// +optional
-	Config *map[string]string `json:"config,omitempty"`
 }
 
 // Defines the structure for the Keycloak Client Secret
@@ -314,33 +281,6 @@ type KeycloakClientConfigMap struct {
 	KeyPrefix *string `json:"keyPrefix,omitempty"`
 }
 
-// KeycloakClientStatus defines the observed state of KeycloakClient.
-type KeycloakClientStatus struct {
-	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
-	// For Kubernetes API conventions, see:
-	// https://github.com/kubernetes/community/blob/master/contributors/devel/sig-architecture/api-conventions.md#typical-status-properties
-
-	// conditions represent the current state of the KeycloakClient resource.
-	// Each condition has a unique type and reflects the status of a specific aspect of the resource.
-	//
-	// Standard condition types include:
-	// - "Available": the resource is fully functional
-	// - "Progressing": the resource is being created or updated
-	// - "Degraded": the resource failed to reach or maintain its desired state
-	//
-	// The status of each condition is one of True, False, or Unknown.
-	// +listType=map
-	// +listMapKey=type
-	// +optional
-	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
-	// The ID of the Keycloak Client object in Keycloak
-	// +optional
-	ID *string `json:"id"`
-}
-
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:storageversion
@@ -362,7 +302,7 @@ type KeycloakClient struct {
 
 	// status defines the observed state of KeycloakClient
 	// +optional
-	Status KeycloakClientStatus `json:"status,omitzero"`
+	Status keycloakcommon.KeycloakClientStatus `json:"status,omitzero"`
 }
 
 // +kubebuilder:object:root=true

@@ -137,6 +137,9 @@ func KeycloakClientSpec() {
 				issuerUrl, err := getConfigMap("keycloak-config", "ISSUER_URL")
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve issuer-url")
 				g.Expect(issuerUrl).To(Equal("http://keycloak.keycloak.svc.cluster.local/realms/master"))
+				providerUrl, err := getConfigMap("keycloak-config", "OIDC_DISCOVERY_URL")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to retrieve provider-url")
+				g.Expect(providerUrl).To(Equal("http://keycloak.keycloak.svc.cluster.local/realms/master/.well-known/openid-configuration"))
 			}
 			Eventually(verifyClientConfigMap, 2*time.Minute).Should(Succeed())
 			By("Deployment annotations handled")
