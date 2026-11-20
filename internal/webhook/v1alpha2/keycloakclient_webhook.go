@@ -30,7 +30,6 @@ import (
 
 	keycloakv1alpha2 "github.com/OSC/keycloak-cr-operator/api/v1alpha2"
 	"github.com/OSC/keycloak-cr-operator/internal/models"
-	"github.com/stoewer/go-strcase"
 )
 
 var (
@@ -277,35 +276,15 @@ func (v *KeycloakClientValidator) validateSecret(obj *keycloakv1alpha2.KeycloakC
 		}
 		if obj.Spec.Secret.ClientSecretKey == nil || *obj.Spec.Secret.ClientSecretKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "clientSecretKey"), "secret clientSecretKey must be set"))
-		} else if obj.SecretEnvVarKeys() {
-			envClientSecretKey := strcase.UpperSnakeCase(*obj.Spec.Secret.ClientSecretKey)
-			if envClientSecretKey != *obj.Spec.Secret.ClientSecretKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "clientSecretKey"), obj.Spec.Secret.ClientSecretKey, fmt.Sprintf("secret clientSecretKey must be upper snake case when envVarKeys is true, expected: %s", envClientSecretKey)))
-			}
 		}
 		if obj.Spec.Secret.ClientIdKey == nil || *obj.Spec.Secret.ClientIdKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "clientIdKey"), "secret clientIdKey must be set"))
-		} else if obj.SecretEnvVarKeys() {
-			envClientIdKey := strcase.UpperSnakeCase(*obj.Spec.Secret.ClientIdKey)
-			if envClientIdKey != *obj.Spec.Secret.ClientIdKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "clientIdKey"), obj.Spec.Secret.ClientIdKey, fmt.Sprintf("secret clientIdKey must be upper snake case when envVarKeys is true, expected: %s", envClientIdKey)))
-			}
 		}
 		if obj.Spec.Secret.IssuerUrlKey == nil || *obj.Spec.Secret.IssuerUrlKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "issuerUrlKey"), "secret issuerUrlKey must be set"))
-		} else if obj.SecretEnvVarKeys() {
-			envIssuerUrlKey := strcase.UpperSnakeCase(*obj.Spec.Secret.IssuerUrlKey)
-			if envIssuerUrlKey != *obj.Spec.Secret.IssuerUrlKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "issuerUrlKey"), obj.Spec.Secret.IssuerUrlKey, fmt.Sprintf("secret issuerUrlKey must be upper snake case when envVarKeys is true, expected: %s", envIssuerUrlKey)))
-			}
 		}
 		if obj.Spec.Secret.CookieSecretKey == nil || *obj.Spec.Secret.CookieSecretKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "cookieSecretKey"), "secret cookieSecretKey must be set"))
-		} else if obj.SecretEnvVarKeys() {
-			envCookieSecretKey := strcase.UpperSnakeCase(*obj.Spec.Secret.CookieSecretKey)
-			if envCookieSecretKey != *obj.Spec.Secret.CookieSecretKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "secret", "cookieSecretKey"), obj.Spec.Secret.CookieSecretKey, fmt.Sprintf("secret cookieSecretKey must be upper snake case when envVarKeys is true, expected: %s", envCookieSecretKey)))
-			}
 		}
 		if obj.Spec.Secret.Create == nil {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "secret", "create"), "secret create must be set"))
@@ -330,35 +309,15 @@ func (v *KeycloakClientValidator) validateConfigMap(obj *keycloakv1alpha2.Keyclo
 		}
 		if obj.Spec.ConfigMap.KeycloakUrlKey == nil || *obj.Spec.ConfigMap.KeycloakUrlKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "keycloakUrlKey"), "configMap keycloakUrlKey must be set"))
-		} else if obj.ConfigMapEnvVarKeys() {
-			envKeycloakUrlKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.KeycloakUrlKey)
-			if envKeycloakUrlKey != *obj.Spec.ConfigMap.KeycloakUrlKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "keycloakUrlKey"), obj.Spec.ConfigMap.KeycloakUrlKey, fmt.Sprintf("configMap keycloakUrlKey must be upper snake case when envVarKeys is true, expected: %s", envKeycloakUrlKey)))
-			}
 		}
 		if obj.Spec.ConfigMap.KeycloakHostKey == nil || *obj.Spec.ConfigMap.KeycloakHostKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "keycloakHostKey"), "configMap keycloakHostKey must be set"))
-		} else if obj.ConfigMapEnvVarKeys() {
-			envKeycloakHostKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.KeycloakHostKey)
-			if envKeycloakHostKey != *obj.Spec.ConfigMap.KeycloakHostKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "keycloakHostKey"), obj.Spec.ConfigMap.KeycloakHostKey, fmt.Sprintf("configMap keycloakHostKey must be upper snake case when envVarKeys is true, expected: %s", envKeycloakHostKey)))
-			}
 		}
 		if obj.Spec.ConfigMap.IssuerUrlKey == nil || *obj.Spec.ConfigMap.IssuerUrlKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "issuerUrlKey"), "configMap issuerUrlKey must be set"))
-		} else if obj.ConfigMapEnvVarKeys() {
-			envIssuerUrlKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.IssuerUrlKey)
-			if envIssuerUrlKey != *obj.Spec.ConfigMap.IssuerUrlKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "issuerUrlKey"), obj.Spec.ConfigMap.IssuerUrlKey, fmt.Sprintf("configMap issuerUrlKey must be upper snake case when envVarKeys is true, expected: %s", envIssuerUrlKey)))
-			}
 		}
 		if obj.Spec.ConfigMap.ProviderUrlKey == nil || *obj.Spec.ConfigMap.ProviderUrlKey == "" {
 			allErrs = append(allErrs, field.Required(field.NewPath("spec", "configMap", "providerUrlKey"), "configMap providerUrlKey must be set"))
-		} else if obj.ConfigMapEnvVarKeys() {
-			envProviderUrlKey := strcase.UpperSnakeCase(*obj.Spec.ConfigMap.ProviderUrlKey)
-			if envProviderUrlKey != *obj.Spec.ConfigMap.ProviderUrlKey {
-				allErrs = append(allErrs, field.Invalid(field.NewPath("spec", "configMap", "providerUrlKey"), obj.Spec.ConfigMap.ProviderUrlKey, fmt.Sprintf("configMap providerUrlKey must be upper snake case when envVarKeys is true, expected: %s", envProviderUrlKey)))
-			}
 		}
 	}
 	return allErrs

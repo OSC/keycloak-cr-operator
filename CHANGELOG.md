@@ -1,3 +1,7 @@
+## v0.1.2 - 2026-11-20
+
+* Do not validate keys are upper snake cake with envVarKeys=true (#71)
+
 ## v0.1.1 - 2026-11-20
 
 * Fix conversion between v1alpha1 and v1alpha2 (#68)
