@@ -119,24 +119,29 @@ func (r *KeycloakClientReconciler) updateChecksumDeployment(ctx context.Context,
 		return nil
 	}
 	for _, deployment := range deploymentList.Items {
-		// Ensure template annotations exist
-		if deployment.Spec.Template.Annotations == nil {
-			deployment.Spec.Template.Annotations = make(map[string]string)
-		}
-
 		// Check if checksum already matches
-		if currentChecksum, ok := deployment.Spec.Template.Annotations[annotationKey]; ok {
-			if currentChecksum == checksum {
-				log.V(1).Info("Checksum matches, skip", "resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
-				continue
+		if deployment.Spec.Template.Annotations != nil {
+			if currentChecksum, ok := deployment.Spec.Template.Annotations[annotationKey]; ok {
+				if currentChecksum == checksum {
+					log.V(1).Info("Checksum matches, skip", "resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
+					continue
+				}
 			}
 		}
+		// Ensure template annotations exist and start empty
+		annotations := make(map[string]string)
+		if cur, ok := deployment.Spec.Template.Annotations[configmapChecksumAnnotation]; ok {
+			annotations[configmapChecksumAnnotation] = cur
+		}
+		if cur, ok := deployment.Spec.Template.Annotations[secretChecksumAnnotation]; ok {
+			annotations[secretChecksumAnnotation] = cur
+		}
 
-		deployment.Spec.Template.Annotations[annotationKey] = checksum
+		annotations[annotationKey] = checksum
 		deploymentCopy := appsv1ac.Deployment(deployment.Name, deployment.Namespace).
 			WithSpec(appsv1ac.DeploymentSpec().
 				WithTemplate(corev1ac.PodTemplateSpec().
-					WithAnnotations(deployment.Spec.Template.Annotations)))
+					WithAnnotations(annotations)))
 
 		log.Info("Apply Deployment checksum with SSA", "resource", deployment.Name, "annotation", annotationKey, "checksum", checksum)
 
@@ -163,24 +168,31 @@ func (r *KeycloakClientReconciler) updateChecksumStatefulSet(ctx context.Context
 		return nil
 	}
 	for _, statefulset := range statefulsetList.Items {
-		// Ensure template annotations exist
-		if statefulset.Spec.Template.Annotations == nil {
-			statefulset.Spec.Template.Annotations = make(map[string]string)
+		// Check if checksum already matches
+		if statefulset.Spec.Template.Annotations != nil {
+			if currentChecksum, ok := statefulset.Spec.Template.Annotations[annotationKey]; ok {
+				if currentChecksum == checksum {
+					log.V(1).Info("Checksum matches, skip", "resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
+					continue
+				}
+			}
 		}
 
-		// Check if checksum already matches
-		if currentChecksum, ok := statefulset.Spec.Template.Annotations[annotationKey]; ok {
-			if currentChecksum == checksum {
-				log.V(1).Info("Checksum matches, skip", "resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
-				continue
-			}
+		// Ensure template annotations exist and start empty
+		statefulset.Spec.Template.Annotations = make(map[string]string)
+		annotations := make(map[string]string)
+		if cur, ok := statefulset.Spec.Template.Annotations[configmapChecksumAnnotation]; ok {
+			annotations[configmapChecksumAnnotation] = cur
+		}
+		if cur, ok := statefulset.Spec.Template.Annotations[secretChecksumAnnotation]; ok {
+			annotations[secretChecksumAnnotation] = cur
 		}
 
 		statefulset.Spec.Template.Annotations[annotationKey] = checksum
 		statefulsetCopy := appsv1ac.StatefulSet(statefulset.Name, statefulset.Namespace).
 			WithSpec(appsv1ac.StatefulSetSpec().
 				WithTemplate(corev1ac.PodTemplateSpec().
-					WithAnnotations(statefulset.Spec.Template.Annotations)))
+					WithAnnotations(annotations)))
 
 		log.Info("Apply StatefulSet checksum with SSA", "resource", statefulset.Name, "annotation", annotationKey, "checksum", checksum)
 

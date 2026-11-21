@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"net/url"
 
 	"github.com/Nerzal/gocloak/v13"
@@ -292,6 +293,56 @@ var _ = Describe("KeycloakClient Controller", func() {
 			secretChecksum, ok = annotations[secretChecksumAnnotation]
 			Expect(ok).To(BeTrue())
 			Expect(secretChecksum).NotTo(BeEmpty())
+			existingSecretAnnotation, ok := annotations["checksum/secret"]
+			Expect(ok).To(BeTrue())
+			Expect(existingSecretAnnotation).To(Equal("secret-checksum"))
+			existingConfigAnnotation, ok := annotations["checksum/config"]
+			Expect(ok).To(BeTrue())
+			Expect(existingConfigAnnotation).To(Equal("config-checksum"))
+
+			// Verify that the operator only owns its own checksum annotation via Server Side Apply
+			// Check managed fields to confirm operator manages only keycloak.osc.edu/secret-checksum
+			managedFields := deployment.GetManagedFields()
+			Expect(managedFields).ToNot(BeEmpty())
+
+			// Find fields managed by the operator and verify correct ownership
+			operatorManagesSecretChecksum := false
+			operatorManagesOtherAnnotations := false
+
+			for _, field := range managedFields {
+				if field.Manager == operatorName {
+					// FieldsV1 is a FieldsV1 struct that needs to be unmarshaled to check its structure
+					var fieldsMap map[string]any
+					err := json.Unmarshal(field.FieldsV1.GetRawBytes(), &fieldsMap)
+					Expect(err).NotTo(HaveOccurred())
+
+					// Navigate to the annotations section: spec.template.metadata.annotations
+					if spec, ok := fieldsMap["f:spec"].(map[string]any); ok {
+						if template, ok := spec["f:template"].(map[string]any); ok {
+							if metadata, ok := template["f:metadata"].(map[string]any); ok {
+								if annotations, ok := metadata["f:annotations"].(map[string]any); ok {
+									// Check which annotations this manager owns
+									if _, ok := annotations["f:keycloak.osc.edu/secret-checksum"]; ok {
+										operatorManagesSecretChecksum = true
+									}
+									// Check if operator incorrectly manages other annotations
+									if _, ok := annotations["f:checksum/secret"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+									if _, ok := annotations["f:checksum/config"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			Expect(operatorManagesSecretChecksum).To(BeTrue(),
+				"Operator should manage the secretChecksumAnnotation (keycloak.osc.edu/secret-checksum)")
+			Expect(operatorManagesOtherAnnotations).To(BeFalse(),
+				"Operator should NOT manage checksum/secret or checksum/config annotations")
 
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
@@ -563,6 +614,44 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(secretChecksumUpdated).NotTo(BeEmpty())
 			Expect(secretChecksumUpdated).NotTo(Equal(secretChecksum))
 
+			// Verify that the operator only owns its own checksum annotation via Server Side Apply
+			managedFields := deployment.GetManagedFields()
+			Expect(managedFields).ToNot(BeEmpty())
+
+			operatorManagesSecretChecksum := false
+			operatorManagesOtherAnnotations := false
+
+			for _, field := range managedFields {
+				if field.Manager == operatorName {
+					var fieldsMap map[string]any
+					err := json.Unmarshal(field.FieldsV1.GetRawBytes(), &fieldsMap)
+					Expect(err).NotTo(HaveOccurred())
+
+					if spec, ok := fieldsMap["f:spec"].(map[string]any); ok {
+						if template, ok := spec["f:template"].(map[string]any); ok {
+							if metadata, ok := template["f:metadata"].(map[string]any); ok {
+								if annotations, ok := metadata["f:annotations"].(map[string]any); ok {
+									if _, ok := annotations["f:keycloak.osc.edu/secret-checksum"]; ok {
+										operatorManagesSecretChecksum = true
+									}
+									if _, ok := annotations["f:checksum/secret"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+									if _, ok := annotations["f:checksum/config"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			Expect(operatorManagesSecretChecksum).To(BeTrue(),
+				"Operator should manage the secretChecksumAnnotation (keycloak.osc.edu/secret-checksum)")
+			Expect(operatorManagesOtherAnnotations).To(BeFalse(),
+				"Operator should NOT manage checksum/secret or checksum/config annotations")
+
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
 		})
@@ -674,6 +763,50 @@ var _ = Describe("KeycloakClient Controller", func() {
 			configmapChecksum, ok = annotations[configmapChecksumAnnotation]
 			Expect(ok).To(BeTrue())
 			Expect(configmapChecksum).NotTo(BeEmpty())
+			existingSecretAnnotation, ok := annotations["checksum/secret"]
+			Expect(ok).To(BeTrue())
+			Expect(existingSecretAnnotation).To(Equal("secret-checksum"))
+			existingConfigAnnotation, ok := annotations["checksum/config"]
+			Expect(ok).To(BeTrue())
+			Expect(existingConfigAnnotation).To(Equal("config-checksum"))
+
+			// Verify that the operator only owns its own checksum annotation via Server Side Apply
+			managedFields := deployment.GetManagedFields()
+			Expect(managedFields).ToNot(BeEmpty())
+
+			operatorManagesSecretChecksum := false
+			operatorManagesOtherAnnotations := false
+
+			for _, field := range managedFields {
+				if field.Manager == operatorName {
+					var fieldsMap map[string]any
+					err := json.Unmarshal(field.FieldsV1.GetRawBytes(), &fieldsMap)
+					Expect(err).NotTo(HaveOccurred())
+
+					if spec, ok := fieldsMap["f:spec"].(map[string]any); ok {
+						if template, ok := spec["f:template"].(map[string]any); ok {
+							if metadata, ok := template["f:metadata"].(map[string]any); ok {
+								if annotations, ok := metadata["f:annotations"].(map[string]any); ok {
+									if _, ok := annotations["f:keycloak.osc.edu/secret-checksum"]; ok {
+										operatorManagesSecretChecksum = true
+									}
+									if _, ok := annotations["f:checksum/secret"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+									if _, ok := annotations["f:checksum/config"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			Expect(operatorManagesSecretChecksum).To(BeTrue(),
+				"Operator should manage the secretChecksumAnnotation (keycloak.osc.edu/secret-checksum)")
+			Expect(operatorManagesOtherAnnotations).To(BeFalse(),
+				"Operator should NOT manage checksum/secret or checksum/config annotations")
 
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
@@ -782,6 +915,44 @@ var _ = Describe("KeycloakClient Controller", func() {
 			Expect(ok).To(BeTrue())
 			Expect(configmapChecksumUpdated).NotTo(BeEmpty())
 			Expect(configmapChecksumUpdated).NotTo(Equal(configmapChecksum))
+
+			// Verify that the operator only owns its own checksum annotation via Server Side Apply
+			managedFields := deployment.GetManagedFields()
+			Expect(managedFields).ToNot(BeEmpty())
+
+			operatorManagesConfigChecksum := false
+			operatorManagesOtherAnnotations := false
+
+			for _, field := range managedFields {
+				if field.Manager == operatorName {
+					var fieldsMap map[string]any
+					err := json.Unmarshal(field.FieldsV1.GetRawBytes(), &fieldsMap)
+					Expect(err).NotTo(HaveOccurred())
+
+					if spec, ok := fieldsMap["f:spec"].(map[string]any); ok {
+						if template, ok := spec["f:template"].(map[string]any); ok {
+							if metadata, ok := template["f:metadata"].(map[string]any); ok {
+								if annotations, ok := metadata["f:annotations"].(map[string]any); ok {
+									if _, ok := annotations["f:keycloak.osc.edu/configmap-checksum"]; ok {
+										operatorManagesConfigChecksum = true
+									}
+									if _, ok := annotations["f:checksum/secret"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+									if _, ok := annotations["f:checksum/config"]; ok {
+										operatorManagesOtherAnnotations = true
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+
+			Expect(operatorManagesConfigChecksum).To(BeTrue(),
+				"Operator should manage the configmapChecksumAnnotation (keycloak.osc.edu/configmap-checksum)")
+			Expect(operatorManagesOtherAnnotations).To(BeFalse(),
+				"Operator should NOT manage checksum/secret or checksum/config annotations")
 
 			// Verify that all expectations were met
 			mockServer.AssertExpectations(GinkgoT())
