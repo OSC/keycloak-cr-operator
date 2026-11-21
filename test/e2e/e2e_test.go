@@ -86,6 +86,13 @@ var _ = Describe("Manager", Ordered, func() {
 		cmd = exec.Command("kubectl", "apply", "-f", deploymentYaml)
 		_, err = utils.Run(cmd)
 		Expect(err).NotTo(HaveOccurred(), "Failed to deploy test deployment")
+		By("Patching deployment")
+		cmd = exec.Command(
+			"kubectl", "patch", "deployment", "nginx-deployment", "-p",
+			`{"spec":{"template":{"metadata":{"annotations":{"checksum/config":"checksum"}}}}}`,
+		)
+		_, err = utils.Run(cmd)
+		Expect(err).NotTo(HaveOccurred(), "Deployment failed to patch")
 		By("Wait for deployment")
 		cmd = exec.Command("kubectl", "wait", "--for=condition=Ready", "pod", "-l", "app=nginx", "--timeout=60s")
 		_, err = utils.Run(cmd)

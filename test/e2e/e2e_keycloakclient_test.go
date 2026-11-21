@@ -151,6 +151,22 @@ func KeycloakClientSpec() {
 				configmapChecksum, err = getDeploymentAnnotation("app=nginx", "keycloak.osc.edu/configmap-checksum")
 				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment annotation for the configmap")
 				g.Expect(configmapChecksum).NotTo(BeEmpty())
+				annotation, err := getDeploymentAnnotation("app=nginx", "checksum/config")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment annotation checksum/config")
+				g.Expect(annotation).To(Equal("checksum"))
+				annotation, err = getDeploymentAnnotation("app=nginx", "foo")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment annotation foo")
+				g.Expect(annotation).To(Equal("bar"))
+				managedFields, err := getDeploymentManagedAnnotations("nginx-deployment")
+				g.Expect(err).NotTo(HaveOccurred(), "Failed to get deployment managed annotations")
+				_, ok := managedFields["f:checksum/config"]
+				g.Expect(ok).To(BeFalse(), "unmanaged checksum annotation should not be managed by the operator")
+				_, ok = managedFields["f:foo"]
+				g.Expect(ok).To(BeFalse(), "unmanaged foo annotation should not be managed by the operator")
+				_, ok = managedFields["f:keycloak.osc.edu/configmap-checksum"]
+				g.Expect(ok).To(BeTrue(), "configmap annotation should be managed by the operator")
+				_, ok = managedFields["f:keycloak.osc.edu/secret-checksum"]
+				g.Expect(ok).To(BeTrue(), "secret annotation should be managed by the operator")
 			}
 			Eventually(verifyDeploymentAnnotations, 2*time.Minute).Should(Succeed())
 			By("Client updated in Keycloak")

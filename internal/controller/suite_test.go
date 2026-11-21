@@ -111,7 +111,13 @@ func bootstrapDeployment(keycloakClientName string) {
 					MatchLabels: map[string]string{"app": "nginx"},
 				},
 				Template: corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{Labels: map[string]string{"app": "nginx"}},
+					ObjectMeta: metav1.ObjectMeta{
+						Labels: map[string]string{"app": "nginx"},
+						Annotations: map[string]string{
+							"checksum/config": "config-checksum",
+							"checksum/secret": "secret-checksum",
+						},
+					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{{Name: "web", Image: "nginx:1.14.2"}},
 					},

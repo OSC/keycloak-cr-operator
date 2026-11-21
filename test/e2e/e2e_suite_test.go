@@ -21,6 +21,7 @@ package e2e
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -176,6 +177,25 @@ func getDeploymentAnnotation(label, annotation string) (string, error) {
 		g.Expect(err).NotTo(HaveOccurred())
 		g.Expect(value).NotTo(BeEmpty())
 		fmt.Printf("Annotation:\n %s\n", value)
+	}
+	Eventually(getAnnotation).Should(Succeed())
+	return value, err
+}
+
+func getDeploymentManagedAnnotations(name string) (map[string]any, error) {
+	By("Getting managed annotations from Deployment")
+	var err error
+	var value map[string]any
+	getAnnotation := func(g Gomega) {
+		cmd := exec.Command("kubectl", "get", "deployment", name, "--show-managed-fields",
+			"-o",
+			`jsonpath={.metadata.managedFields[?(@.manager=="keycloak-cr-operator")].fieldsV1.f:spec.f:template.f:metadata.f:annotations}`)
+		out, err := utils.Run(cmd)
+		g.Expect(err).NotTo(HaveOccurred())
+		g.Expect(out).NotTo(BeEmpty())
+		fmt.Printf("managed fields:\n %s\n", out)
+		err = json.Unmarshal([]byte(out), &value)
+		g.Expect(err).NotTo(HaveOccurred())
 	}
 	Eventually(getAnnotation).Should(Succeed())
 	return value, err

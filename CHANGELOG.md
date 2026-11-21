@@ -1,3 +1,7 @@
+## v0.1.3 - 2026-11-21
+
+* Fix deployment/statefulset annotation ownership to be limited to this operator's annotations (#72)
+
 ## v0.1.2 - 2026-11-20
 
 * Do not validate keys are upper snake cake with envVarKeys=true (#71)
